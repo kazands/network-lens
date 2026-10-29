@@ -1,0 +1,5 @@
+IEEE Registration Authority public MAC-prefix registry facts.
+Sources: https://standards.ieee.org/products-programs/regauth/
+Historical distribution statement: https://sources.debian.org/src/ieee-data/20240722/debian/copyright/
+This bundled snapshot contains only assignment prefixes and registered organization names. It is not an IEEE endorsement. Registered organizations can be interface suppliers, not the device brand.
+Exact sources, retrieval dates and data digests are retained in android/ieee-vendor-provenance.json in the source distribution.

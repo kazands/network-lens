@@ -1,0 +1,127 @@
+{
+  "repository": "lucide-icons/lucide",
+  "accessed": "2026-10-22",
+  "license": {
+    "name": "LICENSE",
+    "path": "LICENSE",
+    "sha": "718bb3f0e44153809972abed31839375804bf652",
+    "display_url": "https://github.com/lucide-icons/lucide/blob/main/LICENSE",
+    "display_title": "LICENSE"
+  },
+  "icons": [
+    {
+      "name": "router",
+      "path": "icons/router.svg",
+      "git_blob_sha": "b171df215596ac33e41545838e121dca77827ffc",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/router.svg"
+    },
+    {
+      "name": "smartphone",
+      "path": "icons/smartphone.svg",
+      "git_blob_sha": "fc840174a324d965ad4dd420a1c99530a414c326",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/smartphone.svg"
+    },
+    {
+      "name": "printer",
+      "path": "icons/printer.svg",
+      "git_blob_sha": "dfa0a608eb1c3a2d45d3baf5d665bbec20f1ed55",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/printer.svg"
+    },
+    {
+      "name": "cast",
+      "path": "icons/cast.svg",
+      "git_blob_sha": "6ebddbe006a12db9c6321ee69b09499556881139",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/cast.svg"
+    },
+    {
+      "name": "speaker",
+      "path": "icons/speaker.svg",
+      "git_blob_sha": "387baab0e8c35241e374df71caf42742e3366a28",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/speaker.svg"
+    },
+    {
+      "name": "folder-symlink",
+      "path": "icons/folder-symlink.svg",
+      "git_blob_sha": "82e7babb8e786482c95818bf296a01454b2ac74d",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/folder-symlink.svg"
+    },
+    {
+      "name": "network",
+      "path": "icons/network.svg",
+      "git_blob_sha": "e166b3535ca33f9ceee49d2215dd78374689865e",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/network.svg"
+    },
+    {
+      "name": "cctv",
+      "path": "icons/cctv.svg",
+      "git_blob_sha": "3d4df7378a7dfd55bdd16df336b2dbefe15b79ef",
+      "sha256": "eca31d564c3874ded01cc78f2c7eccdc9c3de43a5c9ed609d4c2a1483e9a3d20",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/cctv.svg",
+      "accessed": "2026-10-24"
+    },
+    {
+      "name": "lightbulb",
+      "path": "icons/lightbulb.svg",
+      "git_blob_sha": "3f4e40913a27ed3362721dc71aef68be66757b6a",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/lightbulb.svg",
+      "accessed": "2026-10-25",
+      "sha256": "e33bbec15b1e64cca958e086850f951c0dc2201cd5778bb3695fda3cb6ea457d"
+    },
+    {
+      "name": "lock-keyhole",
+      "path": "icons/lock-keyhole.svg",
+      "git_blob_sha": "97fcbd189d5f5d855d26bb1698680367cf3d9391",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/lock-keyhole.svg",
+      "accessed": "2026-10-25",
+      "sha256": "fc0b8b7590d1d9e9bb0112c5c2e15a78ade0bfeca6d6f8c79fbbe149236d74be"
+    },
+    {
+      "name": "plug",
+      "path": "icons/plug.svg",
+      "git_blob_sha": "f28b6f0abef77a6e843dfa99f81731332c72db64",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/plug.svg",
+      "accessed": "2026-10-25",
+      "sha256": "11ba780e4b6f15d37906a8a73537144b59720333d7a9fc8048a437d0389422f8"
+    },
+    {
+      "name": "toggle-left",
+      "path": "icons/toggle-left.svg",
+      "git_blob_sha": "039f1672c578eb11770d9c62a4941196e4206b35",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/toggle-left.svg",
+      "accessed": "2026-10-25",
+      "sha256": "71d513263d5a4fb3404b5eae50f015c723039a74cae3a20979d606fd0e72a60e"
+    },
+    {
+      "name": "thermometer",
+      "path": "icons/thermometer.svg",
+      "git_blob_sha": "808334dc99524049a5813e24f9d7b5c6dd56431c",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/thermometer.svg",
+      "accessed": "2026-10-25",
+      "sha256": "a56c95062445d52d95c51a77c4959d5a022539a0194205cc2ce2e9ce8f35847b"
+    },
+    {
+      "name": "activity",
+      "path": "icons/activity.svg",
+      "git_blob_sha": "629b81c9fd020f3afec659daa5c9c7e5a1d07445",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/activity.svg",
+      "accessed": "2026-10-25",
+      "sha256": "050fbcda05e13c2051cf857683645e19c6b180861ef4d0cc28a6f09ba1ea1666"
+    },
+    {
+      "name": "bell-ring",
+      "path": "icons/bell-ring.svg",
+      "git_blob_sha": "2c93f7573a8d2ac4ef0e8ca8de8fa31d0b99a20a",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/bell-ring.svg",
+      "accessed": "2026-10-25",
+      "sha256": "57d5f12e0f4f89dfeb909ccbac79e6a822cf9d4bcff5111d74a00c3565828f70"
+    },
+    {
+      "name": "fan",
+      "path": "icons/fan.svg",
+      "git_blob_sha": "5b1ecb8acc63e45e3197fbbfd13b467ca2b60462",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/fan.svg",
+      "accessed": "2026-10-25",
+      "sha256": "6ed585fa7a183086480baf6aaeb531cbe65e977222c6462dcb1e4662a6744b54"
+    }
+  ]
+}

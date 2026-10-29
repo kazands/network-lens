@@ -1,0 +1,38 @@
+# Only these reviewed project areas are eligible for Git. Other root data stays local.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/NOTICE
+!/CONTRIBUTING.md
+!/SECURITY.md
+!/AGENTS.md
+!/android/
+!/scripts/
+!/tests/
+!/store-listing/
+!/docs/
+!/.github/
+
+# Local toolchains, generated outputs, credentials and machine settings.
+**/.gradle/
+**/.kotlin/
+**/build/
+**/__pycache__/
+**/.DS_Store
+**/local.properties
+**/.env
+**/.env.*
+!**/.env.example
+*.jks
+*.keystore
+*.pem
+*.key
+*.p12
+*.pfx
+*.apk
+*.aab
+*.idsig
+*.log
+# Historical evidence packager is local-only; it is not a public release publisher.
+/scripts/package-source.py

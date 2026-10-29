@@ -1,0 +1,59 @@
+# Building and testing
+
+## Supported direct build
+
+The verified direct scripts target Linux with a full JDK 21, Bash, Python 3, curl, unzip and zip. Install these through your normal package manager/vendor. Set `JAVA_HOME` to your JDK; the scripts do not install one.
+
+```sh
+export JAVA_HOME=/path/to/jdk-21
+bash scripts/bootstrap-sdk.sh
+bash scripts/test.sh
+bash scripts/build.sh
+```
+
+`bootstrap-sdk.sh` downloads the pinned Google Android SDK platform 37.0 revision 2 and Linux build-tools 36.0.0 archives, verifies their SHA-256 digests and extracts them into `.tools/sdk`. The build also accepts standard SDK layouts through `ANDROID_SDK_ROOT` and `NETLENS_BUILD_TOOLS`.
+
+`setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
+
+The APK appears under `artifacts/Network-Lens-0.3.7.apk`, with a checksum and permission/security audit outputs. Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+
+## Signing
+
+On a fresh checkout, `prepare-signing.py` creates a local development key and random password in `.tools`, with restrictive file permissions. It never prints the password. Do not commit either file. Keep any key you depend on in a secure backup that you control.
+
+A new key cannot update an installation signed by another key. Do not replace or delete an existing signing key to resolve an install failure. Contributor-built APKs are unofficial; no official binary release is currently published here. Source licensing is GPL-3.0-only with third-party exceptions described in NOTICE.
+
+## Host suites
+
+```sh
+bash scripts/test.sh
+```
+
+The script compiles the shared Kotlin logic and independent Java behavior/interoperability tests, then runs 19 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone.
+
+## Android integration tests
+
+Install Android platform-tools and an appropriate emulator/system image through the official Android SDK tools. The test scripts expect `adb` at `.tools/sdk/platform-tools/adb`. Start an isolated emulator before selecting its exact serial.
+
+```sh
+bash scripts/build-android-tests.sh
+python3 scripts/test-android-e2e.py --serial emulator-5554 \
+  --modes failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
+  --output artifacts/local-emulator-check
+```
+
+Replace the example serial with your actual emulator serial. The scripts reject physical devices and verify the emulator property and installed APK bytes. Instrumentation intentionally changes emulator app state and permissions. API 26, 36 and 37 have been tested previously; do not claim a platform passed unless you actually tested it.
+
+Physical Wi-Fi checks are separate, explicitly authorized manual journeys. Never automate arbitrary connected devices or publish household results. See `tests/E2E-REQUIREMENTS.md`.
+
+## Repository hygiene
+
+Before committing:
+
+```sh
+python3 scripts/check-repository.py
+```
+
+This checks staged paths and content for common credentials, private keys and unintended files. It is a guardrail, not a guarantee. Review `git diff --cached` yourself. Synthetic fixtures are appropriate; personal network data is not. Never force-add ignored local tools, captures or signing material.
+
+Refresh the offline IEEE data only as an intentional maintenance change with `python3 scripts/update-ieee-vendors.py --refresh`, then review provenance, terms and tests. The installed app never performs an online vendor lookup.

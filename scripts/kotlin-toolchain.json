@@ -1,0 +1,14 @@
+{
+  "kotlinVersion": "2.3.21",
+  "compilerUrl": "https://github.com/JetBrains/kotlin/releases/download/v2.3.21/kotlin-compiler-2.3.21.zip",
+  "compilerSha256": "a8cfc1d62cd4d0de4d04f42575e40135bd620588c17d568a20eb9c7c259af14f",
+  "r8Version": "8.13.19",
+  "r8Url": "https://dl.google.com/dl/android/maven2/com/android/tools/r8/8.13.19/r8-8.13.19.jar",
+  "r8Sha256": "7712edbae6a71f35937ffc1bd5f4c202919ef2a5e58d3c3544015a868a3cf457",
+  "stdlibSha256": "6f64eac736db9434dd6925b4a518b9d1d17177652320c37916cf9ba3ce7d7d7a",
+  "sources": [
+    "https://kotlinlang.org/docs/command-line.html",
+    "https://developer.android.com/build/releases/agp-8-13-0-release-notes",
+    "https://developer.android.com/build/kotlin-support"
+  ]
+}

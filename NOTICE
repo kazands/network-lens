@@ -1,0 +1,20 @@
+Network Lens
+Copyright (C) 2026 Network Lens contributors
+
+Original source code, documentation and original artwork: GPL-3.0-only.
+See LICENSE for the complete GNU General Public License version 3.
+
+Third-party material is not relicensed by this notice:
+- Lucide pictograms and retained SVG sources: upstream ISC license, with the
+  applicable MIT notices for Feather-derived material. Full notices are in
+  android/app/src/main/res/raw/lucide_license.txt.
+- Kotlin JVM standard library: Apache-2.0 and applicable third-party notices
+  (including BSD-3-Clause and BSL-1.0). Full applicable notices are in
+  android/app/src/main/res/raw/kotlin_license.txt.
+- IEEE public MAC registry facts: source and redistribution context are in
+  android/THIRD_PARTY_NOTICES.md, android/ieee-vendor-provenance.json and
+  android/app/src/main/res/raw/ieee_registry_notice.txt. No exclusive rights
+  are claimed over the underlying registry facts.
+
+Build tools are separately obtained under their upstream terms. They are not
+part of this repository or its application code license.

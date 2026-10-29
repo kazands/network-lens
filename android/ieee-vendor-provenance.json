@@ -1,0 +1,46 @@
+{
+  "source": "IEEE Registration Authority public listings",
+  "compiledUTC": "2026-10-24T15:50:55.058402+00:00",
+  "retrievedUTC": "2026-10-24T15:41:54.873315+00:00",
+  "registries": [
+    {
+      "downloadedUTC": "2026-10-24T15:41:54.873315+00:00",
+      "registry": "MA-L",
+      "url": "https://standards-oui.ieee.org/oui/oui.csv",
+      "sha256": "c9f0ed329b6db3962d7abb79e8a539fe6a1877762687cf95e7593c9fe7c34f9e",
+      "rows": 40397
+    },
+    {
+      "downloadedUTC": "2026-10-24T15:48:33.905952+00:00",
+      "registry": "MA-M",
+      "url": "https://standards-oui.ieee.org/oui28/mam.csv",
+      "sha256": "f881ef5ad8b1e1182943b7ef1420e6369cd10ffa9524ab184c0e077b42d96285",
+      "rows": 6651
+    },
+    {
+      "downloadedUTC": "2026-10-24T15:48:34.320958+00:00",
+      "registry": "IAB",
+      "url": "https://standards-oui.ieee.org/iab/iab.csv",
+      "sha256": "6e71aa3d47f00f19d09cb3b31ce1038de1834703420f0ce4ce111da586f1a533",
+      "rows": 4575
+    },
+    {
+      "downloadedUTC": "2026-10-24T15:48:34.742964+00:00",
+      "registry": "MA-S",
+      "url": "https://standards-oui.ieee.org/oui36/oui36.csv",
+      "sha256": "bda5972192fa5d7c17ca14d1e3fa11a79c73b896da9540bd8a9e990596205ea2",
+      "rows": 7244
+    }
+  ],
+  "organizations": 33962,
+  "prefixes": 58864,
+  "format": "DLV1; sorted prefix keys; 24/28/36-bit longest-prefix lookup",
+  "asset": "android/app/src/main/res/raw/ieee_mac_vendors.bin",
+  "assetBytes": 1531852,
+  "assetSha256": "4525a707c479b97c0f8fc728ce4e7b88ef7a3c5b6d5f9a1afd3351d2992f9bee",
+  "fieldsKept": [
+    "Assignment",
+    "Organization Name"
+  ],
+  "privateOrLocalMacLookup": false
+}
