@@ -26,6 +26,8 @@ Intermittent HomeKit (`_hap._tcp`) and web-service (`_http._tcp`) address resolu
 
 See [BUILDING.md](docs/BUILDING.md) for the supported direct build, pinned toolchain, tests and signing-key behavior. No private key or prior test inventory is required to build from a fresh checkout.
 
+The application, host suites and Android instrumentation are Kotlin. The tests retain the existing standalone runners and emulator safety restrictions.
+
 ```sh
 export JAVA_HOME=/path/to/jdk-21
 bash scripts/bootstrap-sdk.sh

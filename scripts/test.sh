@@ -11,11 +11,14 @@ python3 - <<'PY'
 from pathlib import Path
 core='Ipv6Routes ServiceHandle JavaText IpRange DataGuard ServiceAdmission SafeText Address NetBios Ssdp UpnpDescription Grouping IdentityHints DiscoveryHealth ReverseDns Sadp MdnsPacket DescriptionQueue WsDiscovery IcmpEcho DiscoveryWork CastInfo MdnsRetries VendorIndex TcpCheck HomeKitInfo LocalServices MdnsAssembly'.split()
 base=Path('android/app/src/main/java/dev/netlens')
-for ext in ['kt','java']:
- Path('.tools/tests/'+ext+'-sources.txt').write_text(''.join(str(base/(n+'.'+ext))+'\n' for n in core if (base/(n+'.'+ext)).exists()))
+if any(Path('tests').rglob('*.java')):
+ raise SystemExit('Test sources must be Kotlin; remove stale Java tests before running.')
+sources=[base/(name+'.kt') for name in core]+sorted(Path('tests').glob('*.kt'))
+if not all(path.is_file() for path in sources):
+ raise SystemExit('A required Kotlin source file is missing.')
+Path('.tools/tests/kt-sources.txt').write_text(''.join(str(path)+'\n' for path in sources))
 PY
-"$KOTLIN_DIR/bin/kotlinc" -Xjdk-release=8 -jvm-target 1.8 -no-reflect -d .tools/tests @.tools/tests/kt-sources.txt @.tools/tests/java-sources.txt
-"${JAVA_BIN}javac" -encoding UTF-8 -source 8 -target 8 -cp ".tools/tests:$STDLIB" -d .tools/tests @.tools/tests/java-sources.txt tests/*.java
+"$KOTLIN_DIR/bin/kotlinc" -Xjdk-release=8 -jvm-target 1.8 -no-reflect -d .tools/tests @.tools/tests/kt-sources.txt
 for suite in RoutedIpv6Test ServiceHandleTest IpRangeTest SecurityTest DiscoveryProtocolTest GroupingTest IdentificationTest DiscoveryUpgradeTest WsDiscoveryTest ConfirmedFixesTest IcmpEchoTest ScanEngineTest ResolverTest MdnsRetriesTest VendorIndexTest TcpCheckTest HomeKitTest LocalServicesTest MdnsAssemblyTest; do
     "${JAVA_BIN}java" -cp ".tools/tests:$STDLIB" "$suite"
 done

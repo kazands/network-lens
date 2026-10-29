@@ -41,9 +41,11 @@ As agreed on 2026-10-24, Network Lens must not write any scan data or app prefer
 
 For the approved branding update, the visible name is Network Lens. Use the approved mint Wi-Fi/lens concept with its longer handle, a full teal field and no white disc. The main-screen header uses the launcher’s actual foreground artwork without its background/mask, at a larger size and with a readable theme accent; details retain Back navigation. Keep app ID/signing continuity and RAM-only behavior. Native previews must cover light/dark, large text, circle/squircle/rounded masks and Android themed icons.
 
-## Kotlin migration acceptance (0.3.0)
+## Kotlin migration acceptance (production 0.3.0; tests 2026-10-29)
 
-All hand-written production code must be Kotlin. The build must reject remaining production Java (Android-generated R.java and the independent Java test harness are allowed). Preserve the native UI, logo assets, package/signing identity, min SDK, permissions, fresh-scan admission and RAM-only data policy. Run the existing host and Android suites against the port, documenting any test-environment corrections and confirming them against the Java baseline, verify legacy and modern NSD/ICMP paths, exact-network binding, bounded/cancelled work, navigation/theme/SSID, and cold-start cleanup. Pin and attribute the Kotlin standard library and build tools; the compiler itself must not be packaged.
+All hand-written production code and test suites must be Kotlin. The application build must reject remaining production Java, and both test build paths must reject stale Java test sources. Android-generated R.java is allowed as build output. Preserve the native UI, logo assets, package/signing identity, min SDK, permissions, fresh-scan admission and RAM-only data policy. Run the existing host and Android suites against the port, documenting any test-environment corrections and confirming them against the Java baseline, verify legacy and modern NSD/ICMP paths, exact-network binding, bounded/cancelled work, navigation/theme/SSID, and cold-start cleanup. Pin and attribute the Kotlin standard library and build tools; the compiler itself must not be packaged.
+
+Test-language migrations must retain assertion predicates, fixture bytes/text, object identity, Java numeric/regex semantics, observable null results, resource acquisition/close/handler ordering and all emulator, API, permission and cancellation guards. Compare host results with the original baseline and run the applicable Android modes without changing application behavior or weakening a failing assertion.
 
 ## HomeKit and Matter — 0.3.1
 

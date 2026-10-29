@@ -14,7 +14,19 @@ find "$TEST_DIR/classes" "$TEST_DIR/dex" -type f -delete
 python3 scripts/setup-kotlin-toolchain.py
 STDLIB="$PWD/.tools/kotlin-0300/kotlinc/lib/kotlin-stdlib.jar"
 "$TOOLS/aapt2" link -o "$TEST_DIR/resources.apk" --manifest tests/android/AndroidManifest.xml -I "$PLATFORM"
-"${JAVA_BIN}javac" -source 8 -target 8 -bootclasspath "$PLATFORM:$TOOLS/core-lambda-stubs.jar" -cp ".tools/build/classes.jar:$STDLIB" -d "$TEST_DIR/classes" tests/android/SmokeInstrumentation.java
+python3 - <<'PY'
+from pathlib import Path
+if any(Path('tests').rglob('*.java')):
+    raise SystemExit('Test sources must be Kotlin; remove stale Java tests before building.')
+sources = sorted(Path('tests/android').glob('*.kt'))
+if not sources:
+    raise SystemExit('Android Kotlin instrumentation sources are missing.')
+Path('.tools/android-tests/kt-sources.txt').write_text(''.join(str(path) + '\n' for path in sources))
+PY
+"$PWD/.tools/kotlin-0300/kotlinc/bin/kotlinc" -no-jdk -no-reflect -jvm-target 1.8 \
+    -Xfriend-paths="$PWD/.tools/build/classes.jar" \
+    -classpath ".tools/build/classes.jar:$PLATFORM:$STDLIB" \
+    -d "$TEST_DIR/classes" @"$TEST_DIR/kt-sources.txt"
 "${JAVA_BIN}jar" cf "$TEST_DIR/classes.jar" -C "$TEST_DIR/classes" .
 "${JAVA_BIN}java" -cp .tools/kotlin-0300/r8.jar com.android.tools.r8.D8 --min-api 26 --lib "$PLATFORM" --classpath .tools/build/classes.jar --classpath "$STDLIB" --output "$TEST_DIR/dex" "$TEST_DIR/classes.jar"
 cp "$TEST_DIR/resources.apk" "$TEST_DIR/unsigned.apk"

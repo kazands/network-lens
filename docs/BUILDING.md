@@ -29,7 +29,7 @@ A new key cannot update an installation signed by another key. Do not replace or
 bash scripts/test.sh
 ```
 
-The script compiles the shared Kotlin logic and independent Java behavior/interoperability tests, then runs 19 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone.
+The script compiles the shared Kotlin logic and Kotlin behavior tests, then runs 19 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -43,6 +43,8 @@ python3 scripts/test-android-e2e.py --serial emulator-5554 \
 ```
 
 Replace the example serial with your actual emulator serial. The scripts reject physical devices and verify the emulator property and installed APK bytes. Instrumentation intentionally changes emulator app state and permissions. API 26, 36 and 37 have been tested previously; do not claim a platform passed unless you actually tested it.
+
+The instrumentation companion is Kotlin and uses the target application's existing pinned Kotlin standard library. Its compiler receives the application JAR as a friend module for internal test access. No additional application library or permission is introduced. The `permission` and `icmp-denied` modes require API 37 or newer; keep their existing API guards intact when selecting modes.
 
 Physical Wi-Fi checks are separate, explicitly authorized manual journeys. Never automate arbitrary connected devices or publish household results. See `tests/E2E-REQUIREMENTS.md`.
 
