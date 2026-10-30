@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "applicationId": "dev.netlens",
+  "applicationId": "io.github.kazands.networklens",
   "testCertificateSha256": "d727e14948df2d2508a31ba875d0062a081ba335b201dff9bab03708fd6a6989",
   "roles": {
     "app": {

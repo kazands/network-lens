@@ -12,6 +12,8 @@ A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search t
 
 **Development preview: 0.3.8.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
+The current source is 0.3.10 and uses the Android application ID `io.github.kazands.networklens`. It installs as a separate app from the older preview linked above; it cannot update that installation in place. See [the identity change](docs/IDENTITY-MIGRATION.md) before switching.
+
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses a production app-signing identity; an older test-signed installation requires a one-time uninstall/reinstall. Later maintainer previews retain that app-signing identity. Private signing credentials are never distributed.
 
 Read the [0.3.8 verification notes](docs/VERIFICATION-0.3.8.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.

@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-import dev.netlens.Grouping
+import io.github.kazands.networklens.Grouping
 import java.util.*
 
 object GroupingTest {

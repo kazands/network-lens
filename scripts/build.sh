@@ -14,7 +14,7 @@ if [[ "$BUILD_MODE" == release ]]; then
     python3 scripts/release-signing.py check --role app
 fi
 SDK_DIR="${ANDROID_SDK_ROOT:-$PWD/.tools/sdk}"
-BUILD_TOOLS="${NETLENS_BUILD_TOOLS:-$SDK_DIR/android-16}"
+BUILD_TOOLS="${NETWORK_LENS_BUILD_TOOLS:-$SDK_DIR/android-16}"
 if [[ ! -x "$BUILD_TOOLS/aapt2" ]]; then BUILD_TOOLS="$SDK_DIR/build-tools/36.0.0"; fi
 PLATFORM="$SDK_DIR/android-37.0/android.jar"
 if [[ ! -f "$PLATFORM" ]]; then PLATFORM="$SDK_DIR/platforms/android-37.0/android.jar"; fi
@@ -24,12 +24,12 @@ if [[ ! -f "$PLATFORM" || ! -x "$BUILD_TOOLS/aapt2" ]]; then echo 'Android SDK p
 BUILD_DIR="$PWD/.tools/build"
 APK_DIR="$PWD/artifacts"
 if [[ "$BUILD_MODE" == release ]]; then BUILD_DIR="$PWD/.tools/build-release"; APK_DIR="$PWD/artifacts/release"; fi
-APK_PATH="$APK_DIR/Network-Lens-0.3.9.apk"
+APK_PATH="$APK_DIR/Network-Lens-0.3.10.apk"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" artifacts
 # Remove only this script's generated output so removed source files cannot survive a rebuild.
 find "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" -type f -delete
 "$BUILD_TOOLS/aapt2" compile --dir android/app/src/main/res -o "$BUILD_DIR/resources.zip"
-sed 's/<manifest /<manifest package="dev.netlens" /' android/app/src/main/AndroidManifest.xml > "$BUILD_DIR/AndroidManifest.xml"
+sed 's/<manifest /<manifest package="io.github.kazands.networklens" /' android/app/src/main/AndroidManifest.xml > "$BUILD_DIR/AndroidManifest.xml"
 "$BUILD_TOOLS/aapt2" link -o "$BUILD_DIR/resources.apk" --manifest "$BUILD_DIR/AndroidManifest.xml" -I "$PLATFORM" --java "$BUILD_DIR/generated" "$BUILD_DIR/resources.zip"
 python3 scripts/setup-kotlin-toolchain.py
 KOTLIN_DIR="$PWD/.tools/kotlin-0300/kotlinc"
@@ -48,13 +48,13 @@ fi
 cp "$BUILD_DIR/resources.apk" "$BUILD_DIR/unsigned.apk"
 (cd "$BUILD_DIR/dex" && zip -q "$BUILD_DIR/unsigned.apk" classes*.dex)
 "$BUILD_TOOLS/zipalign" -f -p 4 "$BUILD_DIR/unsigned.apk" "$BUILD_DIR/aligned.apk"
-KEYSTORE="$PWD/.tools/netlens-development.jks"
-PASSWORD_FILE="$PWD/.tools/netlens-signing-password"
+KEYSTORE="$PWD/.tools/network-lens-development.jks"
+PASSWORD_FILE="$PWD/.tools/network-lens-signing-password"
 if [[ "$BUILD_MODE" == release ]]; then
     python3 scripts/release-signing.py sign-apk --input "$BUILD_DIR/aligned.apk" --output "$APK_PATH"
 else
     python3 scripts/prepare-signing.py --keytool "${JAVA_BIN}keytool"
-    "$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias netlens --ks-pass "file:$PASSWORD_FILE" --out "$APK_PATH" "$BUILD_DIR/aligned.apk"
+    "$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias network-lens --ks-pass "file:$PASSWORD_FILE" --out "$APK_PATH" "$BUILD_DIR/aligned.apk"
 fi
 "$BUILD_TOOLS/apksigner" verify --verbose "$APK_PATH"
 python3 scripts/check-permissions.py "$APK_PATH" --aapt "$BUILD_TOOLS/aapt" --output "$APK_DIR/permissions-audit.json"

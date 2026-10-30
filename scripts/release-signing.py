@@ -59,7 +59,7 @@ def keytool():
 
 def android_tool(name):
     sdk = Path(os.environ.get('ANDROID_SDK_ROOT', str(ROOT / '.tools/sdk')))
-    override = os.environ.get('NETLENS_BUILD_TOOLS')
+    override = os.environ.get('NETWORK_LENS_BUILD_TOOLS')
     candidates = [Path(override)] if override else [sdk / 'android-16', sdk / 'build-tools/36.0.0']
     path = next((directory / name for directory in candidates if (directory / name).is_file()), None)
     require(path is not None, 'Android build tools are missing; see docs/BUILDING.md.')
@@ -131,7 +131,7 @@ def identity():
     value = json_read(IDENTITY)
     require(isinstance(value, dict) and set(value) == {'schemaVersion', 'applicationId', 'testCertificateSha256', 'roles'},
             'Unexpected release identity fields.')
-    require(type(value['schemaVersion']) is int and value['schemaVersion'] == 1 and value['applicationId'] == 'dev.netlens', 'Unexpected release identity or application ID.')
+    require(type(value['schemaVersion']) is int and value['schemaVersion'] == 1 and value['applicationId'] == 'io.github.kazands.networklens', 'Unexpected release identity or application ID.')
     require(isinstance(value['roles'], dict) and set(value['roles']) == set(ROLES), 'Both distinct signing roles are required.')
     fingerprints = []
     for role, (store, password, alias) in ROLES.items():
@@ -184,12 +184,12 @@ def initialize():
     require(not tools.is_symlink(), 'The private tools directory cannot be a symlink.')
     tools.mkdir(mode=0o700, exist_ok=True)
     tools.chmod(0o700)
-    test_store = tools / 'netlens-development.jks'
-    test_password = tools / 'netlens-signing-password'
+    test_store = tools / 'network-lens-development.jks'
+    test_password = tools / 'network-lens-signing-password'
     require(test_store.exists() == test_password.exists(), 'Existing test signing material is incomplete; restore it first.')
-    test = certificate(test_store, test_password, 'netlens') if test_store.exists() else None
+    test = certificate(test_store, test_password, 'network-lens') if test_store.exists() else None
     PRIVATE.mkdir(mode=0o700)
-    value = {'schemaVersion': 1, 'applicationId': 'dev.netlens', 'testCertificateSha256': test, 'roles': {}}
+    value = {'schemaVersion': 1, 'applicationId': 'io.github.kazands.networklens', 'testCertificateSha256': test, 'roles': {}}
     for role, (store, password, alias) in ROLES.items():
         fd = os.open(PRIVATE / password, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, 'w') as output:
@@ -250,7 +250,7 @@ def sign_apk(source, destination):
             'Release APK output must be directly under artifacts/release and must not be a symlink.')
     require(source.resolve() != destination.resolve(), 'APK input and output must be different files.')
     badging = command([android_tool('aapt'), 'dump', 'badging', source]).decode('utf-8', errors='replace')
-    require(re.search(r"^package: name='dev\.netlens' ", badging, re.M) is not None, 'Only the Network Lens application can use this release signer.')
+    require(re.search(r"^package: name='io\.github\.kazands\.networklens' ", badging, re.M) is not None, 'Only the Network Lens application can use this release signer.')
     allowed.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.release-', suffix='.apk', dir=allowed)
     os.close(fd)

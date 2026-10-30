@@ -2,17 +2,17 @@
 """Black-box Wi-Fi loss/recovery journey. Isolated emulators only."""
 from pathlib import Path
 import argparse,hashlib,json,re,subprocess,time,xml.etree.ElementTree as E
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('--serial',required=True);p.add_argument('--version',default='0.3.9');p.add_argument('--output',required=True);a=p.parse_args()
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('--serial',required=True);p.add_argument('--version',default='0.3.10');p.add_argument('--output',required=True);a=p.parse_args()
 assert re.fullmatch(r'emulator-[0-9]+',a.serial),'Physical devices are forbidden'
 root=Path(__file__).resolve().parent.parent;adb=root/'.tools/sdk/platform-tools/adb';out=root/a.output;out.mkdir(parents=True,exist_ok=True);checks=[]
 def run(*args):return subprocess.check_output([str(adb),'-s',a.serial,*args],timeout=40).decode()
 assert run('shell','getprop','ro.kernel.qemu').strip()=='1'
 apk=root/('artifacts/Network-Lens-'+a.version+'.apk');digest=hashlib.sha256(apk.read_bytes()).hexdigest()
-installed=run('shell','pm','path','dev.netlens').strip();assert installed.startswith('package:/data/app/') and installed.endswith('/base.apk')
+installed=run('shell','pm','path','io.github.kazands.networklens').strip();assert installed.startswith('package:/data/app/') and installed.endswith('/base.apk')
 assert run('shell','sha256sum',installed[len('package:'):]).split()[0]==digest,'Installed release differs from the APK under test' 
 def nodes():
  s=run('shell','uiautomator','dump','/sdcard/lanwhisp-network-e2e.xml');assert 'dumped to' in s
- r=E.fromstring(run('exec-out','cat','/sdcard/lanwhisp-network-e2e.xml'));ns=[n for n in r.iter('node') if n.get('package')=='dev.netlens'];assert ns,'DeviceLens must be visible';return ns
+ r=E.fromstring(run('exec-out','cat','/sdcard/lanwhisp-network-e2e.xml'));ns=[n for n in r.iter('node') if n.get('package')=='io.github.kazands.networklens'];assert ns,'Network Lens must be visible';return ns
 def texts(ns):return [n.get('text') for n in ns if n.get('text')]
 def click(label,desc=False):
  ns=nodes();found=[n for n in ns if (n.get('content-desc' if desc else 'text')==label or (not desc and label=='Scan Wi-Fi' and n.get('text','').startswith('Scan Wi-Fi\n')))];assert len(found)==1,label
@@ -32,7 +32,7 @@ def waitText(fragment,timeout=10):
   if any(fragment in t for t in texts(nodes())):return True
   time.sleep(.3)
  return False
-def launch():run('shell','am','force-stop','dev.netlens');run('shell','am','start','-W','-n','dev.netlens/.MainActivity')
+def launch():run('shell','am','force-stop','io.github.kazands.networklens');run('shell','am','start','-W','-n','io.github.kazands.networklens/.MainActivity')
 try:
  wifi(True);launch();check(not any(t.startswith('Stop scan') for t in texts(nodes())),'Opening on Wi-Fi starts no automatic scan')
  click('Options',True);click('Wi-Fi details');check('Router address' in texts(nodes()),'Connected Wi-Fi details exposes current addresses');click('Done')
@@ -44,7 +44,7 @@ try:
  click('Scan Wi-Fi');check(any(t.startswith('Stop scan') for t in texts(nodes())),'A user can start a scan after reconnecting')
  wifi(False);check(waitText('Your Wi-Fi comes first'),'Losing Wi-Fi during a scan clears the old session from the screen');check(not any(t.startswith('Stop scan') for t in texts(nodes())),'Wi-Fi loss cancels the running scan rather than switching interfaces')
  wifi(True);check(waitText('Ready when you are'),'Recovery after an interrupted scan selects the current Wi-Fi session');check(not any(t.startswith('Stop scan') for t in texts(nodes())),'Recovery from an interrupted scan requires an explicit new scan')
- for permission in ['android.permission.ACCESS_FINE_LOCATION','android.permission.ACCESS_COARSE_LOCATION']:run('shell','pm','revoke','dev.netlens',permission)
+ for permission in ['android.permission.ACCESS_FINE_LOCATION','android.permission.ACCESS_COARSE_LOCATION']:run('shell','pm','revoke','io.github.kazands.networklens',permission)
  launch();wifi(False);check(waitText('Your Wi-Fi comes first'),'Disconnect state updates even when optional SSID access is denied')
  wifi(True);check(waitText('Ready when you are'),'Reconnect state updates even when optional SSID access is denied');check('Scan Wi-Fi' in texts(nodes()),'Denied optional location keeps Scan Wi-Fi available without a fake SSID')
 except Exception as error:

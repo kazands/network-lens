@@ -22,7 +22,7 @@ POLICY = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/DeviceLens-0.2.12.apk'))
+    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/Network-Lens-0.3.10.apk'))
     parser.add_argument('--aapt')
     parser.add_argument('--output')
     args = parser.parse_args()
@@ -33,8 +33,8 @@ def main():
         parser.error('Android build-tools aapt is required')
     apk = Path(args.apk).resolve()
     output = subprocess.check_output([str(aapt), 'dump', 'permissions', str(apk)], text=True)
-    if not re.search(r'^package:\s+dev\.netlens\s*$', output, re.M):
-        raise SystemExit('FAIL: expected the dev.netlens application package')
+    if not re.search(r'^package:\s+io\.github\.kazands\.networklens\s*$', output, re.M):
+        raise SystemExit('FAIL: expected the io.github.kazands.networklens application package')
     permissions = set(re.findall(r"^uses-permission(?:-sdk-\d+)?: name='([^']+)'", output, re.M))
     if not permissions:
         raise SystemExit('FAIL: permission inventory is empty or could not be parsed')

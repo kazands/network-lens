@@ -46,9 +46,9 @@ Use the full JDK and pinned SDK described in [BUILDING.md](BUILDING.md):
 bash scripts/build.sh --release
 ```
 
-The command checks the app key, pinned certificate, owner-only permissions and backup receipt before build work or downloads. It uses `.tools/build-release/` and writes `artifacts/release/Network-Lens-0.3.9.apk`, its SHA-256 file and permission/security audit outputs. It does not overwrite the development APK or use the upload key. APK signature schemes v2 and v3 cover the supported Android 8.0+ range; v1 and v4 are disabled for this path.
+The command checks the app key, pinned certificate, owner-only permissions and backup receipt before build work or downloads. It uses `.tools/build-release/` and writes `artifacts/release/Network-Lens-0.3.10.apk`, its SHA-256 file and permission/security audit outputs. It does not overwrite the development APK or use the upload key. APK signature schemes v2 and v3 cover the supported Android 8.0+ range; v1 and v4 are disabled for this path.
 
-The ordinary `bash scripts/build.sh` and Android instrumentation builder continue to use the original development key and existing output locations. Production credentials are not passed to instrumentation or ordinary tests. The signing integration harness generates isolated synthetic credentials instead.
+The ordinary `bash scripts/build.sh` and Android instrumentation builder use `.tools/network-lens-development.jks`, `.tools/network-lens-signing-password` and the `network-lens` alias. The maintainer checkout retains the original development certificate under these canonical names; the package rename does not create a replacement key. Production credentials are not passed to instrumentation or ordinary tests. The signing integration harness generates isolated synthetic credentials instead.
 
 ```sh
 bash scripts/test-release-signing.sh
@@ -61,6 +61,8 @@ Build the development APK first, since the harness uses its application payload 
 `python3 scripts/release-signing.py init` exists for the initial maintainer setup when both the public identity file and private release directory are absent. It refuses existing or partially initialized state. Builds never invoke it. A partial initialization is preserved for inspection/recovery; do not delete private material or rerun key creation blindly.
 
 ## Installation and Google Play
+
+Version 0.3.10 uses `io.github.kazands.networklens` for both its application ID and Kotlin namespace. It installs as a separate application from the previous previews even though the app-signing certificate is unchanged. Do not change or replace any signing key to address this intentional package-ID break. See [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md).
 
 The public app key differs from the existing test key. Changing from the current test installation to a public build requires a one-time uninstall/reinstall; a normal update is expected to be rejected. This setup does not uninstall the user's test app. Future public builds must retain the pinned app identity and suitable version codes.
 

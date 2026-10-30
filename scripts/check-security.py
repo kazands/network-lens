@@ -81,7 +81,7 @@ def main():
     def dump(*arguments):
         return subprocess.check_output([args.aapt, 'dump', *arguments], text=True)
     manifest = tree(dump('xmltree', str(apk), 'AndroidManifest.xml'))
-    require(manifest['attributes'].get('package') == 'dev.netlens', 'Unexpected application package')
+    require(manifest['attributes'].get('package') == 'io.github.kazands.networklens', 'Unexpected application package')
     app = child(manifest, 'application')
     for flag in ('debuggable', 'allowBackup', 'fullBackupContent', 'usesCleartextTraffic'):
         require(app['attributes'].get('android:' + flag) == 0, flag + ' must be explicitly false')
@@ -95,7 +95,7 @@ def main():
     resource = app['attributes'].get('android:dataExtractionRules', '')
     require(isinstance(resource, str) and re.fullmatch(r'@0x[0-9a-f]+', resource), 'Missing extraction rules reference')
     resources = dump('resources', str(apk))
-    require(re.search(r'resource ' + re.escape(resource[1:]) + r' dev\.netlens:xml/data_extraction_rules\b', resources) is not None, 'Extraction rules must reference the audited resource')
+    require(re.search(r'resource ' + re.escape(resource[1:]) + r' io\.github\.kazands\.networklens:xml/data_extraction_rules\b', resources) is not None, 'Extraction rules must reference the audited resource')
     rules = tree(dump('xmltree', str(apk), 'res/xml/data_extraction_rules.xml'))
     domains = {'root', 'file', 'database', 'sharedpref', 'external', 'device_root', 'device_file', 'device_database', 'device_sharedpref'}
     require(rules['name'] == 'data-extraction-rules', 'Unexpected extraction rules root')
@@ -114,18 +114,18 @@ def main():
         runtime = set(provenance['classes'])
         require(hashlib.sha256(archive.read(provenance['licenseResource'])).hexdigest() == provenance['licenseSha256'], 'Kotlin runtime license/notices must match the reviewed resource')
         def approved(name):
-            if name.startswith('Ldev/netlens/') or name in runtime:
+            if name.startswith('Lio/github/kazands/networklens/') or name in runtime:
                 return True
             parent = name.split('$$ExternalSynthetic', 1)[0] + ';'
             return '$$ExternalSynthetic' in name and parent in runtime
         require(bool(names) and all(approved(n) for n in names), 'Unreviewed application/runtime class')
-        require(not any(n in names for n in ('Ldev/netlens/MonitorJob;', 'Ldev/netlens/Diagnostics;')), 'Removed monitoring/tool classes must not ship')
+        require(not any(n in names for n in ('Lio/github/kazands/networklens/MonitorJob;', 'Lio/github/kazands/networklens/Diagnostics;')), 'Removed monitoring/tool classes must not ship')
     report = {'status': 'PASS', 'apk': apk.name, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),
               'scope': 'Packaged component exposure, explicit debug/backup/cleartext flags, cloud/transfer exclusions, class inventory and common private-key/native-library file extensions. Not a vulnerability certification.',
-              'application_class_count': sum(n.startswith('Ldev/netlens/') for n in names), 'third_party_class_namespaces': ['kotlin (pinned official standard library)'],
+              'application_class_count': sum(n.startswith('Lio/github/kazands/networklens/') for n in names), 'third_party_class_namespaces': ['kotlin (pinned official standard library)'],
               'kotlin_stdlib_sha256': provenance['sha256'], 'kotlin_stdlib_version': provenance['version'], 'total_class_count': len(names),
               'kotlin_notices_verified': True,
-              'exported_components': ['dev.netlens.MainActivity (launcher)'],
+              'exported_components': ['io.github.kazands.networklens.MainActivity (launcher)'],
               'private_components': [],
               'debuggable': False, 'allow_backup': False, 'full_backup_content': False,
               'cleartext_http': False, 'cloud_backup_and_device_transfer_exclusions': sorted(domains)}

@@ -11,15 +11,15 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-`bootstrap-sdk.sh` downloads the pinned Google Android SDK platform 37.0 revision 2 and Linux build-tools 36.0.0 archives, verifies their SHA-256 digests and extracts them into `.tools/sdk`. The build also accepts standard SDK layouts through `ANDROID_SDK_ROOT` and `NETLENS_BUILD_TOOLS`.
+`bootstrap-sdk.sh` downloads the pinned Google Android SDK platform 37.0 revision 2 and Linux build-tools 36.0.0 archives, verifies their SHA-256 digests and extracts them into `.tools/sdk`. The build also accepts standard SDK layouts through `ANDROID_SDK_ROOT` and `NETWORK_LENS_BUILD_TOOLS`.
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.9.apk`, with a checksum and permission/security audit outputs. This unreleased branding update is separate from the published 0.3.8 preview. Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.10.apk`, with a checksum and permission/security audit outputs. This unreleased package-identity update uses `io.github.kazands.networklens` and installs separately from the published 0.3.8 preview; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
-On a fresh checkout, `prepare-signing.py` creates a local development key and random password in `.tools`, with restrictive file permissions. It never prints the password. Do not commit either file. Keep any key you depend on in a secure backup that you control.
+On a fresh checkout, `prepare-signing.py` creates `.tools/network-lens-development.jks` and `.tools/network-lens-signing-password`, using the `network-lens` alias and restrictive file permissions. It never prints the password. Do not commit either file. Keep any key you depend on in a secure backup that you control.
 
 A new key cannot update an installation signed by another key. Do not replace or delete an existing signing key to resolve an install failure. Contributor-built APKs are unofficial; maintainer previews are distributed through [GitHub Releases](https://github.com/kazands/network-lens/releases). Source licensing is GPL-3.0-only with third-party exceptions described in NOTICE.
 

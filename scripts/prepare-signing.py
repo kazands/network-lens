@@ -12,12 +12,12 @@ args = parser.parse_args()
 directory = Path(__file__).resolve().parent.parent / '.tools'
 directory.mkdir(mode=0o700, exist_ok=True)
 directory.chmod(0o700)
-key = directory / 'netlens-development.jks'
-password = directory / 'netlens-signing-password'
-pending = directory / 'netlens-signing-password.pending'
+key = directory / 'network-lens-development.jks'
+password = directory / 'network-lens-signing-password'
+pending = directory / 'network-lens-signing-password.pending'
 
 def keytool(*arguments, secret):
-    env = dict(os.environ, NETLENS_SIGNING_PASSWORD=secret)
+    env = dict(os.environ, NETWORK_LENS_SIGNING_PASSWORD=secret)
     return subprocess.run([args.keytool, *arguments], env=env,
                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -38,16 +38,16 @@ else:
     if key.exists():
         # Recover if a previous run changed the key password before finalizing the password file.
         validated = keytool('-list', '-keystore', str(key), '-storepass:env',
-                            'NETLENS_SIGNING_PASSWORD', secret=secret)
+                            'NETWORK_LENS_SIGNING_PASSWORD', secret=secret)
         if validated.returncode:
             result = keytool('-storepasswd', '-keystore', str(key), '-storepass', 'android',
-                             '-new:env', 'NETLENS_SIGNING_PASSWORD', secret=secret)
+                             '-new:env', 'NETWORK_LENS_SIGNING_PASSWORD', secret=secret)
             if result.returncode:
                 raise SystemExit('Could not protect the existing development key. No replacement key was generated.')
     else:
         result = keytool('-genkeypair', '-keystore', str(key), '-storepass:env',
-                         'NETLENS_SIGNING_PASSWORD', '-keypass:env', 'NETLENS_SIGNING_PASSWORD',
-                         '-alias', 'netlens', '-dname', 'CN=NetLens Development', '-keyalg', 'RSA',
+                         'NETWORK_LENS_SIGNING_PASSWORD', '-keypass:env', 'NETWORK_LENS_SIGNING_PASSWORD',
+                         '-alias', 'network-lens', '-dname', 'CN=Network Lens Development', '-keyalg', 'RSA',
                          '-keysize', '2048', '-validity', '10000', secret=secret)
         if result.returncode:
             raise SystemExit('Could not create the private development signing key.')

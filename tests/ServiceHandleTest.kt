@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-import dev.netlens.ServiceHandle
+import io.github.kazands.networklens.ServiceHandle
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 

@@ -55,14 +55,16 @@ object SigningTest {
         } finally { password.fill('\u0000') }
     }
     private fun payload(path: Path): Map<String, String> = ZipFile(path.toFile()).use { zip ->
-        val oldSignature = setOf("META-INF/MANIFEST.MF", "META-INF/NETLENS.SF", "META-INF/NETLENS.RSA")
-        zip.entries().toList().filter { !it.isDirectory && it.name !in oldSignature }.associate { entry ->
+        val signature = Regex("META-INF/[^/]+\\.(SF|RSA|DSA|EC)")
+        zip.entries().toList().filter {
+            !it.isDirectory && it.name != "META-INF/MANIFEST.MF" && !signature.matches(it.name)
+        }.associate { entry ->
             entry.name to zip.getInputStream(entry).use { sha(it.readBytes()) }
         }
     }
     private fun tool(name: String): String {
         val sdk = Paths.get(System.getenv("ANDROID_SDK_ROOT") ?: project.resolve(".tools/sdk").toString())
-        val directories = System.getenv("NETLENS_BUILD_TOOLS")?.let { listOf(Paths.get(it)) }
+        val directories = System.getenv("NETWORK_LENS_BUILD_TOOLS")?.let { listOf(Paths.get(it)) }
             ?: listOf(sdk.resolve("android-16"), sdk.resolve("build-tools/36.0.0"))
         return directories.map { it.resolve(name) }.first { Files.isRegularFile(it) }.toString()
     }
@@ -78,7 +80,7 @@ object SigningTest {
         val keyDir = fixture.resolve(".tools/release-signing")
         val identity = fixture.resolve("android/release-signing.json")
         val receipt = keyDir.resolve("backup-verification.json")
-        val originalApk = project.resolve("artifacts/Network-Lens-0.3.9.apk")
+        val originalApk = project.resolve("artifacts/Network-Lens-0.3.10.apk")
         check(Files.isRegularFile(originalApk), "Build the development APK before these integration checks")
         val originalHash = sha(bytes(originalApk))
         expectedFailure("check")
@@ -86,15 +88,15 @@ object SigningTest {
         check(command("bash", fixture.resolve("scripts/build.sh").toString(), "--release").first != 0,
             "Release preflight fails before compilation when identity is missing")
         check(!Files.exists(fixture.resolve(".tools/build-release")), "Rejected release leaves build output untouched")
-        check(!Files.exists(fixture.resolve(".tools/netlens-development.jks")), "Rejected release does not automatically create a test key")
+        check(!Files.exists(fixture.resolve(".tools/network-lens-development.jks")), "Rejected release does not automatically create a test key")
         val keytool = Paths.get(System.getProperty("java.home")).resolve("bin/keytool").toString()
         check(command("python3", fixture.resolve("scripts/prepare-signing.py").toString(), "--keytool", keytool).first == 0,
             "Create a separate synthetic legacy test identity")
-        val testKey = fixture.resolve(".tools/netlens-development.jks")
-        val testPassword = fixture.resolve(".tools/netlens-signing-password")
+        val testKey = fixture.resolve(".tools/network-lens-development.jks")
+        val testPassword = fixture.resolve(".tools/network-lens-signing-password")
         val testKeyBytes = bytes(testKey); val testPasswordBytes = bytes(testPassword)
         secrets.add(text(testPassword).trim())
-        val testFingerprint = storeFingerprint(testKey, testPassword, "netlens", 2048)
+        val testFingerprint = storeFingerprint(testKey, testPassword, "network-lens", 2048)
         val init = cli("init")
         check(init.first == 0, "Explicit one-time initialization succeeds")
         check(Files.getPosixFilePermissions(keyDir) == privateDirectory, "Private signing directory is owner-only")

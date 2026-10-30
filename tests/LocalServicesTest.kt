@@ -5,8 +5,8 @@
     "DEPRECATION",
 )
 
-import dev.netlens.LocalServices
-import dev.netlens.MdnsPacket
+import io.github.kazands.networklens.LocalServices
+import io.github.kazands.networklens.MdnsPacket
 import java.util.Locale
 
 /** Native callback representation must match current wire data without widening wire syntax. */

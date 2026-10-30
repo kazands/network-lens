@@ -1,9 +1,9 @@
-package dev.netlens.test
+package io.github.kazands.networklens.test
 
 import android.app.Instrumentation
 import android.content.Intent
 import android.os.SystemClock
-import dev.netlens.*
+import io.github.kazands.networklens.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 

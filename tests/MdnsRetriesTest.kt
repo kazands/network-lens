@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-import dev.netlens.*
+import io.github.kazands.networklens.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 

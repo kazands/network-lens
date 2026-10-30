@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-package dev.netlens.test
+package io.github.kazands.networklens.test
 
 import android.app.*
 import android.content.*
@@ -17,7 +17,7 @@ import android.os.*
 import android.view.*
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.*
-import dev.netlens.*
+import io.github.kazands.networklens.*
 import java.io.*
 import java.lang.reflect.*
 import java.net.*
@@ -801,7 +801,7 @@ class SmokeInstrumentation : Instrumentation() {
             !((texts())!!.contains(phone6.ip)),
             "Rendered grouped details exclude the retired member",
         )
-        var updateType: Class<*> = Class.forName("dev.netlens.MainActivity\$ScanUpdate")
+        var updateType: Class<*> = Class.forName("io.github.kazands.networklens.MainActivity\$ScanUpdate")
         var update: Constructor<*> =
             updateType.getDeclaredConstructor(
                 Discovery::class.java,
@@ -881,7 +881,7 @@ class SmokeInstrumentation : Instrumentation() {
                 invoke("render")
             }
         )
-        var restoredMonitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var restoredMonitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         onMain(callback19@{ activity!!.recreate() })
         var restored: Activity? =
             nullablePlatformResult(waitForMonitorWithTimeout(restoredMonitor, 8000))
@@ -1100,7 +1100,7 @@ class SmokeInstrumentation : Instrumentation() {
         )
         settle()
         recoveryReachable("Retry cleanup")
-        var monitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var monitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         broken.credential = true
         broken.device = true
         click("Retry cleanup")
@@ -1221,7 +1221,7 @@ class SmokeInstrumentation : Instrumentation() {
     }
 
     private fun icmpPeerReceivePath(live: NetworkState, own: InetAddress): Unit {
-        var channelType: Class<*> = Class.forName("dev.netlens.AndroidIcmp\$SocketChannel")
+        var channelType: Class<*> = Class.forName("io.github.kazands.networklens.AndroidIcmp\$SocketChannel")
         var constructor: Constructor<*> =
             channelType.getDeclaredConstructor(
                 java.io.FileDescriptor::class.java,
@@ -2336,7 +2336,7 @@ class SmokeInstrumentation : Instrumentation() {
                 "A recovered instance does not create another native resolver request",
             )
             if ((Build.VERSION.SDK_INT >= 34)) {
-                var requestClass: Class<*> = Class.forName("dev.netlens.Discovery\$ModernRequest")
+                var requestClass: Class<*> = Class.forName("io.github.kazands.networklens.Discovery\$ModernRequest")
                 var ctor: Constructor<*> =
                     requestClass.getDeclaredConstructor(
                         NsdServiceInfo::class.java,
@@ -2480,7 +2480,7 @@ class SmokeInstrumentation : Instrumentation() {
                         (target.getResources())!!.getIdentifier(
                             ("ic_device_" + drawables[i]),
                             "drawable",
-                            "dev.netlens",
+                            "io.github.kazands.networklens",
                         )),
                     ("Correct Lucide role for " + d.kind),
                 )
@@ -2746,7 +2746,7 @@ class SmokeInstrumentation : Instrumentation() {
             "Stop closes the follow-up socket promptly",
         )
         if ((Build.VERSION.SDK_INT >= 34)) {
-            var requestClass: Class<*> = Class.forName("dev.netlens.Discovery\$ModernRequest")
+            var requestClass: Class<*> = Class.forName("io.github.kazands.networklens.Discovery\$ModernRequest")
             var ctor: Constructor<*> =
                 requestClass.getDeclaredConstructor(
                     NsdServiceInfo::class.java,
@@ -3058,7 +3058,7 @@ class SmokeInstrumentation : Instrumentation() {
             var updates: Discovery = Discovery(target, live)
             accepting.set(updates, true)
             enriching.set(updates, true)
-            var requestType: Class<*> = Class.forName("dev.netlens.Discovery\$ModernRequest")
+            var requestType: Class<*> = Class.forName("io.github.kazands.networklens.Discovery\$ModernRequest")
             var constructor: Constructor<*> =
                 requestType.getDeclaredConstructor(
                     NsdServiceInfo::class.java,
@@ -4665,7 +4665,7 @@ class SmokeInstrumentation : Instrumentation() {
 
     private fun launch(demo: Boolean): Activity {
         return startActivitySync(
-            ((Intent(Intent.ACTION_MAIN).setClassName("dev.netlens", "dev.netlens.MainActivity"))!!
+            ((Intent(Intent.ACTION_MAIN).setClassName("io.github.kazands.networklens", "io.github.kazands.networklens.MainActivity"))!!
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))!!
                 .putExtra("demo", demo)
         )
@@ -4699,7 +4699,7 @@ class SmokeInstrumentation : Instrumentation() {
         while ((SystemClock.uptimeMillis() < until)) {
             var active: AccessibilityNodeInfo? =
                 nullablePlatformResult((getUiAutomation())!!.getRootInActiveWindow())
-            if (((active !== null) && !("dev.netlens".contentEquals(active.getPackageName())))) {
+            if (((active !== null) && !("io.github.kazands.networklens".contentEquals(active.getPackageName())))) {
                 moved = true
                 break
             }
@@ -4810,7 +4810,7 @@ class SmokeInstrumentation : Instrumentation() {
         )
         var endpoints: Int = (store.devices(live.key))!!.size
         check((endpoints > 0), "Completed foreground scan saves live endpoint observations")
-        var monitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var monitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         onMain(callback96@{ activity!!.recreate() })
         var replacement: Activity? =
             nullablePlatformResult(waitForMonitorWithTimeout(monitor, 8000))
@@ -4862,7 +4862,7 @@ class SmokeInstrumentation : Instrumentation() {
             "No background scan refreshes the stopped result",
         )
         target.startActivity(
-            (Intent(Intent.ACTION_MAIN).setClassName("dev.netlens", "dev.netlens.MainActivity"))!!
+            (Intent(Intent.ACTION_MAIN).setClassName("io.github.kazands.networklens", "io.github.kazands.networklens.MainActivity"))!!
                 .addFlags(
                     ((Intent.FLAG_ACTIVITY_NEW_TASK).toInt() or
                         (Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).toInt())
@@ -4903,7 +4903,7 @@ class SmokeInstrumentation : Instrumentation() {
         var target: Context = getTargetContext()
         var store: Store = Store(target)
         store.clear()
-        var prefs: SharedPreferences = target.getSharedPreferences("netlens", 0)
+        var prefs: SharedPreferences = target.getSharedPreferences("network_lens", 0)
         ((((prefs.edit())!!.putBoolean("monitor", true))!!.putString("devices:legacy", "[]"))!!
                 .putString("events:legacy", "[]"))!!
             .commit()
@@ -4969,7 +4969,7 @@ class SmokeInstrumentation : Instrumentation() {
         )
         var pkg: PackageInfo =
             (target.getPackageManager())!!.getPackageInfo(
-                "dev.netlens",
+                "io.github.kazands.networklens",
                 ((((((((PackageManager.GET_ACTIVITIES).toInt() or
                                 (PackageManager.GET_SERVICES).toInt()))
                             .toInt() or (PackageManager.GET_RECEIVERS).toInt()))
@@ -6074,7 +6074,7 @@ class SmokeInstrumentation : Instrumentation() {
             else current.findAccessibilityNodeInfosByText(expected))
         check(
             ((matches)!!.stream())!!.anyMatch(
-                callback133@{ n -> "dev.netlens".contentEquals(n.getPackageName()) }
+                callback133@{ n -> "io.github.kazands.networklens".contentEquals(n.getPackageName()) }
             ),
             ((("Capture shows intended DeviceLens state: " + name) + "; root=") +
                 ((if ((current === null)) "null" else current.getPackageName()))),
@@ -6635,7 +6635,7 @@ class SmokeInstrumentation : Instrumentation() {
     }
 
     private fun legacyFile(c: Context): java.io.File {
-        return java.io.File(c.getDataDir(), "shared_prefs/netlens.xml")
+        return java.io.File(c.getDataDir(), "shared_prefs/network_lens.xml")
     }
 
     private fun noLegacyFiles(c: Context): Boolean {
@@ -6750,7 +6750,7 @@ class SmokeInstrumentation : Instrumentation() {
     private fun branding(): Unit {
         var c: Context = getTargetContext()
         var info: android.content.pm.ApplicationInfo =
-            (c.getPackageManager())!!.getApplicationInfo("dev.netlens", 0)
+            (c.getPackageManager())!!.getApplicationInfo("io.github.kazands.networklens", 0)
         check(
             ((info.loadLabel(c.getPackageManager()))!!.toString())!!.equals("Network Lens"),
             "Installed launcher and settings label is Network Lens",
@@ -7033,7 +7033,7 @@ class SmokeInstrumentation : Instrumentation() {
         var c: Context = getTargetContext()
         for (storage in arrayOf(c, c.createDeviceProtectedStorageContext())) {
             check(
-                ((((((storage.getSharedPreferences("netlens", 0))!!.edit())!!.putBoolean(
+                ((((((storage.getSharedPreferences("network_lens", 0))!!.edit())!!.putBoolean(
                                     "dark",
                                     true,
                                 ))!!
@@ -7136,7 +7136,7 @@ class SmokeInstrumentation : Instrumentation() {
                 )
             }
         )
-        var monitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var monitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         onMain(callback165@{ activity!!.recreate() })
         var replacement: Activity? =
             nullablePlatformResult(waitForMonitorWithTimeout(monitor, 8000))
@@ -7244,7 +7244,7 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         var before: Int = (((field("settingsScroll") as ScrollView?)))!!.getScrollY()
         check((before > 100), "Settings is genuinely scrolled before recreation")
-        var monitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var monitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         onMain(callback169@{ activity!!.recreate() })
         var replacement: Activity? =
             nullablePlatformResult(waitForMonitorWithTimeout(monitor, 8000))
@@ -7381,7 +7381,7 @@ class SmokeInstrumentation : Instrumentation() {
                 (texts())!!.contains(
                     ("Version " +
                         (((getTargetContext())!!.getPackageManager())!!.getPackageInfo(
-                                "dev.netlens",
+                                "io.github.kazands.networklens",
                                 0,
                             ))!!
                             .versionName)
@@ -7610,7 +7610,7 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         var savedSettingsY: Int = (((field("settingsScroll") as ScrollView?)))!!.getScrollY()
         check((savedSettingsY > 100), "Settings is scrolled before recreation")
-        var monitor: ActivityMonitor = addMonitor("dev.netlens.MainActivity", null, false)
+        var monitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
         onMain(callback190@{ activity!!.recreate() })
         var replacement: Activity? =
             nullablePlatformResult(waitForMonitorWithTimeout(monitor, 8000))
@@ -7825,7 +7825,7 @@ class SmokeInstrumentation : Instrumentation() {
                 (store.report(live.key) === null)),
             "Deletion rejects stale inventory and status together",
         )
-        var prefs: SharedPreferences = target.getSharedPreferences("netlens", 0)
+        var prefs: SharedPreferences = target.getSharedPreferences("network_lens", 0)
         (((((prefs.edit())!!.putString("inventory-network", live.key))!!.putString(
                         "inventory",
                         "[]",

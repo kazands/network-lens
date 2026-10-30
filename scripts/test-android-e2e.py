@@ -33,11 +33,11 @@ test_apk = root / '.tools/android-tests/tests.apk'
 test_digest = hashlib.sha256(test_apk.read_bytes()).hexdigest()
 print(run(['install', '--no-incremental', '-r', str(apk)]), flush=True)
 print(run(['install', '--no-incremental', '-r', str(root / '.tools/android-tests/tests.apk')]), flush=True)
-installed = run(['shell', 'pm', 'path', 'dev.netlens']).strip()
+installed = run(['shell', 'pm', 'path', 'io.github.kazands.networklens']).strip()
 assert installed.startswith('package:/data/app/') and installed.endswith('/base.apk'), installed
 installed_digest = run(['shell', 'sha256sum', installed[len('package:'):]]).split()[0]
 assert installed_digest == digest, 'Installed release differs from the APK under test'
-installed_test = run(['shell', 'pm', 'path', 'dev.netlens.test']).strip()
+installed_test = run(['shell', 'pm', 'path', 'io.github.kazands.networklens.test']).strip()
 assert installed_test.startswith('package:/data/app/') and installed_test.endswith('/base.apk')
 assert run(['shell', 'sha256sum', installed_test[len('package:'):]]).split()[0] == test_digest, 'Installed test APK differs from the test binary under review'
 results = []
@@ -46,15 +46,15 @@ for mode in args.modes.split(','):
     began = time.monotonic()
     try:
         assert hashlib.sha256(apk.read_bytes()).hexdigest() == digest, 'APK changed during matrix'
-        run(['shell', 'am', 'force-stop', 'dev.netlens'])
+        run(['shell', 'am', 'force-stop', 'io.github.kazands.networklens'])
         if api >= 37 and mode not in ('permission', 'icmp-denied'):
-            run(['shell', 'pm', 'grant', 'dev.netlens', 'android.permission.ACCESS_LOCAL_NETWORK'])
+            run(['shell', 'pm', 'grant', 'io.github.kazands.networklens', 'android.permission.ACCESS_LOCAL_NETWORK'])
         permissions = ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION'] if mode == 'wifi-name' else ['android.permission.ACCESS_LOCAL_NETWORK'] if mode in ('permission', 'icmp-denied') else []
         for permission in permissions:
-            run(['shell', 'pm', 'revoke', 'dev.netlens', permission])
+            run(['shell', 'pm', 'revoke', 'io.github.kazands.networklens', permission])
             if api >= 28:
-                run(['shell', 'pm', 'clear-permission-flags', 'dev.netlens', permission, 'user-set', 'user-fixed'])
-        stream = run(['shell', 'am', 'instrument', '-w', '-e', 'mode', mode, 'dev.netlens.test/dev.netlens.test.SmokeInstrumentation'], 420)
+                run(['shell', 'pm', 'clear-permission-flags', 'io.github.kazands.networklens', permission, 'user-set', 'user-fixed'])
+        stream = run(['shell', 'am', 'instrument', '-w', '-e', 'mode', mode, 'io.github.kazands.networklens.test/io.github.kazands.networklens.test.SmokeInstrumentation'], 420)
         (output / (mode + '-api' + str(api) + '.txt')).write_text(stream)
         match = re.search(r'PASS · (\d+) Android checks', stream)
         passed = bool(match) and 'FAIL' not in stream and 'INSTRUMENTATION_FAILED' not in stream
@@ -64,7 +64,7 @@ for mode in args.modes.split(','):
         result = {'mode': mode, 'status': 'FAIL', 'error': str(error), 'seconds': round(time.monotonic() - began)}
         (output / (mode + '-api' + str(api) + '.txt')).write_text(str(error))
         print('FAIL: ' + mode + ': ' + str(error), flush=True)
-        run(['shell', 'am', 'force-stop', 'dev.netlens'])
+        run(['shell', 'am', 'force-stop', 'io.github.kazands.networklens'])
     results.append(result)
     report = {'version': version, 'apkSha256': digest, 'androidAPI': api, 'target': 'isolated emulator', 'installedHashVerified': True, 'testApkSha256': test_digest, 'results': results, 'plannedModes': args.modes.split(','), 'completed': len(results) == len(args.modes.split(',')), 'status': ('PASS' if all(r['status'] == 'PASS' for r in results) else 'FAIL') if len(results) == len(args.modes.split(',')) else 'RUNNING', 'totalChecks': sum(r.get('checks', 0) for r in results)}
     (output / ('matrix-api' + str(api) + '.json')).write_text(json.dumps(report, indent=2) + '\n')

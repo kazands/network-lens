@@ -1,5 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.netlens.test">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="io.github.kazands.networklens.test">
 <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="37" />
 <application android:label="DeviceLens tests" />
-<instrumentation android:name=".SmokeInstrumentation" android:targetPackage="dev.netlens" android:functionalTest="true" />
+<instrumentation android:name=".SmokeInstrumentation" android:targetPackage="io.github.kazands.networklens" android:functionalTest="true" />
 </manifest>

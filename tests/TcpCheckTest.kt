@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-import dev.netlens.TcpCheck
+import io.github.kazands.networklens.TcpCheck
 import java.io.*
 import java.util.concurrent.atomic.*
 

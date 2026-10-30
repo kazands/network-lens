@@ -5,7 +5,7 @@
     "DEPRECATION",
 )
 
-import dev.netlens.IpRange
+import io.github.kazands.networklens.IpRange
 
 object IpRangeTest {
     var checks: Int = 0

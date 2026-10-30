@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "dev.netlens"
+    namespace = "io.github.kazands.networklens"
     compileSdk = 37
     buildToolsVersion = "36.0.0"
     defaultConfig {
-        applicationId = "dev.netlens"
+        applicationId = "io.github.kazands.networklens"
         minSdk = 26
         targetSdk = 37
-        versionCode = 37
-        versionName = "0.3.9"
+        versionCode = 38
+        versionName = "0.3.10"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

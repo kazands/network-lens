@@ -33,4 +33,4 @@ cp "$TEST_DIR/resources.apk" "$TEST_DIR/unsigned.apk"
 (cd "$TEST_DIR/dex" && zip -q "$TEST_DIR/unsigned.apk" classes.dex)
 "$TOOLS/zipalign" -f -p 4 "$TEST_DIR/unsigned.apk" "$TEST_DIR/aligned.apk"
 python3 scripts/prepare-signing.py --keytool "${JAVA_BIN}keytool"
-"$TOOLS/apksigner" sign --ks .tools/netlens-development.jks --ks-key-alias netlens --ks-pass file:.tools/netlens-signing-password --out "$TEST_DIR/tests.apk" "$TEST_DIR/aligned.apk"
+"$TOOLS/apksigner" sign --ks .tools/network-lens-development.jks --ks-key-alias network-lens --ks-pass file:.tools/network-lens-signing-password --out "$TEST_DIR/tests.apk" "$TEST_DIR/aligned.apk"
