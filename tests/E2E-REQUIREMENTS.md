@@ -22,6 +22,7 @@ This checklist records the focused app agreed in the conversation. Results belon
 | R16 | Remain usable with larger text and different orientations. | Native 200 percent text, scrolling, landscape, bounded dialogs, visible fixed actions and reachable final menu entry. This is not a formal TalkBack certification. |
 | R17 | Minimize permissions and protect local data. | Exact seven-permission allowlist; no background location/ads/analytics/storage permission; no app-written scan files, database, preferences, history or logs; legacy preferences/backups removed; no user-data Bundle restoration; backup/transfer exclusions; one exported launcher; malicious-input and session-fencing regressions. |
 | R18 | Run on supported Android versions and update compatibly. | Minimum API26, modern API36/37 runtime matrices, signing/package checks, retained certificate, compatible physical-phone update preserving Android grants while removing prior app-stored data. |
+| R19 | Keep production, Play upload and test signing identities separate. | Explicit one-time generation; preserved test credentials; pinned role certificates; owner-only files; independent downloaded backup copies that open successfully; release preflight rejects missing/wrong keys and stale receipts; app payload equality; emulator install/update certificate checks. The first test-to-production transition requires an explicitly authorized reinstall. |
 
 ## Boundaries
 
@@ -107,3 +108,10 @@ Normalize native Android service types with a single leading separator, missing 
 - Scan details name failed/incomplete methods near the top, remain Partial, preserve collapsed technical details, and work in both themes and large text.
 - A later complete scan removes the previous failure summary; no previous scan or history is retained.
 - Real phone repeats must capture every failed/incomplete source and reason before continuing, or stop with the current scan intact.
+
+## Scan efficiency (0.3.8)
+
+- Reuse only fresh, validated responses from the current Discovery instance. Native cached candidates, earlier scans, withdrawn scope and cancelled work cannot substitute for confirmation. Preserve independent name/MAC/model enrichment and unknown values.
+- Keep all retry, deadline, network-binding and two-connection TCP confirmation guards. Report actual attempted echo work separately from addresses covered by another current response.
+- Coalesce progress before copying/grouping device lists. Stale operations, reset tokens and post-terminal progress must not evaluate deferred snapshots. The final frozen list must reach the UI without being replaced by older work.
+- Compare controlled before/after work counts and identical synthetic data, plus aggregate real-device timings when available. State instrumentation overhead and changing-network limits; do not call a Partial scan complete or infer an overall speedup from a synthetic burst alone.

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "applicationId": "dev.netlens",
+  "testCertificateSha256": "d727e14948df2d2508a31ba875d0062a081ba335b201dff9bab03708fd6a6989",
+  "roles": {
+    "app": {
+      "alias": "network-lens-app",
+      "certificateSha256": "5b818d9d22d7e9fc93eaee23bfe4adb94c42c5e9f8dce2e98f0d78960c035ae3",
+      "keystoreFile": "network-lens-app-signing.p12",
+      "passwordFile": "network-lens-app-signing-password"
+    },
+    "upload": {
+      "alias": "network-lens-upload",
+      "certificateSha256": "c18d428d1b898ac3a07bacfd6b9bb4893a6d09b96d15651e221622a213a85ad2",
+      "keystoreFile": "network-lens-upload.p12",
+      "passwordFile": "network-lens-upload-password"
+    }
+  }
+}

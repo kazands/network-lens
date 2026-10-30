@@ -15,13 +15,17 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The APK appears under `artifacts/Network-Lens-0.3.7.apk`, with a checksum and permission/security audit outputs. Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The APK appears under `artifacts/Network-Lens-0.3.8.apk`, with a checksum and permission/security audit outputs. Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
 On a fresh checkout, `prepare-signing.py` creates a local development key and random password in `.tools`, with restrictive file permissions. It never prints the password. Do not commit either file. Keep any key you depend on in a secure backup that you control.
 
 A new key cannot update an installation signed by another key. Do not replace or delete an existing signing key to resolve an install failure. Contributor-built APKs are unofficial; no official binary release is currently published here. Source licensing is GPL-3.0-only with third-party exceptions described in NOTICE.
+
+Maintainer release APKs use a separate pinned app-signing identity and verified recovery receipt. Run `bash scripts/build.sh --release`; output goes under `artifacts/release/`, preserving development outputs. Release builds never create keys. A separate upload identity is prepared for future Play enrollment. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md) for private files, backup verification, migration and remaining Play work.
+
+`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 19 application host suites below.
 
 ## Host suites
 
@@ -38,7 +42,7 @@ Install Android platform-tools and an appropriate emulator/system image through 
 ```sh
 bash scripts/build-android-tests.sh
 python3 scripts/test-android-e2e.py --serial emulator-5554 \
-  --modes failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
+  --modes scan-efficiency,failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
   --output artifacts/local-emulator-check
 ```
 

@@ -10,7 +10,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--serial', required=True)
-parser.add_argument('--modes', default='split-mdns,homekit,branding,session-only,session-cold,fresh-presence,mac-vendors,details-upgrade,service-retries,resolver-upgrade,engine-upgrade,icmp,full,grouping,identification,discovery-upgrade,ws-discovery,navigation,scan-details,options,wifi-name')
+parser.add_argument('--modes', default='scan-efficiency,split-mdns,homekit,branding,session-only,session-cold,fresh-presence,mac-vendors,details-upgrade,service-retries,resolver-upgrade,engine-upgrade,icmp,full,grouping,identification,discovery-upgrade,ws-discovery,navigation,scan-details,options,wifi-name')
 parser.add_argument('--output', required=True)
 args = parser.parse_args()
 if not re.fullmatch(r'emulator-[0-9]+', args.serial):

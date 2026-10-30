@@ -2,7 +2,7 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-**Development preview: 0.3.7.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play. No official APK release is published in this repository yet.
+**Development preview: 0.3.8.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play. No official APK release is published in this repository yet.
 
 ## What it does
 
@@ -36,6 +36,8 @@ bash scripts/build.sh
 ```
 
 Outputs and downloaded tools are ignored by Git. A fresh checkout creates its own local development signing key, which cannot update an installation signed by a different key.
+
+The maintainer's direct release build uses `bash scripts/build.sh --release`, a separate pinned app-signing key and verified recovery receipt. Its APK and audits go under `artifacts/release/`. Private credentials are never supplied by this repository. See [release signing](docs/RELEASE-SIGNING.md); Google Play enrollment and a verified App Bundle build remain separate work.
 
 ## Permissions
 

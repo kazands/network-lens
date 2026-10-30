@@ -2,7 +2,7 @@
 """Black-box Wi-Fi loss/recovery journey. Isolated emulators only."""
 from pathlib import Path
 import argparse,hashlib,json,re,subprocess,time,xml.etree.ElementTree as E
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('--serial',required=True);p.add_argument('--version',default='0.3.7');p.add_argument('--output',required=True);a=p.parse_args()
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('--serial',required=True);p.add_argument('--version',default='0.3.8');p.add_argument('--output',required=True);a=p.parse_args()
 assert re.fullmatch(r'emulator-[0-9]+',a.serial),'Physical devices are forbidden'
 root=Path(__file__).resolve().parent.parent;adb=root/'.tools/sdk/platform-tools/adb';out=root/a.output;out.mkdir(parents=True,exist_ok=True);checks=[]
 def run(*args):return subprocess.check_output([str(adb),'-s',a.serial,*args],timeout=40).decode()

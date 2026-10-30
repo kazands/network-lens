@@ -2,6 +2,17 @@
 set -euo pipefail
 umask 077
 cd "$(dirname "$0")/.."
+BUILD_MODE=development
+if [[ $# -eq 1 && "$1" == --release ]]; then
+    BUILD_MODE=release
+elif [[ $# -ne 0 ]]; then
+    echo 'Usage: bash scripts/build.sh [--release]' >&2
+    exit 1
+fi
+if [[ "$BUILD_MODE" == release ]]; then
+    # Validate the pinned key and recovery receipt before any build work or downloads.
+    python3 scripts/release-signing.py check --role app
+fi
 SDK_DIR="${ANDROID_SDK_ROOT:-$PWD/.tools/sdk}"
 BUILD_TOOLS="${NETLENS_BUILD_TOOLS:-$SDK_DIR/android-16}"
 if [[ ! -x "$BUILD_TOOLS/aapt2" ]]; then BUILD_TOOLS="$SDK_DIR/build-tools/36.0.0"; fi
@@ -11,6 +22,9 @@ JAVA_BIN="${JAVA_HOME:+$JAVA_HOME/bin/}"
 if ! command -v "${JAVA_BIN}javac" >/dev/null; then echo 'Set JAVA_HOME to a full JDK 17 or later.' >&2; exit 1; fi
 if [[ ! -f "$PLATFORM" || ! -x "$BUILD_TOOLS/aapt2" ]]; then echo 'Android SDK platform 37.0 and build-tools 36.0.0 are required. See README.md.' >&2; exit 1; fi
 BUILD_DIR="$PWD/.tools/build"
+APK_DIR="$PWD/artifacts"
+if [[ "$BUILD_MODE" == release ]]; then BUILD_DIR="$PWD/.tools/build-release"; APK_DIR="$PWD/artifacts/release"; fi
+APK_PATH="$APK_DIR/Network-Lens-0.3.8.apk"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" artifacts
 # Remove only this script's generated output so removed source files cannot survive a rebuild.
 find "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" -type f -delete
@@ -35,11 +49,15 @@ cp "$BUILD_DIR/resources.apk" "$BUILD_DIR/unsigned.apk"
 (cd "$BUILD_DIR/dex" && zip -q "$BUILD_DIR/unsigned.apk" classes*.dex)
 "$BUILD_TOOLS/zipalign" -f -p 4 "$BUILD_DIR/unsigned.apk" "$BUILD_DIR/aligned.apk"
 KEYSTORE="$PWD/.tools/netlens-development.jks"
-python3 scripts/prepare-signing.py --keytool "${JAVA_BIN}keytool"
 PASSWORD_FILE="$PWD/.tools/netlens-signing-password"
-"$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias netlens --ks-pass "file:$PASSWORD_FILE" --out artifacts/Network-Lens-0.3.7.apk "$BUILD_DIR/aligned.apk"
-"$BUILD_TOOLS/apksigner" verify --verbose artifacts/Network-Lens-0.3.7.apk
-python3 scripts/check-permissions.py artifacts/Network-Lens-0.3.7.apk --aapt "$BUILD_TOOLS/aapt" --output artifacts/permissions-audit.json
-python3 scripts/check-security.py artifacts/Network-Lens-0.3.7.apk --aapt "$BUILD_TOOLS/aapt" --output artifacts/security-audit.json
-sha256sum artifacts/Network-Lens-0.3.7.apk > artifacts/Network-Lens-0.3.7.apk.sha256
-ls -lh artifacts/Network-Lens-0.3.7.apk
+if [[ "$BUILD_MODE" == release ]]; then
+    python3 scripts/release-signing.py sign-apk --input "$BUILD_DIR/aligned.apk" --output "$APK_PATH"
+else
+    python3 scripts/prepare-signing.py --keytool "${JAVA_BIN}keytool"
+    "$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias netlens --ks-pass "file:$PASSWORD_FILE" --out "$APK_PATH" "$BUILD_DIR/aligned.apk"
+fi
+"$BUILD_TOOLS/apksigner" verify --verbose "$APK_PATH"
+python3 scripts/check-permissions.py "$APK_PATH" --aapt "$BUILD_TOOLS/aapt" --output "$APK_DIR/permissions-audit.json"
+python3 scripts/check-security.py "$APK_PATH" --aapt "$BUILD_TOOLS/aapt" --output "$APK_DIR/security-audit.json"
+sha256sum "$APK_PATH" > "$APK_PATH.sha256"
+ls -lh "$APK_PATH"

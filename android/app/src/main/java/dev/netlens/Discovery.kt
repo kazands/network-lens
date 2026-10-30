@@ -21,6 +21,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val networkCheck: NetworkCheck = NetworkCheck { context, network -> network.check(context) }) {
     interface Listener {
         fun progress(done: Int, total: Int, devices: List<Device>)
+        /** Consumers that coalesce updates can defer copying until delivery is needed. */
+        fun progressSnapshot(done: Int, total: Int, devices: () -> List<Device>) = progress(done, total, devices())
         fun finished(devices: List<Device>, complete: Boolean, message: String)
     }
     fun interface EchoFactory {
@@ -35,6 +37,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val cancelled = AtomicBoolean()
     private val found: ConcurrentMap<String, Device> = ConcurrentHashMap()
     private val freshResponders: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val echoAttempted = AtomicBoolean()
     @Volatile private var phase = "Finishing device details…"
     fun phase(): String = phase
     private val sockets: MutableSet<Socket> = ConcurrentHashMap.newKeySet()
@@ -180,20 +183,20 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 total = hosts.size; started = true; accepting = true; enriching = true
                 health.begin("IPv4 checks"); health.skipped("UPnP descriptions", "No supported description advertised")
                 observePhoneAddresses(net.addresses)
-                listener.progress(0, total, snapshot())
+                listener.progressSnapshot(0, total, ::snapshot)
                 val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(55)
                 scanDeadline = deadline
                 health.skipped(IPV6_SOURCE, "No separate IPv6 echo checks were needed")
                 startNsd(); startMdns(); startSsdp(); startSadp(); startWsDiscovery()
                 val echoTargets = hosts.any { it != net.ip }
-                if (echoTargets) health.begin(ICMP_SOURCE) else health.skipped(ICMP_SOURCE, "No other IPv4 addresses in this range")
+                health.skipped(ICMP_SOURCE, if (echoTargets) "Echo checks are used for unconfirmed addresses" else "No other IPv4 addresses in this range")
                 val count = total
                 val jobs = ArrayList<Future<*>>()
                 for (host in hosts) jobs.add(workers.submit {
                     if (cancelled.get()) return@submit
                     if (host != net.ip) probe(host, 160, 220)
                     val n = done.incrementAndGet()
-                    if (n % 8 == 0 || n == count) listener.progress(n, count, snapshot())
+                    if (n % 8 == 0 || n == count) listener.progressSnapshot(n, count, ::snapshot)
                 })
                 awaitJobs(jobs, deadline, "IPv4 checks")
                 if (!cancelled.get()) {
@@ -210,18 +213,18 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (unanswered.isNotEmpty() || metadata.isNotEmpty()) {
                         if (deadline - System.nanoTime() > TimeUnit.SECONDS.toNanos(8)) {
                             phase = "Checking unanswered devices…"; health.begin(retrySource)
-                            listener.progress(done.get(), count, snapshot())
+                            listener.progressSnapshot(done.get(), count, ::snapshot)
                             val retry = ArrayList<Future<*>>()
                             val retried = AtomicInteger()
                             for (host in unanswered) retry.add(workers.submit {
                                 if (cancelled.get()) return@submit
                                 health.count(retrySource, "reachability retries"); probe(host, 250, 400)
-                                if (retried.incrementAndGet() % 8 == 0) listener.progress(done.get(), count, snapshot())
+                                if (retried.incrementAndGet() % 8 == 0) listener.progressSnapshot(done.get(), count, ::snapshot)
                             })
                             for (host in metadata) retry.add(workers.submit {
                                 if (cancelled.get()) return@submit
                                 found[host]?.let { d -> health.count(retrySource, "name/MAC retries"); enrichNetBios(host, d, 400) }
-                                if (retried.incrementAndGet() % 8 == 0) listener.progress(done.get(), count, snapshot())
+                                if (retried.incrementAndGet() % 8 == 0) listener.progressSnapshot(done.get(), count, ::snapshot)
                             })
                             awaitJobs(retry, deadline - TimeUnit.SECONDS.toNanos(5), retrySource)
                             if (!cancelled.get()) health.ok(retrySource)
@@ -229,7 +232,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     } else health.skipped(retrySource, "All checked addresses already responded with details")
                     phase = "Finishing device details…"
                 }
-                if (!cancelled.get() && echoTargets) health.ok(ICMP_SOURCE)
+                if (!cancelled.get() && echoAttempted.get()) health.ok(ICMP_SOURCE)
                 workers.shutdown()
                 if (!cancelled.get()) {
                     if (done.get() == total) health.ok("IPv4 checks")
@@ -238,7 +241,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     while (!cancelled.get() && (System.nanoTime() < cutoff || ipv6Pending.get() > 0 && System.nanoTime() < deadline)) {
                         val now = System.nanoTime()
                         if (now >= nsdStarted + TimeUnit.SECONDS.toNanos(10) && !health.pending() && !mdnsPending() && ipv6Pending.get() == 0 && now - lastServiceChange > TimeUnit.MILLISECONDS.toNanos(1500)) break
-                        listener.progress(done.get(), total, snapshot()); Thread.sleep(250)
+                        listener.progressSnapshot(done.get(), total, ::snapshot); Thread.sleep(250)
                     }
                     if (mdnsPending()) health.truncated(MDNS_SOURCE, "Local device details did not finish before the scan ended")
                     accepting = false
@@ -246,7 +249,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     wsThread?.let { it.join(500); if (it.isAlive) health.truncated(WSD_SOURCE, "Discovery window did not finish") }
                     health.closeBrowseWindow(); cleanupNsd(); enrichment.shutdown()
                     while (!cancelled.get() && !enrichment.isTerminated() && System.nanoTime() < deadline) {
-                        listener.progress(done.get(), total, snapshot()); enrichment.awaitTermination(250, TimeUnit.MILLISECONDS)
+                        listener.progressSnapshot(done.get(), total, ::snapshot); enrichment.awaitTermination(250, TimeUnit.MILLISECONDS)
                     }
                     if (!enrichment.isTerminated()) { health.truncated("Device enrichment", "Scan time limit reached"); enriching = false }
                     mdnsThread?.let { it.join(500); if (it.isAlive) health.truncated(MDNS_SOURCE, "Query window did not finish") }
@@ -382,6 +385,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     }
     private fun probe(host: String, connectTimeout: Int, nameTimeout: Int) {
         if (cancelled.get()) return
+        if (useFreshResponse(host, connectTimeout, nameTimeout)) return
         val echo = echo(host, if (connectTimeout == 160) 200 else 300)
         if (cancelled.get() || echo.status == IcmpEcho.Status.CANCELLED) return
         val d = if (echo.status == IcmpEcho.Status.REPLIED) observe(host, "ICMP echo response") else null
@@ -389,8 +393,10 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             synchronized(d) { d.detail("ICMP response time", if (echo.latencyMillis == 0L) "Less than 1 ms" else "" + echo.latencyMillis + " ms") }
             queryDeviceName(d); queueDetails(d, connectTimeout, nameTimeout); return
         }
+        if (useFreshResponse(host, connectTimeout, nameTimeout)) return
         for (port in PORTS) {
             if (cancelled.get()) return
+            if (useFreshResponse(host, connectTimeout, nameTimeout)) return
             val result = confirmTcp(peerAddress(host), port, connectTimeout, "IPv4 checks")
             if (result.status == TcpCheck.Status.CANCELLED) return
             if (result.status != TcpCheck.Status.CONFIRMED) continue
@@ -400,7 +406,18 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             }
             return
         }
-        if (!cancelled.get()) enrichNetBios(host, null, nameTimeout)
+        if (!cancelled.get() && !useFreshResponse(host, connectTimeout, nameTimeout)) enrichNetBios(host, null, nameTimeout)
+    }
+    /** Only a response already validated by this scan can replace another presence probe. */
+    private fun useFreshResponse(host: String, connectTimeout: Int, nameTimeout: Int): Boolean {
+        if (cancelled.get() || !enriching || !freshResponders.contains(host)) return false
+        val device = found[host] ?: return false
+        if (!inScope(peerAddress(host))) return false
+        health.count("IPv4 checks", "already answered this scan")
+        queryDeviceName(device)
+        // Presence reuse does not discard the independent name/MAC/port work.
+        if (!device.self) queueDetails(device, connectTimeout, nameTimeout)
+        return true
     }
     private fun peerAddress(host: String): InetAddress = try { InetAddress.getByName(host) }
         catch (e: UnknownHostException) { throw IllegalArgumentException("Invalid scan address", e) }
@@ -423,6 +440,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         return result
     }
     private fun echo(host: String, timeout: Int): IcmpEcho.Result {
+        echoAttempted.set(true); health.begin(ICMP_SOURCE)
         health.count(ICMP_SOURCE, "probes")
         val result = IcmpEcho.probe({
             val target = InetAddress.getByName(host)

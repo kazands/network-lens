@@ -45,8 +45,11 @@ class MainActivity : Activity() {
     private var lastPrepared = 0L
     private val rowCache = HashMap<String, DeviceRow>()
     private var rowPanel: LinearLayout? = null
-    private class ScanUpdate(val operation: Discovery, val token: Long, val sequence: Long, val done: Int, val total: Int, val raw: List<Device>, val finished: Boolean, val message: String) {
+    private class ScanUpdate(val operation: Discovery, val token: Long, val sequence: Long, val done: Int, val total: Int, val snapshot: () -> List<Device>, val finished: Boolean, val message: String) {
+        var raw: List<Device> = emptyList()
         var groups: List<Device> = emptyList()
+        constructor(operation: Discovery, token: Long, sequence: Long, done: Int, total: Int, raw: List<Device>, finished: Boolean, message: String) :
+            this(operation, token, sequence, done, total, { raw }, finished, message) { this.raw = raw }
     }
     private var selected: Device? = null
     private val expandedDetails = HashSet<String>()
@@ -609,23 +612,28 @@ class MainActivity : Activity() {
         scanning = true; selected = null; done = 0; total = 0; devices = ArrayList(); message = ""; render()
         operation.scan(range, object : Discovery.Listener {
             override fun progress(n: Int, size: Int, found: List<Device>) { offerScan(operation, token, n, size, found, false, "") }
+            override fun progressSnapshot(n: Int, size: Int, devices: () -> List<Device>) { offerScanSnapshot(operation, token, n, size, devices, false, "") }
             override fun finished(found: List<Device>, complete: Boolean, summary: String) { offerScan(operation, token, done, total, found, true, summary) }
         })
     }
     /** One latest input, one grouped result and one main-thread delivery, independent of callback rate. */
     private fun offerScan(operation: Discovery, token: Long, n: Int, size: Int, found: List<Device>, finished: Boolean, summary: String) {
+        offerScanSnapshot(operation, token, n, size, { found }, finished, summary)
+    }
+    private fun offerScanSnapshot(operation: Discovery, token: Long, n: Int, size: Int, snapshot: () -> List<Device>, finished: Boolean, summary: String) {
         synchronized(updateLock) {
             if (destroyed || presentation.isShutdown || discovery !== operation || !store.isCurrent(token)) return
             if (queuedOperation !== operation) { queuedOperation = operation; terminalQueued = false }
             if (terminalQueued) return
             if (finished) terminalQueued = true
-            pendingInput = ScanUpdate(operation, token, ++nextSequence, n, size, found, finished, summary)
+            pendingInput = ScanUpdate(operation, token, ++nextSequence, n, size, snapshot, finished, summary)
             if (!preparing) { preparing = true; presentation.schedule({ prepareScan() }, maxOf(0, 250 - (SystemClock.uptimeMillis() - lastPrepared)), TimeUnit.MILLISECONDS) }
         }
     }
     private fun prepareScan() {
         val next = synchronized(updateLock) { val value = pendingInput; pendingInput = null; lastPrepared = SystemClock.uptimeMillis(); value }
         if (next != null && discovery === next.operation && store.isCurrent(next.token)) {
+            next.raw = next.snapshot()
             next.groups = Device.grouped(next.raw)
             synchronized(updateLock) {
                 if (discovery === next.operation && store.isCurrent(next.token)) pendingDisplay = next

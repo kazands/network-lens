@@ -1,6 +1,10 @@
 # Development status
 
-Network Lens 0.3.7 is a development preview. The source was organized into a standalone repository on 2026-10-29. This repository setup does not change the previously accepted APK or establish production readiness.
+Network Lens 0.3.8 is a development preview. The source was organized into a standalone repository on 2026-10-29. Repository setup and performance changes do not establish production readiness.
+
+## Scan efficiency update
+
+Version 0.3.8 avoids redundant presence probes after a validated response in the same scan and defers device-list snapshots until the existing presentation queue needs them. Independent detail lookups, fresh-scan isolation, confirmation rules, retry budgets and discovery deadlines remain. These changes do not resolve the intermittent DNS-SD limitation below. Controlled benchmarks and physical-device timing comparisons must distinguish CPU/allocation reductions from total scan duration and device coverage.
 
 ## Known discovery limitation
 
@@ -17,6 +21,10 @@ These are historical results for the accepted build, not a fresh test claim for 
 ## Before production
 
 Further discovery reliability work, real Thread-network validation and broader device testing remain. Release signing/key recovery, Google Play listing/privacy declarations and a complete reproducible release/license package need to be checked before publishing an official binary. There is no published official binary release here yet.
+
+## Release-signing preparation
+
+The direct APK pipeline has an explicit `--release` path, separate production/app and Play-upload identities, pinned public fingerprints and a recovery-verification gate. Existing development signing and artifacts are preserved. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md). This source configuration alone does not claim a successful backup, signed binary, Android installation test, Play enrollment or public release; current verification belongs to its exact artifact/report. A verified App Bundle build and Play Console setup remain separate work.
 
 ## Repository migration verification (2026-10-29)
 

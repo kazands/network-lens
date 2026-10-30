@@ -13,8 +13,8 @@ android {
         applicationId = "dev.netlens"
         minSdk = 26
         targetSdk = 37
-        versionCode = 35
-        versionName = "0.3.7"
+        versionCode = 36
+        versionName = "0.3.8"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
