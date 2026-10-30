@@ -1,6 +1,9 @@
 # Development status
 
-Network Lens 0.3.8 is a development preview. The source was organized into a standalone repository on 2026-10-29. Repository setup and performance changes do not establish production readiness.
+The published Network Lens 0.3.8 is a development preview. The working source is 0.3.9, an unreleased update to the launcher, themed icon and shared header artwork using the approved hyper-realistic glass-and-metal design. The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
+
+The focused branding checks for the working source are recorded separately in
+[VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md).
 
 ## Scan efficiency update
 

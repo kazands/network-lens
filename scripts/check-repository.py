@@ -8,7 +8,12 @@ ROOT_FILES = {'.gitignore', 'README.md', 'LICENSE', 'NOTICE', 'CONTRIBUTING.md',
 ROOT_DIRS = {'android', 'scripts', 'tests', 'store-listing', 'docs', '.github'}
 PRIVATE_PARTS = {'.tools', '.codex', '.codex-attachments', 'evidence', 'artifacts', 'downloads', '__pycache__', '.gradle', '.kotlin', 'build'}
 PRIVATE_SUFFIXES = {'.jks', '.keystore', '.pem', '.key', '.p12', '.pfx', '.apk', '.aab', '.idsig', '.log'}
-BINARY_ASSETS = {'android/app/src/main/res/raw/ieee_mac_vendors.bin', 'android/branding/network-lens-approved-mockup.png', 'store-listing/en-US/icon.png', 'docs/images/network-lens-logo.png'}
+BINARY_ASSETS = {'android/app/src/main/res/raw/ieee_mac_vendors.bin',
+                 'android/branding/network-lens-approved-mockup.png',
+                 'android/branding/network-lens-hyperreal.png',
+                 'android/app/src/main/res/drawable-nodpi/network_lens_logo.png',
+                 'store-listing/en-US/icon.png',
+                 'docs/images/network-lens-logo.png'}
 SECRETS = [re.compile(rb'-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----'),
            re.compile(rb'\bgh[pousr]_[A-Za-z0-9_]{20,}'),
            re.compile(rb'\bgithub_pat_[A-Za-z0-9_]{20,}'),

@@ -46,7 +46,7 @@ Use the full JDK and pinned SDK described in [BUILDING.md](BUILDING.md):
 bash scripts/build.sh --release
 ```
 
-The command checks the app key, pinned certificate, owner-only permissions and backup receipt before build work or downloads. It uses `.tools/build-release/` and writes `artifacts/release/Network-Lens-0.3.8.apk`, its SHA-256 file and permission/security audit outputs. It does not overwrite the development APK or use the upload key. APK signature schemes v2 and v3 cover the supported Android 8.0+ range; v1 and v4 are disabled for this path.
+The command checks the app key, pinned certificate, owner-only permissions and backup receipt before build work or downloads. It uses `.tools/build-release/` and writes `artifacts/release/Network-Lens-0.3.9.apk`, its SHA-256 file and permission/security audit outputs. It does not overwrite the development APK or use the upload key. APK signature schemes v2 and v3 cover the supported Android 8.0+ range; v1 and v4 are disabled for this path.
 
 The ordinary `bash scripts/build.sh` and Android instrumentation builder continue to use the original development key and existing output locations. Production credentials are not passed to instrumentation or ordinary tests. The signing integration harness generates isolated synthetic credentials instead.
 

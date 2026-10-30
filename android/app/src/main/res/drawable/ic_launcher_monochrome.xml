@@ -1,13 +1,14 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    
-    <group android:translateX="18" android:translateY="18" android:scaleX="0.055" android:scaleY="0.055">
-        <path android:fillColor="#00000000" android:strokeWidth="118" android:strokeLineCap="round" android:pathData="M820,786L1060,1055" android:strokeColor="#FFFFFFFF">
-            </path>
-        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="50" android:strokeLineCap="round" android:pathData="M846,795L1048,1028" />
-        <path android:fillColor="#00000000" android:strokeWidth="78" android:pathData="M905,522A368,368 0,1 1,169,522A368,368 0,1 1,905,522Z" android:strokeColor="#FFFFFFFF">
-            </path>
-        <path android:fillColor="#00000000" android:strokeWidth="68" android:strokeLineCap="round" android:pathData="M302,439C438,309 638,309 770,439 M380,537C470,449 602,449 692,537 M455,624C501,577 569,577 615,624" android:strokeColor="#FFFFFFFF">
-            </path>
-        <path android:fillColor="#FFFFFFFF" android:pathData="M593.5,719A57.5,57.5 0,1 1,478.5,719A57.5,57.5 0,1 1,593.5,719Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Simplified two-arc Wi-Fi/lens companion for Android themed icons.
+         Glass and metal lighting belongs only to the full-colour artwork. -->
+    <group android:translateX="21.384" android:translateY="22.536" android:scaleX="0.684" android:scaleY="0.684">
+        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="9"
+            android:strokeLineCap="round" android:pathData="M64.5,63.5L80,80" />
+        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="6.5"
+            android:pathData="M72,43A28,28 0,1 1,16,43A28,28 0,1 1,72,43Z" />
+        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="6"
+            android:strokeLineCap="round" android:pathData="M27.5,38Q44,21.5 60.5,38M35,47Q44,38 53,47" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M47.6,56A3.6,3.6 0,1 1,40.4,56A3.6,3.6 0,1 1,47.6,56Z" />
     </group>
 </vector>

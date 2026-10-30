@@ -1,17 +1,7 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Native vector rendition of the approved long-handle Wi-Fi/lens concept. -->
-    <group android:translateX="18" android:translateY="18" android:scaleX="0.055" android:scaleY="0.055">
-        <path android:fillColor="#00000000" android:strokeWidth="118" android:strokeLineCap="round" android:pathData="M820,786L1060,1055">
-            <aapt:attr name="android:strokeColor"><gradient android:type="linear" android:startX="800" android:startY="750" android:endX="1100" android:endY="1100" android:startColor="#32D7AD" android:endColor="#16D4AE" /></aapt:attr>
-        </path>
-        <path android:fillColor="#00000000" android:strokeColor="#A3F8D6" android:strokeWidth="50" android:strokeLineCap="round" android:pathData="M846,795L1048,1028" />
-        <path android:fillColor="#00000000" android:strokeWidth="78" android:pathData="M905,522A368,368 0,1 1,169,522A368,368 0,1 1,905,522Z">
-            <aapt:attr name="android:strokeColor"><gradient android:type="linear" android:startX="240" android:startY="180" android:endX="930" android:endY="1020" android:startColor="#B1F9D8" android:centerColor="#77EEC7" android:endColor="#1BD5A8" /></aapt:attr>
-        </path>
-        <path android:fillColor="#00000000" android:strokeWidth="68" android:strokeLineCap="round" android:pathData="M302,439C438,309 638,309 770,439 M380,537C470,449 602,449 692,537 M455,624C501,577 569,577 615,624">
-            <aapt:attr name="android:strokeColor"><gradient android:type="linear" android:startX="300" android:startY="320" android:endX="770" android:endY="720" android:startColor="#B1F9D8" android:endColor="#83F2CE" /></aapt:attr>
-        </path>
-        <path android:fillColor="#9BF5D2" android:pathData="M593.5,719A57.5,57.5 0,1 1,478.5,719A57.5,57.5 0,1 1,593.5,719Z" />
-    </group>
-</vector>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="16.666667%">
+    <!-- Share the untinted glass-and-metal artwork with the header. The
+         central 72/108 viewport keeps the whole emblem inside launcher masks. -->
+    <bitmap android:src="@drawable/network_lens_logo"
+        android:gravity="fill" android:filter="true" />
+</inset>

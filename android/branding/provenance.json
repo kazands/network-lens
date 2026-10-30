@@ -1,13 +1,41 @@
 {
   "brand": "Network Lens",
-  "approvedConcept": "First displayed icon with the approved longer handle",
-  "source": "Built-in Image Gen; native vector rendition for Android adaptive/themed icons",
-  "headerResource": "ic_launcher_foreground shared with launcher, transparent crop and theme accent in a 56dp frame",
-  "files": {
-    "android/app/src/main/res/drawable/ic_launcher_foreground.xml": "33122406bec599d56aa92dfec4c666a2741fe67091b262c710177b9a9b2c193a",
-    "android/app/src/main/res/drawable/ic_launcher_monochrome.xml": "7708bafc1a645194ce7897d6e61833275ff951bb1c12255b31334842c1e8bac1",
-    "android/app/src/main/res/drawable/ic_launcher_background.xml": "5d8d5e1b9c177f0991a25bacc007bbebaaa82ca262fd5c91bff3196180099045",
-    "android/branding/network-lens-approved-mockup.png": "51ecbcb9624ae7f0e386fa3007d2e0802090b20f4aa4849f81c4509acad21421"
+  "approvedConcept": "Hyper-realistic teal metal Wi-Fi/lens with two signal arcs and a dot on a frosted mint glass disc; approved 2026-10-30",
+  "source": "Built-in image_gen rendering of the user-provided Wi-Fi/lens logo, followed by a built-in image_gen transparent-background adaptation",
+  "colours": {
+    "launcherBackground": "#B9F1D8",
+    "materials": "Dark teal metal and frosted mint glass with realistic lighting"
   },
-  "note": "Transparent extraction trials were rejected and are not shipped. Package ID and signer remain compatible. No third-party/Fing artwork."
+  "headerResource": "network_lens_logo, shared with the launcher bitmap; no tint, 56dp frame",
+  "adaptiveForeground": "16.666667 percent proportional inset; central 72/108 viewport; launcher supplies outer mask",
+  "monochrome": "Original flat two-arc Wi-Fi/lens companion; no glass disc, for system-themed recolouring",
+  "rasterExport": "512px app PNG from the transparent 1254px source; 512px store icon from the native Android renderer",
+  "generation": {
+    "tool": "built-in image_gen",
+    "originalPromptSummary": "Preserve the supplied two-arc Wi-Fi/lens shape and mint/teal palette; render dark teal anodized metal and frosted mint glass with realistic studio lighting.",
+    "backgroundExtractionPrompt": "Use case: background-extraction. Edit target: the attached user-approved Network Lens logo. Remove only the warm off-white studio background and floor. Deliver one clean isolated emblem on a truly transparent background. Preserve the approved object's appearance faithfully: entire circular frosted mint glass disc with realistic edge and shallow depth; dark teal metal magnifying glass with diagonal down-right handle, exactly two Wi-Fi arcs and one dot, the same positions, proportions, bevels, lighting, textures and optical lens reflections. Do not redesign or flatten it. Remove the floor contact shadow and any detached cast shadow; keep the self-shading within the emblem. Keep glass interior mint coloured and sufficiently opaque/readable for display over both light and dark app backgrounds. Entire object visible with a narrow even transparent safety margin, square canvas, front-facing composition, smooth clean alpha edge, no white fringe. No text, no extra symbols, no pedestal, no white or coloured square background."
+  },
+  "previousDesign": {
+    "approvedConcept": "A — Balanced, selected 2026-10-30; light mint background, dark teal two-arc Wi-Fi lens, longer handle, corrected optical centring",
+    "source": "Original vector refinement of the earlier Image Gen Wi-Fi/lens concept; SVG and native Android vector artwork",
+    "files": {
+      "android/app/src/main/res/drawable/ic_launcher_foreground.xml": "69bf4a04ae8a55410837358fdb3ae85b56865caa421ad06b1dc8911250db943b",
+      "android/app/src/main/res/drawable/ic_launcher_monochrome.xml": "cdb906bf00358201ac7ebbd653428b1d3e5ee2213a05b35fdc87e85693d6ee09",
+      "android/app/src/main/res/drawable/ic_launcher_background.xml": "019f9e7a0b67dfb52d9188ec2e05b9e1c50f51b11a13f64a6a6cefdb416c3dbe",
+      "android/branding/network-lens.svg": "01330c007a47b9bd194234c7c9011e0e891a3c7df7dc3a193d4f7d0c517227d4",
+      "android/branding/network-lens-approved-mockup.png": "c0920c83c365fba0512625a04da805b25cc12f14e5d534792aaa540e67592151",
+      "store-listing/en-US/icon.png": "c0920c83c365fba0512625a04da805b25cc12f14e5d534792aaa540e67592151"
+    }
+  },
+  "files": {
+    "android/app/src/main/res/drawable-nodpi/network_lens_logo.png": "883507bbc8e775f10a63ce1fe4b8220fbfd1ffdc94630cd0dda5f05c2a311b50",
+    "android/app/src/main/res/drawable/ic_launcher_foreground.xml": "754fb462ba27cb5652b76ab38aae1aa2e1dd3bd3f5d05c6058770b47e5c38d0a",
+    "android/app/src/main/res/drawable/ic_launcher_monochrome.xml": "eba144aa05d18c48280ca7728e479b3e3bd894124d0cdebcb96af4058285eb07",
+    "android/app/src/main/res/drawable/ic_launcher_background.xml": "019f9e7a0b67dfb52d9188ec2e05b9e1c50f51b11a13f64a6a6cefdb416c3dbe",
+    "android/branding/network-lens.svg": "01330c007a47b9bd194234c7c9011e0e891a3c7df7dc3a193d4f7d0c517227d4",
+    "android/branding/network-lens-approved-mockup.png": "f0627687c2cd72ecbd290095eca5b3bc675e8d7bfca272940f4c4099cdb07744",
+    "android/branding/network-lens-hyperreal.png": "5d00345b97e902596b65424e62e8281f1feea56ff5f0309440c41ee44c0e64cd",
+    "store-listing/en-US/icon.png": "93c4c47ad258c1775f7f4e64bb61fef23e9825ac51ab7c7f195956e93a94f8c2"
+  },
+  "note": "The previous Balanced SVG remains an editable flat reference, not the source of the full-colour logo. No third-party/Fing artwork or household screenshots. App ID, signing identities and RAM-only scan behaviour are preserved. No store upload or release publication."
 }

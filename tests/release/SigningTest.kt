@@ -78,7 +78,7 @@ object SigningTest {
         val keyDir = fixture.resolve(".tools/release-signing")
         val identity = fixture.resolve("android/release-signing.json")
         val receipt = keyDir.resolve("backup-verification.json")
-        val originalApk = project.resolve("artifacts/Network-Lens-0.3.8.apk")
+        val originalApk = project.resolve("artifacts/Network-Lens-0.3.9.apk")
         check(Files.isRegularFile(originalApk), "Build the development APK before these integration checks")
         val originalHash = sha(bytes(originalApk))
         expectedFailure("check")

@@ -262,8 +262,8 @@ class MainActivity : Activity() {
             back.contentDescription = if (showingSettings && selected != null) "Back to device details" else "Back to devices"
             back.setOnClickListener { backToPreviousPage() }; header.addView(back, lp(48, 48))
         } else {
-            val icon = ImageView(this); icon.setImageDrawable(InsetDrawable(getDrawable(R.drawable.ic_launcher_foreground), -0.25f))
-            icon.imageTintList = ColorStateList.valueOf(accent); icon.tag = "app-brand"; icon.scaleType = ImageView.ScaleType.FIT_CENTER
+            val icon = ImageView(this); icon.setImageResource(R.drawable.network_lens_logo)
+            icon.tag = "app-brand"; icon.scaleType = ImageView.ScaleType.FIT_CENTER
             icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; header.addView(icon, lp(56, 56)); spaceHorizontal(header, 10)
         }
         val title = text(if (!store.ready()) getString(R.string.app_name) else if (showingSettings) "Settings" else if (selected == null) getString(R.string.app_name) else "Device details", 18, ink, true)

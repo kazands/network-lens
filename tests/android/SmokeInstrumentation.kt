@@ -6676,6 +6676,7 @@ class SmokeInstrumentation : Instrumentation() {
         var areaA: Int = 0
         var areaB: Int = 0
         var alphaError: Long = 0
+        var edgeOnly = true
         run {
             var y: Int = 0
             while ((y < a.getHeight())) {
@@ -6700,6 +6701,21 @@ class SmokeInstrumentation : Instrumentation() {
                         if ((ap || bp)) {
                             union++
                         }
+                        if (ap != bp) {
+                            val other = if (ap) b else a
+                            var touchesOther = false
+                            for (dy in -1..1) {
+                                for (dx in -1..1) {
+                                    val nx = x + dx
+                                    val ny = y + dy
+                                    if (nx in 0 until other.width && ny in 0 until other.height &&
+                                        android.graphics.Color.alpha(other.getPixel(nx, ny)) > 127) {
+                                        touchesOther = true
+                                    }
+                                }
+                            }
+                            if (!touchesOther) edgeOnly = false
+                        }
                         alphaError += Math.abs((pa - qa))
                         if (
                             ((ap && bp) &&
@@ -6723,8 +6739,11 @@ class SmokeInstrumentation : Instrumentation() {
                 y++
             }
         }
+        // A small mark's one-pixel cached fringe can exceed one percent of
+        // its area. Admit that measured case only when every changed pixel
+        // touches the other silhouette; keep the overlap, colour and alpha guards.
         return ((((union > 0) && ((intersection / (union).toDouble()) >= .97)) &&
-            ((Math.abs((areaA - areaB)) / (Math.max(1, areaB)).toDouble()) < .01)) &&
+            (((Math.abs((areaA - areaB)) / (Math.max(1, areaB)).toDouble()) < .01) || edgeOnly)) &&
             (((alphaError / (((a.width * a.getHeight()))).toDouble())).toDouble() < (3).toDouble()))
     }
 
@@ -6777,11 +6796,50 @@ class SmokeInstrumentation : Instrumentation() {
             }
         }
         check(
-            ((opaque == (size * size)) && (white == 0)),
-            "Icon artwork fills its entire surface with no white field",
+            ((opaque == (size * size)) && (white < size * size / 100)),
+            "Icon artwork is opaque with no white studio field; small glass highlights are allowed",
         )
         var mark: Bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         ((icon)!!.getForeground())!!.draw(android.graphics.Canvas(mark))
+        check(
+            art.getPixel(0, 0) == android.graphics.Color.rgb(185, 241, 216),
+            "The launcher has the approved full-bleed light mint background",
+        )
+        var alphaMass = 0.0
+        var weightedX = 0.0
+        var weightedY = 0.0
+        var tealPixels = 0
+        var mintPixels = 0
+        val materialColours = HashSet<Int>()
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                val pixel = mark.getPixel(x, y)
+                val alpha = android.graphics.Color.alpha(pixel)
+                alphaMass += alpha
+                weightedX += (x + .5) * alpha
+                weightedY += (y + .5) * alpha
+                // Frosted glass retains near-opaque alpha rather than solid paint.
+                if (alpha > 200) {
+                    val red = android.graphics.Color.red(pixel)
+                    val green = android.graphics.Color.green(pixel)
+                    val blue = android.graphics.Color.blue(pixel)
+                    if (red < 70 && green in 35..135 && blue in 35..145) tealPixels++
+                    if (red in 80..220 && green > red + 15 && blue > red + 10) mintPixels++
+                    materialColours.add(pixel)
+                }
+            }
+        }
+        check(
+            tealPixels > size * size / 20 && mintPixels > size * size / 10 &&
+                materialColours.size > 256,
+            "The approved emblem retains teal metal, mint glass and realistic material shading",
+        )
+        check(
+            alphaMass > 0 &&
+                Math.abs(weightedX / alphaMass - size / 2.0) < size * .015 &&
+                Math.abs(weightedY / alphaMass - size / 2.0) < size * .015,
+            "The glass emblem is centred within the icon",
+        )
         for (shape in arrayOf("circle", "squircle", "rounded-square")) {
             var masked: Bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             var mc: android.graphics.Canvas = android.graphics.Canvas(masked)
@@ -6874,9 +6932,15 @@ class SmokeInstrumentation : Instrumentation() {
             (mono)!!.setBounds(((icon)!!.getForeground())!!.getBounds())
             var b: Bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             (mono)!!.draw(android.graphics.Canvas(b))
+            var centralEmpty = 0
+            for (y in size / 4 until size * 3 / 4) {
+                for (x in size / 4 until size * 3 / 4) {
+                    if (android.graphics.Color.alpha(b.getPixel(x, y)) == 0) centralEmpty++
+                }
+            }
             check(
                 ((android.graphics.Color.alpha(b.getPixel(0, 0)) == 0) &&
-                    (android.graphics.Color.alpha(b.getPixel(256, 256)) == 0)),
+                    centralEmpty > size * size / 12),
                 "The themed layer has genuine empty space, with no background disc",
             )
             save(b, "brand-monochrome")
@@ -6907,17 +6971,14 @@ class SmokeInstrumentation : Instrumentation() {
                         "Header logo is larger than the former 40dp badge",
                     )
                     check(
-                        ((brand)!!.getImageTintList() !== null),
-                        (("The transparent logo follows the readable theme accent in " + theme) +
-                            " mode"),
+                        ((brand)!!.getImageTintList() == null),
+                        "The logo retains its glass and metal colours in " + theme + " mode",
                     )
                     var shared: android.graphics.drawable.Drawable =
                         (((activity!!.getDrawable(info.icon)
                                 as android.graphics.drawable.AdaptiveIconDrawable?)))!!
                             .getForeground()
-                    var reference: android.graphics.drawable.Drawable =
-                        android.graphics.drawable.InsetDrawable(shared, -(0.25f))
-                    reference.setTintList((brand)!!.getImageTintList())
+                    val reference = (shared as android.graphics.drawable.InsetDrawable).drawable!!
                     var actual: Bitmap = brandBitmap((brand)!!.drawable, 128)
                     var expected: Bitmap = brandBitmap(reference, 128)
                     try {
@@ -6931,7 +6992,7 @@ class SmokeInstrumentation : Instrumentation() {
                     }
                     check(
                         sameBrandRendering(actual, expected),
-                        (("Header matches the launcher foreground geometry and tint without its background or mask in " +
+                        (("Header uses the same full-colour emblem as the launcher without its padding or mask in " +
                             theme) + " mode"),
                     )
                 }

@@ -24,7 +24,7 @@ if [[ ! -f "$PLATFORM" || ! -x "$BUILD_TOOLS/aapt2" ]]; then echo 'Android SDK p
 BUILD_DIR="$PWD/.tools/build"
 APK_DIR="$PWD/artifacts"
 if [[ "$BUILD_MODE" == release ]]; then BUILD_DIR="$PWD/.tools/build-release"; APK_DIR="$PWD/artifacts/release"; fi
-APK_PATH="$APK_DIR/Network-Lens-0.3.8.apk"
+APK_PATH="$APK_DIR/Network-Lens-0.3.9.apk"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" artifacts
 # Remove only this script's generated output so removed source files cannot survive a rebuild.
 find "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" -type f -delete
