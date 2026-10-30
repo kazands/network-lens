@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -113,14 +112,7 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
     }
     fun content(): LinearLayout = body
     fun paragraph(value: String, size: Int, color: Int, bold: Boolean): TextView =
-        TextView(context).also {
-            it.text = value
-            it.setTextSize(size.toFloat())
-            it.setTextColor(color)
-            it.typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
-            it.includeFontPadding = false
-            it.setLineSpacing(px(3).toFloat(), 1f)
-        }
+        AppTypography.text(context, value, size, color, bold)
 
     fun actionButton(value: String, filled: Boolean, destructive: Boolean): TextView {
         val fill = if (destructive) colors.danger else colors.accent

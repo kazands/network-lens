@@ -6,17 +6,17 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.10 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.10/Network-Lens-0.3.10.apk)
+[![Download Android APK — Network Lens 0.3.11 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.11/Network-Lens-0.3.11.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.10) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.11) · No GitHub account required to download.
 
-**Development preview: 0.3.10.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.11.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This release uses the Android application ID `io.github.kazands.networklens`. It installs as a separate app from older previews and cannot update them in place. You can install it alongside the old app, check the new installation, then remove the old one. See [the identity change](docs/IDENTITY-MIGRATION.md) before switching.
+This release retains the Android application ID `io.github.kazands.networklens` and public app-signing identity introduced in 0.3.10, so it updates that production-signed preview in place. Previews before 0.3.10 have a different application ID; see [the identity change](docs/IDENTITY-MIGRATION.md) before switching.
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.10 verification notes](docs/VERIFICATION-0.3.10.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.11 verification notes](docs/VERIFICATION-0.3.11.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 ## What it does
 

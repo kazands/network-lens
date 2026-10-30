@@ -73,7 +73,9 @@ class SmokeInstrumentation : Instrumentation() {
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode.equals("scan-efficiency")) {
+            if (mode == "typography") {
+                TypographyChecks.run(this, ::check)
+            } else if (mode.equals("scan-efficiency")) {
                 ScanEfficiency.run(this, ::check)
             } else if (mode.equals("failure-reporting")) {
                 failureReporting()
@@ -1674,12 +1676,12 @@ class SmokeInstrumentation : Instrumentation() {
                     invoke("render")
                 }
             )
-            assertText("RESPONSE TIME (ICMPv6)")
+            assertText("Response time (ICMPv6)")
             capture("routed-accessory-light")
             description("Switch to dark mode")
-            assertText("RESPONSE TIME (ICMPv6)")
+            assertText("Response time (ICMPv6)")
             click("Show discovery evidence")
-            assertText("NETWORK PATH")
+            assertText("Network path")
             assertText("Routed IPv6 through Wi-Fi")
             capture("routed-accessory-dark")
         } finally {
@@ -2501,7 +2503,7 @@ class SmokeInstrumentation : Instrumentation() {
         click("Fixture HomeKit light")
         assertText("HomeKit light")
         check(
-            !((texts())!!.contains("HOMEKIT SETUP (ADVERTISED)")),
+            !((texts())!!.contains("HomeKit setup (advertised)")),
             "Setup evidence stays collapsed on the simple details page",
         )
         click("Copy device details")
@@ -2518,7 +2520,7 @@ class SmokeInstrumentation : Instrumentation() {
             }
         )
         click("Show discovery evidence")
-        assertText("HOMEKIT SETUP (ADVERTISED)")
+        assertText("HomeKit setup (advertised)")
         assertText("Not paired")
         capture("homekit-details-dark")
         description("Back to devices")
@@ -2585,12 +2587,12 @@ class SmokeInstrumentation : Instrumentation() {
         setSearch("Brother")
         assertText("1 device group matching")
         click("Vendor fixture")
-        assertText("MAC VENDOR")
+        assertText("MAC vendor")
         assertText(vendor)
         assertText("Reported maker")
         assertText("Reported model")
         check(
-            !((texts())!!.contains("NETWORK IDENTIFIER (DNS)")),
+            !((texts())!!.contains("Network identifier (DNS)")),
             "Lookup uses the endpoint hardware MAC rather than arbitrary metadata",
         )
         capture("mac-vendor-light")
@@ -2626,7 +2628,7 @@ class SmokeInstrumentation : Instrumentation() {
         setSearch("")
         click("Vendor fixture")
         check(
-            !((texts())!!.contains("MAC VENDOR")),
+            !((texts())!!.contains("MAC vendor")),
             "A MAC-shaped DNS identifier does not become a registry lookup",
         )
         check(
@@ -2845,12 +2847,12 @@ class SmokeInstrumentation : Instrumentation() {
         activity = launch(false)
         settle()
         click("Office workstation")
-        assertText("RESPONSE TIME (ICMP)")
+        assertText("Response time (ICMP)")
         assertText("12 ms")
         onMain(
             callback54@{
                 var label: View? =
-                    find((activity!!.window)!!.getDecorView(), "RESPONSE TIME (ICMP)", false)
+                    find((activity!!.window)!!.getDecorView(), "Response time (ICMP)", false)
                 var row: View? = ((label)!!.getParent() as View?)
                 check(
                     ((label)!!.getBottom() <= ((row)!!.getHeight() - (row)!!.getPaddingBottom())),
@@ -2858,25 +2860,25 @@ class SmokeInstrumentation : Instrumentation() {
                 )
             }
         )
-        assertText("MAC ADDRESS")
+        assertText("MAC address")
         assertText("Not available")
         check(
-            (!((texts())!!.contains("TCP RESPONSE TIME")) &&
+            (!((texts())!!.contains("TCP response time")) &&
                 !((texts())!!.contains("Not measured"))),
             "A measured ICMP result replaces the irrelevant unmeasured TCP field",
         )
         check(
-            ((!((texts())!!.contains("MODEL\n")) && !((texts())!!.contains("MANUFACTURER\n"))) &&
+            ((!((texts())!!.contains("Model\n")) && !((texts())!!.contains("Manufacturer\n"))) &&
                 (texts())!!.contains("Not reported: manufacturer, model, device type.")),
             "Unavailable identity fields have one honest summary",
         )
         check(
-            !((texts())!!.contains("NETWORK IDENTIFIER (DNS)")),
+            !((texts())!!.contains("Network identifier (DNS)")),
             "Technical evidence is collapsed by default",
         )
         capture("details-compact-light")
         click("Show discovery evidence")
-        assertText("NETWORK IDENTIFIER (DNS)")
+        assertText("Network identifier (DNS)")
         assertText("02:11:22:33:44:55")
         onMain(callback55@{ (detailScroll())!!.scrollTo(0, 350) })
         settle()
@@ -2885,7 +2887,7 @@ class SmokeInstrumentation : Instrumentation() {
         description("Switch to dark mode")
         settle()
         assertText("Hide discovery evidence")
-        assertText("NETWORK IDENTIFIER (DNS)")
+        assertText("Network identifier (DNS)")
         onMain(
             callback57@{
                 check(
@@ -2897,7 +2899,7 @@ class SmokeInstrumentation : Instrumentation() {
         capture("details-evidence-dark")
         click("Hide discovery evidence")
         check(
-            !((texts())!!.contains("NETWORK IDENTIFIER (DNS)")),
+            !((texts())!!.contains("Network identifier (DNS)")),
             "Collapsing removes technical evidence from the content tree",
         )
         click("Copy device details")
@@ -2931,15 +2933,15 @@ class SmokeInstrumentation : Instrumentation() {
         click("Known printer")
         assertText("Compact 500")
         assertText("Fixture Inc")
-        assertText("RESPONSE TIME (TCP)")
+        assertText("Response time (TCP)")
         assertText("27 ms")
         check(
             (!((texts())!!.contains("Not reported:")) &&
-                !((texts())!!.contains("RESPONSE TIME (ICMP)"))),
+                !((texts())!!.contains("Response time (ICMP)"))),
             "Known identity and TCP measurements display without invented missing values",
         )
         check(
-            !((texts())!!.contains("NETWORK IDENTIFIER (DNS)")),
+            !((texts())!!.contains("Network identifier (DNS)")),
             "A new selection resets the previous evidence disclosure",
         )
         capture("details-known-dark")
@@ -2960,7 +2962,7 @@ class SmokeInstrumentation : Instrumentation() {
         onMain(
             callback61@{
                 var label: TextView? =
-                    (find((activity!!.window)!!.getDecorView(), "MANUFACTURER", false) as TextView?)
+                    (find((activity!!.window)!!.getDecorView(), "Manufacturer", false) as TextView?)
                 check(
                     (((label)!!.getLayout())!!.getLineCount() == 1),
                     "Large-text detail labels use a full-width stacked layout",
@@ -5271,7 +5273,7 @@ class SmokeInstrumentation : Instrumentation() {
             activity = launch(false)
             waitForIdleSync()
             click("Office printer")
-            assertText("REPORTED HARDWARE")
+            assertText("Reported hardware")
             assertText("Fixture hardware")
             capture("ws-hardware-light")
             onMain(

@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.10.apk`, with a checksum and permission/security audit outputs. This package-identity update uses `io.github.kazands.networklens` and installs separately from earlier previews; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.11.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and updates the production-signed 0.3.10 preview in place. Previews before 0.3.10 use a different application ID; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -42,13 +42,15 @@ Install Android platform-tools and an appropriate emulator/system image through 
 ```sh
 bash scripts/build-android-tests.sh
 python3 scripts/test-android-e2e.py --serial emulator-5554 \
-  --modes scan-efficiency,failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
+  --modes scan-efficiency,typography,failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
   --output artifacts/local-emulator-check
 ```
 
 Replace the example serial with your actual emulator serial. The scripts reject physical devices and verify the emulator property and installed APK bytes. Instrumentation intentionally changes emulator app state and permissions. API 26, 36 and 37 have been tested previously; do not claim a platform passed unless you actually tested it.
 
 The instrumentation companion is Kotlin and uses the target application's existing pinned Kotlin standard library. Its compiler receives the application JAR as a friend module for internal test access. No additional application library or permission is introduced. The `permission` and `icmp-denied` modes require API 37 or newer; keep their existing API guards intact when selecting modes.
+
+The `typography` mode uses synthetic dual-stack and IPv6-only devices. It checks full address wrapping, scoped IPv6, exact copying and IPv4/IPv6 order at 320dp and 411dp widths, normal and 200% font settings, and both appearances. It never starts discovery.
 
 Physical Wi-Fi checks are separate, explicitly authorized manual journeys. Never automate arbitrary connected devices or publish household results. See `tests/E2E-REQUIREMENTS.md`.
 

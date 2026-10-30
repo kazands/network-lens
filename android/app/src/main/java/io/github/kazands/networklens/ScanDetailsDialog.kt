@@ -2,7 +2,6 @@ package io.github.kazands.networklens
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
@@ -131,7 +130,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
                 space(summary, 12)
                 val parts = snapshot.scope.javaSplit(" · ", 2)
                 val range = text(parts[0], 14, colors.text, false)
-                range.typeface = Typeface.MONOSPACE
+                AppTypography.identifier(range, 14)
                 range.setTextIsSelectable(true)
                 summary.addView(range)
                 if (snapshot.scope.contains("IPv6")) {
@@ -229,11 +228,8 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
     }
 
     private fun heading(view: TextView) { if (Build.VERSION.SDK_INT >= 28) view.isAccessibilityHeading = true }
-    private fun text(value: String, size: Int, color: Int, bold: Boolean): TextView = TextView(context).also {
-        it.text = value; it.setTextSize(size.toFloat()); it.setTextColor(color)
-        it.typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
-        it.includeFontPadding = false; it.setLineSpacing(dp(3).toFloat(), 1f)
-    }
+    private fun text(value: String, size: Int, color: Int, bold: Boolean): TextView =
+        AppTypography.text(context, value, size, color, bold)
     private fun action(value: String, filled: Boolean): TextView = text(value, 14, if (filled) colors.surface else colors.accent, true).also {
         it.gravity = Gravity.CENTER; it.minHeight = dp(52); it.setPadding(dp(14), dp(14), dp(14), dp(14))
         it.background = RippleDrawable(ColorStateList.valueOf(0x22336644),
@@ -247,7 +243,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         }
     }
     private fun label(parent: LinearLayout, value: String) {
-        val view = text(value, 11, colors.muted, true); view.letterSpacing = .06f; parent.addView(view)
+        parent.addView(text(value, AppTypography.LABEL, colors.muted, true))
     }
     private fun column(): LinearLayout = LinearLayout(context).also { it.orientation = LinearLayout.VERTICAL }
     private fun card(): LinearLayout = column().also { it.background = shape(colors.surface, colors.border, 18) }
