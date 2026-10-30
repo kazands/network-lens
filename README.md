@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="store-listing/en-US/icon.png" alt="Network Lens logo: a teal Wi-Fi magnifying glass on frosted mint glass" width="160" height="160">
+</p>
+
 # Network Lens
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
