@@ -21,7 +21,7 @@ The APK appears under `artifacts/Network-Lens-0.3.8.apk`, with a checksum and pe
 
 On a fresh checkout, `prepare-signing.py` creates a local development key and random password in `.tools`, with restrictive file permissions. It never prints the password. Do not commit either file. Keep any key you depend on in a secure backup that you control.
 
-A new key cannot update an installation signed by another key. Do not replace or delete an existing signing key to resolve an install failure. Contributor-built APKs are unofficial; no official binary release is currently published here. Source licensing is GPL-3.0-only with third-party exceptions described in NOTICE.
+A new key cannot update an installation signed by another key. Do not replace or delete an existing signing key to resolve an install failure. Contributor-built APKs are unofficial; maintainer previews are distributed through [GitHub Releases](https://github.com/kazands/network-lens/releases). Source licensing is GPL-3.0-only with third-party exceptions described in NOTICE.
 
 Maintainer release APKs use a separate pinned app-signing identity and verified recovery receipt. Run `bash scripts/build.sh --release`; output goes under `artifacts/release/`, preserving development outputs. Release builds never create keys. A separate upload identity is prepared for future Play enrollment. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md) for private files, backup verification, migration and remaining Play work.
 

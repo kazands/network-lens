@@ -1,6 +1,6 @@
 # Network Lens 0.3.8 verification
 
-Prepared 2026-10-30 for a development preview. This is a sanitized summary of
+Updated 2026-10-30 for a development preview. This is a sanitized summary of
 completed checks, with remaining limits stated below. It is not a production
 readiness or security certification.
 
@@ -67,11 +67,65 @@ address-resolution timeout and one Complete scan. The known intermittent
 HomeKit (`_hap._tcp`) / HTTP (`_http._tcp`) resolution limitation remains open.
 Reporting changes do not establish that the underlying discovery issue is fixed.
 
-The post-measurement physical search/Back/theme checks were not run because
-the app left the foreground. Those paths passed in emulator matrices. A complete
-journey on the **production-signed APK on the physical phone remains pending**;
-no physical phone was reinstalled during signing preparation. Moving from the
-old test identity requires a one-time reinstall and fresh permission grants.
+The post-measurement physical search/Back/theme checks were not run in the
+performance session because the app left the foreground. Separate production-APK
+phone checks subsequently completed on an authorized Pixel 8 running API 37:
+
+- The explicitly authorized test-to-production reinstall passed 17 migration
+  checks. Installed bytes matched the APK above; only previously granted runtime
+  permissions were restored. The accepted development APK and signing key remain.
+- The phone journey recorded 86 unique UI/scan conditions covering menus, Wi-Fi
+  name display, range validation/Cancel, privacy, RAM clearing in dark mode,
+  search, device details/evidence, both Back buttons, Settings origin/position,
+  IPv6 below IPv4, both appearances and Stop.
+- Three uninterrupted fresh scans were Complete, with no failed discovery
+  methods. One deliberate Stop was Partial, with interrupted methods retained.
+  The final fresh scan replaced the stopped status; the original appearance and
+  unfiltered list were restored.
+- Two earlier coordinate-based navigation attempts were inconclusive: one
+  expected control was missing and a repeat failed a return-position assertion.
+  Later tests verified the intended endpoint and settled row geometry. Both fully
+  visible and partly clipped rows passed toolbar and Android Back checks. No app
+  defect or exact cause for the earlier results was established; no app code was
+  changed to obtain the passes. Original attempt reports remain local.
+- A foreground interruption stopped input. The user reopened the app and the
+  remaining checks resumed. No diagnostic companion, household inventory, raw
+  phone view, personal screenshot or clipboard copy was saved for publication.
+
+Additional physical release checks completed on the same production APK:
+
+- Home during an active scan cancelled discovery and preserved an explicitly
+  stopped Partial result. Every interrupted method was captured before continuing.
+  Returning to the app did not restart scanning.
+- A full process restart restored no device rows, followed the system appearance
+  instead of a temporary app override, and did not start a scan automatically.
+- A controlled Wi-Fi-off/on test verified that Android created a different
+  connection. The app cleared the previous device list and waited for a new scan.
+  The first manual reconnect attempt had retained rows without a recorded
+  before/after connection transition. Its exact cause remains unestablished;
+  that attempt is retained locally alongside the passing controlled test.
+- Denying the actual Android local-network prompt blocked discovery, kept the
+  list empty and displayed recovery guidance. Restoring the prior permission
+  grants permitted fresh discovery without an automatic scan on return.
+- The finalization session recorded 37 unique conditions. Both recovery scans
+  finished their planned IPv4 coverage. Cold-restart recovery was Partial;
+  permission/reconnect recovery was Complete. Exact failed methods, when present,
+  were captured before another scan.
+- The cold-restart scan reproduced both known native resolution failures:
+  `_hap._tcp` and `_http._tcp` registered but supplied no addresses within either
+  bounded attempt of about four seconds. This is an unresolved discovery limit,
+  even though the lifecycle and permission assertions passed.
+- The original appearance, optional permission grants and unfiltered fresh list
+  were restored. No app code, signing identity or APK bytes changed for these
+  finalization checks. Clipboard mutation and physical coverage of every text
+  scale/orientation were not repeated; their earlier emulator coverage remains.
+
+Capture attempts are part of the record: a fast diagnostic reader missed nine
+interrupted rows in the Home scan. The unchanged scan was retained, the host
+reader stopped, and slow reverse traversal captured every required row. An initial
+permission-message check preceded the controlled Scan-button request; after the
+user denied that actual Android prompt, the message check passed. These are test
+setup/capture corrections, not claimed application repairs.
 
 Real Thread-mesh validation and broader router/device coverage remain. A Complete
 scan means the planned checks completed, not that every device can be detected.
@@ -88,4 +142,5 @@ licenses in NOTICE and the Android third-party notices.
 
 No signing key, password, private backup receipt, household inventory, personal
 screenshot or raw phone capture belongs in the public package. SHA256SUMS uses
-portable filenames. This preview remains a draft pending its phone check.
+portable filenames. This is a development pre-release for feedback, with the
+remaining discovery and hardware limitations stated above.
