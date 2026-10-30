@@ -1,6 +1,6 @@
 # Development status
 
-The published Network Lens 0.3.8 is a development preview. The working source is 0.3.10, an unreleased package-identity update to `io.github.kazands.networklens`, retaining the approved hyper-realistic glass-and-metal artwork. It installs separately from older previews; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
+Network Lens 0.3.10 is a development preview. It uses the application ID `io.github.kazands.networklens` and retains the approved hyper-realistic glass-and-metal artwork. It installs separately from older previews; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
 
 The earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md). Current package-identity verification is recorded separately in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md).
 

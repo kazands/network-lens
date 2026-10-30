@@ -1,6 +1,6 @@
 # Network Lens 0.3.10 verification
 
-Verified locally on 2026-10-30. This is an unreleased application-identity update. The published GitHub download remains the 0.3.8 preview; no release asset or tag is replaced by this source update.
+Verified locally on 2026-10-30 for the 0.3.10 development pre-release. Publication adds the tested APK, corresponding source package, checksums and these notes without changing the tested APK bytes or application code. Older release assets and tags are preserved.
 
 ## Application identity
 
@@ -53,3 +53,9 @@ The initial restricted host run could not open a loopback socket; the same host 
 All device actions selected explicit emulator serials and verified the emulator property. No physical phone was operated, no household scan data was collected, and no credentials or personal screenshots are included. Local logs, test helpers and emulator screenshots remain ignored under `.tools/` and `artifacts/`. A newly started Android 8 emulator was closed after its checks; the Android 17 test emulator is also closed at the end of verification.
 
 Repository content checks, artwork provenance hashes and `git diff --check` passed before commit. This update does not resolve or claim to resolve the known DNS-SD discovery limitation in [STATUS.md](STATUS.md). Physical-device installation, real-Wi-Fi discovery and Play enrollment remain unverified for this new package identity.
+
+## Public release package
+
+The release contains `Network-Lens-0.3.10.apk`, `Network-Lens-0.3.10-source.zip`, `SHA256SUMS` and `VERIFICATION-0.3.10.md`. The source archive records its exact Git commit and per-file hashes in `RELEASE-SOURCE.json`. It includes the committed project, build/test instructions, original/upstream licenses and notices, checksum-verified Kotlin standard-library sources and the public IEEE fields needed to regenerate the vendor asset. Regeneration was verified byte-for-byte before packaging. The archive excludes private credentials, tool caches, household captures and personal screenshots.
+
+The README button links directly to the versioned 0.3.10 APK asset. Anonymous public downloads are checked against the release package's portable checksums after publication. This remains a development pre-release, with the physical-device and discovery limits above.
