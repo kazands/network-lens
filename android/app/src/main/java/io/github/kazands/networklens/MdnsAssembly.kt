@@ -130,6 +130,32 @@ class MdnsAssembly {
     private fun records(peer: Peer, labels: List<String>, kind: Int) = peer.sets[setKey(labels, kind)]?.map { it.record } ?: emptyList()
     private fun instances(peer: Peer): List<List<String>> = peer.sets.values.flatten().map { it.record }
         .filter { it.kind == 12 }.map { it.target }.distinctBy { MdnsPacket.key(it) }
+
+    /** Suppress only PTRs backed by complete, current same-sender services in this scan.
+     * Advertised TTL is aged from receipt; the shorter assembly retention is not the wire TTL. */
+    @Synchronized internal fun knownAnswers(v6: Boolean, names: List<String>, now: Long): List<MdnsPacket.Record> {
+        if (closed) return emptyList()
+        expire(now)
+        val owners = names.map { MdnsPacket.key(it.split('.')) }.toSet()
+        val out = LinkedHashMap<String, MdnsPacket.Record>()
+        for (peer in peers.values) {
+            if ((peer.address.address.size == 16) != v6) continue
+            val complete = complete(peer).map { MdnsPacket.key(listOf(it.name) + it.type.removeSuffix(".").split('.') + "local") }.toSet()
+            for (entries in peer.sets.values) for (entry in entries) {
+                val r = entry.record
+                if (r.kind != 12 || MdnsPacket.key(r.owner) !in owners || MdnsPacket.key(r.target) !in complete) continue
+                val age = maxOf(0L, now - entry.received)
+                val elapsed = TimeUnit.NANOSECONDS.toSeconds(age) + if (age % TimeUnit.SECONDS.toNanos(1) == 0L) 0 else 1
+                val ttl = r.ttl - elapsed
+                if (ttl <= 0 || ttl < (r.ttl + 1) / 2) continue
+                val key = MdnsPacket.key(r.owner) + "|" + MdnsPacket.key(r.target)
+                val prior = out[key]
+                if (prior == null && out.size >= 64) return emptyList()
+                if (prior == null || ttl < prior.ttl) out[key] = r.copy(ttl = ttl, flush = false)
+            }
+        }
+        return out.values.toList()
+    }
     private fun complete(peer: Peer): List<MdnsPacket.Service> {
         val out = ArrayList<MdnsPacket.Service>()
         for (instance in instances(peer)) {

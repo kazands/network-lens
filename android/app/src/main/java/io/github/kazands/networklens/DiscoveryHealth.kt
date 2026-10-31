@@ -16,7 +16,11 @@ class DiscoveryHealth {
         MDNS_IGNORED_SOURCE("ignored source packets"), MDNS_OVERSIZED("oversized packets"),
         MDNS_NON_RESPONSE("non-response packets"), MDNS_REJECTED("rejected response packets"),
         MDNS_NO_LIVE_DETAILS("responses without live details"), MDNS_LIVE("live-record responses"),
-        MDNS_LIMIT("receive budget stops")
+        MDNS_LIMIT("receive budget stops"), MDNS_BYTES("bytes received"),
+        MDNS_DECODED("response decodes"), MDNS_QUERY_DECODED("query decodes"),
+        MDNS_QUERY_SKIPPED("queries beyond suppression budget"),
+        MDNS_COALESCED("questions coalesced"), MDNS_SENT("query packets sent"),
+        MDNS_KNOWN_ANSWERS("known answers sent")
     }
     private val starting = HashSet<String>()
     private val browsing = HashSet<String>()
@@ -54,9 +58,11 @@ class DiscoveryHealth {
         val values = counters.getOrPut(source) { TreeMap() }
         if (values.containsKey(event) || values.size < 6) values[event] = minOf(1000000, values.getOrDefault(event, 0) + 1)
     }
-    @Synchronized fun diagnostic(source: String, event: Diagnostic) {
+    @Synchronized fun diagnostic(source: String, event: Diagnostic, amount: Int = 1) {
+        require(amount in 0..33554432)
         val values = diagnostics.getOrPut(source) { java.util.EnumMap(Diagnostic::class.java) }
-        values[event] = minOf(1000000, values.getOrDefault(event, 0) + 1)
+        val limit = if (event == Diagnostic.MDNS_BYTES) 33554432 else 1000000
+        values[event] = minOf(limit.toLong(), values.getOrDefault(event, 0).toLong() + amount).toInt()
     }
     @Synchronized fun skipped(source: String, reason: String) { states.putIfAbsent(source, "Not used · " + reason) }
     @Synchronized fun starting(type: String) { starting.add(type); begin("mDNS " + type) }

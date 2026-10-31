@@ -6178,16 +6178,25 @@ class SmokeInstrumentation : Instrumentation() {
         var longValue: StringBuilder = StringBuilder("Failed · ")
         run {
             var i: Int = 0
-            while ((i < 1000)) {
+            while ((i < 2000)) {
                 longValue.append('x')
                 i++
             }
         }
         oversized.put(source, longValue.toString())
         check(
-            ((ScanReport("", false, "", 0, 0, 1, oversized).sources.get(source))!!.length == 512),
+            ((ScanReport("", false, "", 0, 0, 1, oversized).sources.get(source))!!.length == 1024),
             "Untrusted overlong source values remain capped",
         )
+        val trafficHealth = DiscoveryHealth().apply {
+            fail(source, "x".repeat(80)); truncated(source, "y".repeat(80))
+            for (label in listOf("hostname batches", "service retry batches", "type queries", "new types", "hostnames", "query batches")) count(source, label)
+            for (event in DiscoveryHealth.Diagnostic.values()) if (event.name.startsWith("MDNS_")) diagnostic(source, event, 4096)
+        }
+        val trafficDetail = trafficHealth.sources().getValue(source)
+        check(trafficDetail.length > 512 && trafficDetail.length <= 1024, "Finite traffic diagnostics require the expanded bounded report entry")
+        check(ScanReport("", false, "", 0, 0, 1, trafficHealth.sources()).sources[source] == trafficDetail,
+            "Terminal reports retain all traffic counters without silently truncating them")
         check(
             store.retainIfCurrent(store.token(), live.key, Collections.emptyList(), report),
             "Failure fixture retains a report without inventing devices",

@@ -69,6 +69,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val mdnsQuestions = LinkedHashMap<String, ReverseQuestion>()
     private val mdnsRetries = MdnsRetries()
     private val mdnsAssembly = MdnsAssembly()
+    private val mdnsQuestionSuppression = MdnsQuestionSuppression()
     private val directServices: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val modernQueue: Queue<ModernRequest> = ArrayDeque()
     private val legacyBrowses: Queue<LegacyBrowse> = ArrayDeque()
@@ -124,6 +125,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         closeIo()
         cleanupNsd()
         mdnsAssembly.close()
+        mdnsQuestionSuppression.close()
     }
     @Synchronized fun refreshNetwork(current: NetworkState): Boolean {
         if (!net.refresh(current)) return false
@@ -1076,18 +1078,27 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (enumerations < 2 && now - start >= TimeUnit.SECONDS.toNanos((enumerations * 2).toLong())) {
                         val question = MdnsPacket.query(Collections.singletonList(MdnsPacket.ENUMERATION))
                         socket.send(DatagramPacket(question, question.size, group, 5353)); enumerations++; health.count(MDNS_SOURCE, "type queries")
+                        health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
                     }
                     if (now >= nextBatch) {
                         drainMdns(now)
                         val batch = mdnsBatch(ipv6, now, typeAttempts, typeNext)
                         if (batch.questions.isNotEmpty()) {
-                            val query = MdnsPacket.query(batch.questions); socket.send(DatagramPacket(query, query.size, group, 5353))
+                            val known = mdnsAssembly.knownAnswers(ipv6, batch.questions, now)
+                            for (query in MdnsPacket.queryPackets(batch.questions, known)) {
+                                if (!accepting || cancelled.get()) break
+                                socket.send(DatagramPacket(query, query.size, group, 5353))
+                                health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
+                                val answers = ((query[6].toInt() and 255) shl 8) or (query[7].toInt() and 255)
+                                if (answers > 0) health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_KNOWN_ANSWERS, answers)
+                            }
                             health.count(MDNS_SOURCE, "hostname batches"); if (batch.retry) health.count(MDNS_SOURCE, "service retry batches")
                         }
-                        val followUps = mdnsAssembly.due(ipv6, now, 4)
+                        val followUps = mdnsAssembly.due(ipv6, now, 4).filter { shouldAsk(ipv6, it, now) }
                         if (followUps.isNotEmpty()) {
                             val query = MdnsPacket.followUp(followUps)
                             socket.send(DatagramPacket(query, query.size, group, 5353))
+                            health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
                             health.count("mDNS service details", "query batches")
                         }
                         if (mdnsAssembly.limited) health.truncated("mDNS service details", "Current-record or follow-up limit reached")
@@ -1095,7 +1106,9 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     }
                     val bytes = ByteArray(MdnsPacket.MAX_PACKET + 1); val packet = DatagramPacket(bytes, bytes.size)
                     try { socket.receive(packet) } catch (_: SocketTimeoutException) { continue }
-                    val response = traffic.receive(bytes, packet.length, packet.port, inScope(packet.address))
+                    val response = traffic.receive(bytes, packet.length, packet.port, inScope(packet.address)) { questions ->
+                        if (accepting && !cancelled.get()) mdnsQuestionSuppression.observe(packet.address.address.size == 16, questions, System.nanoTime())
+                    }
                     if (traffic.limited) break
                     if (response != null) mdnsResolved(packet.address, response)
                 }
@@ -1108,19 +1121,27 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private class MdnsBatch(names: List<String>, val retry: Boolean) {
         val questions: List<String> = Collections.unmodifiableList(names)
     }
+    private fun shouldAsk(ipv6: Boolean, question: MdnsPacket.Question, now: Long): Boolean {
+        if (!mdnsQuestionSuppression.suppress(ipv6, question, now)) return true
+        health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_COALESCED)
+        return false
+    }
     @Synchronized private fun mdnsBatch(ipv6: Boolean, now: Long, typeAttempts: MutableMap<String, Int>, typeNext: MutableMap<String, Long>): MdnsBatch {
         val questions = ArrayList<String>()
-        for (type in mdnsRetries.due(ipv6, now, 8)) questions.add(type + "local")
+        val retries = mdnsRetries.due(ipv6, now, 8)
+        for (type in retries) if (shouldAsk(ipv6, MdnsPacket.Question((type + "local").split('.'), 12), now)) questions.add(type + "local")
         // Recovery queries do not consume normal reverse/type attempts.
-        if (questions.isNotEmpty()) return MdnsBatch(questions, true)
+        if (retries.isNotEmpty()) return MdnsBatch(questions, true)
         for (q in mdnsQuestions.values) if ((Address.bytes(q.ip)!!.size == 16) == ipv6 && q.attempts < 2 && now >= q.next) {
-            questions.add(q.question); q.attempts++; q.next = now + TimeUnit.MILLISECONDS.toNanos(1200)
+            if (shouldAsk(ipv6, MdnsPacket.Question(q.question.split('.'), 12), now)) questions.add(q.question)
+            q.attempts++; q.next = now + TimeUnit.MILLISECONDS.toNanos(1200)
             if (questions.size == 8) break
         }
         for (type in TreeSet(nsdTypes)) {
             if (questions.size == 8) break
             if (typeAttempts.getOrDefault(type, 0) < 2 && now >= typeNext.getOrDefault(type, 0L)) {
-                questions.add(type + "local"); typeAttempts[type] = typeAttempts.getOrDefault(type, 0) + 1
+                if (shouldAsk(ipv6, MdnsPacket.Question((type + "local").split('.'), 12), now)) questions.add(type + "local")
+                typeAttempts[type] = typeAttempts.getOrDefault(type, 0) + 1
                 typeNext[type] = now + TimeUnit.MILLISECONDS.toNanos(1200)
             }
         }
@@ -1304,6 +1325,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         } catch (_: Exception) {}
     }
     @Synchronized private fun cleanupNsd() {
+        mdnsQuestionSuppression.close()
         resolverTimeouts.removeCallbacksAndMessages(null)
         for (browse in legacyBrowses) health.truncated("mDNS " + browse.type, if (cancelled.get()) "Scan stopped before this type was checked" else "Scan window ended before this type was checked")
         legacyBrowses.clear(); legacyActive.clear()

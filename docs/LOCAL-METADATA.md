@@ -58,7 +58,8 @@ the numeric status, without reason phrases, headers or bodies. Raw exception
 messages, endpoint addresses, advertised paths and device identifiers are not
 copied into diagnostic text. Counts stay in the current scan's RAM-only report.
 The original ordinary-counter limit remains; the additional diagnostic vocabulary
-is a finite enum and each counter saturates at one million.
+is a finite enum. Event counts saturate at one million; received-byte counts
+saturate at 32 MiB.
 
 The direct mDNS receiver also counts datagrams per IPv4/IPv6 receive window,
 ignored sources, oversized packets, non-response header packets, rejected response packets,
@@ -67,14 +68,31 @@ A live-record response counter is not a count of confirmed devices. It grants no
 additional presence or identity authority. No packet bytes or peer identifiers
 are retained by the traffic counter.
 
-The original per-socket limit still stops on the 1,025th datagram, after admitting
-at most 1,024 for processing. The stopping datagram is included in received totals
-and the budget-stop count; all discarded traffic still consumes the budget.
-IPv4 and IPv6 retain separate receive budgets with aggregate diagnostic totals.
-These are receive-window counts; packets are not deduplicated across windows or
-matched to individual senders by the traffic counter.
-These diagnostics do not change discovery scheduling, requests, retries, packet
-or queue limits, certificate checks, or the overall scan deadline.
+The reliability pass separates each configured receive window into at most 4,096
+raw datagrams, 8 MiB of copied payload and 1,024 full response decodes. Discarded
+traffic consumes the raw packet/byte limits; query headers do not consume the
+response-decoding limit. At most 256 small query packets are parsed for optional
+question suppression. Exceeding a receive/byte/response limit remains Truncated;
+skipping further query-suppression parsing does not discard response evidence.
+IPv4 and IPv6 have separate budgets with aggregate counters; packets are not
+deduplicated across windows or attributed to individual senders by these counts.
+
+Current-scan traffic reduction has two bounded mechanisms:
+
+- A recently observed identical QM question with an empty known-answer section
+  can stand in for a scheduled question for one second. Only complete, bounded
+  local questions qualify. Their records never supply presence or identity.
+- Repeated service PTR queries include aged known answers only for complete,
+  unexpired, same-sender services learned from current response packets in this
+  scan. Answers below half their advertised TTL are omitted. A complete sequence
+  occupies at most four 1,200-byte packets with the required TC framing; if it
+  cannot fit, an ordinary query is sent instead. Cached Android callbacks and
+  incomplete/proxy-only service data never authorize known-answer suppression.
+
+Record/admission/queue limits, selected-Wi-Fi binding and the overall scan-work
+deadline remain. Source-detail entries are capped at 1,024 characters so the
+finite additional counters survive terminal reporting; source keys/counts remain
+bounded. These changes do not establish real-network improvement until measured.
 
 ## Development validation (2026-10-31)
 
@@ -122,6 +140,28 @@ That earlier review used development APK SHA-256
 `979975c1cc32ea7888503296c2017b70ce7f881bafa8a1f5cc70b317d78bf7e2`.
 A fresh independent Deep review found one minor Gen1 short-ID compatibility gap;
 the current source includes its correction and regression coverage.
+
+## mDNS reliability validation (in progress)
+
+A mixed-traffic regression against the prior receiver failed at response 125 after
+900 query packets. The revised receiver accepts the same 900 queries plus 500
+responses without exhausting its independent response budget. Synthetic tests
+also cover response/raw-packet/byte flood limits, expiry/goodbyes, family isolation,
+query non-authority, bounded cache admission and multipart known-answer framing.
+
+The reliability implementation passed 21 host suites / 15,790 checks, direct app
+and instrumentation builds, packaged permission/security audits and five API 36
+suites / 159 checks: local-metadata 28, split-mdns 22, service-retries 9,
+failure-reporting 37 and scan-details 63. Installed hashes were verified. A
+mistyped test mode ran the default smoke suite; its 67 checks are not counted as
+retry coverage or in the 159-check total. A fresh independent Deep Kaz review
+approved the complete mDNS change with no substantive findings.
+
+Physical measurement is in progress using a private same-app test candidate that
+also measures bounded TCP-only retries for failed Spotify endpoints. That
+experiment is not a production connectivity fix. Its source injection and APK
+remain ignored; normal source and prior release outputs were restored exactly.
+The PR remains draft pending measured findings and final-candidate validation.
 
 ## Diagnostic extension validation (2026-10-31)
 
@@ -260,6 +300,7 @@ reporting checks does not make these Partial scans Complete.
 The additions independently implement documented wire behavior. No vendor code,
 fingerprint database or additional runtime dependency is incorporated.
 
+- [Multicast DNS traffic reduction](https://www.rfc-editor.org/rfc/rfc6762.html#section-7), known-answer and duplicate-question suppression.
 - [Thread Group border-router white paper](https://www.threadgroup.org/Portals/0/documents/support/ThreadBorderRouterWhitePaper_07192022_4001_1.pdf), section 9.
 - [ESPHome mDNS implementation](https://github.com/esphome/esphome/blob/5f5a81434df4d47c3b9fb8d3927f11791a5bcbf6/esphome/components/mdns/mdns_component.cpp), TXT field definitions.
 - [Shelly mDNS](https://shelly-api-docs.shelly.cloud/gen2/General/mDNS/), [Gen1 compatibility](https://shelly-api-docs.shelly.cloud/gen2/General/gen1Compatibility/) and [Gen1 `/shelly`](https://shelly-api-docs.shelly.cloud/gen1/#shelly).

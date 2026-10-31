@@ -205,15 +205,26 @@ object LocalMetadataTest {
         check(!counts.contains("fixture") && !counts.contains("198.18."), "mDNS accounting exports only categories and counts")
         val budgetHealth = DiscoveryHealth().apply { begin(MdnsTraffic.SOURCE) }
         val budget = MdnsTraffic(budgetHealth, false)
-        repeat(1024) { check(budget.receive(empty, empty.size, 5353, true) != null && !budget.limited, "All original receive-budget slots remain available") }
-        check(budget.receive(live, live.size, 5353, true) == null && budget.limited, "The 1,025th packet stops the original bounded receive window")
+        repeat(1024) { check(budget.receive(empty, empty.size, 5353, true) != null && !budget.limited, "All bounded response-decode slots remain available") }
+        check(budget.receive(live, live.size, 5353, true) == null && budget.limited, "The 1,025th response stops the bounded decode window")
         val terminal = budgetHealth.sources()
         check(terminal.getValue(MdnsTraffic.SOURCE).startsWith("Truncated") && terminal.getValue(MdnsTraffic.SOURCE).contains("packets received 1025"), "The budget-stopping datagram is counted and remains Partial")
         budget.receive(live, live.size, 5353, true)
         check(terminal == budgetHealth.sources(), "Stopped receive accounting retains no later packets")
         val ignoredBudget = MdnsTraffic(DiscoveryHealth(), false)
         repeat(1025) { ignoredBudget.receive(live, live.size, 1, false) }
-        check(ignoredBudget.limited, "Irrelevant traffic still consumes the hard safety budget")
+        check(!ignoredBudget.limited, "Cheap discarded traffic does not consume the response-processing budget")
+        repeat(MdnsTraffic.MAX_DATAGRAMS + 1 - 1025) { ignoredBudget.receive(live, live.size, 1, false) }
+        check(ignoredBudget.limited, "Discarded traffic still consumes the independent raw receive budget")
+        val mixed = MdnsTraffic(DiscoveryHealth(), false)
+        repeat(900) { mixed.receive(query, query.size, 5353, true) }
+        repeat(500) { check(mixed.receive(empty, empty.size, 5353, true) != null, "Busy query traffic leaves bounded capacity for responses") }
+        check(!mixed.limited, "Mixed receive traffic no longer hits the old combined packet cap")
+        val byteHealth = DiscoveryHealth()
+        val byteBudget = MdnsTraffic(byteHealth, false)
+        val oversized = ByteArray(MdnsPacket.MAX_PACKET + 1)
+        repeat(1024) { byteBudget.receive(oversized, oversized.size, 5353, true) }
+        check(byteBudget.limited && byteHealth.sources().getValue(MdnsTraffic.SOURCE).contains("8 MiB receive byte limit"), "Large discarded traffic remains independently byte bounded")
         check(MdnsTraffic(DiscoveryHealth(), false).receive(live, live.size, 5353, true)?.freshResponse == true, "A fresh receive window has no inherited budget or packet history")
     }
 

@@ -53,6 +53,17 @@ and the known intermittent native HTTP resolution limitation remain open. The
 metadata notes record exact artifacts, interrupted helper attempts and coverage
 limits; reporting changes do not resolve discovery failures.
 
+## mDNS reliability pass (in progress)
+
+The current branch separates raw receive traffic from full response decoding,
+adds current-scan question/known-answer suppression and retains finite byte,
+packet, record and time limits. A mixed-traffic regression reproduces the old
+premature stop and passes with the revised receiver. All 21 host suites / 15,790
+checks, direct builds, package audits and five API 36 suites / 159 checks passed.
+A fresh independent Deep review approved the mDNS implementation. Real-network
+measurement and final production validation are still in progress; source and
+scope details are recorded in [LOCAL-METADATA.md](LOCAL-METADATA.md).
+
 ## Known discovery limitation
 
 Repeated physical-device scans reproduced intermittent resolution deadlines for HomeKit (`_hap._tcp`) and HTTP (`_http._tcp`). Android registrations sometimes supplied no usable address update within both bounded attempts. Other discovery methods continued, and the scan correctly remained Partial.

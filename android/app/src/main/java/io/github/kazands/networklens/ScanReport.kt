@@ -24,9 +24,9 @@ class ScanReport @JvmOverloads constructor(
         val clean = LinkedHashMap<String, String>()
         for ((key, value) in sources) {
             if (clean.size >= 64) break
-            // Two bounded failure reasons plus six counters can exceed 200 characters.
+            // Bounded reasons plus the finite traffic/transport diagnostic vocabulary.
             // Preserve that diagnostic context while keeping each RAM-only entry bounded.
-            clean[SafeText.label(key, 160)] = SafeText.label(value, 512)
+            clean[SafeText.label(key, 160)] = SafeText.label(value, 1024)
         }
         this.sources = Collections.unmodifiableMap(clean)
     }
