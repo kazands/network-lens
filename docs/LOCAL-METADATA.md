@@ -60,8 +60,8 @@ copied into diagnostic text. Counts stay in the current scan's RAM-only report.
 The original ordinary-counter limit remains; the additional diagnostic vocabulary
 is a finite enum and each counter saturates at one million.
 
-The direct mDNS receiver also counts received IPv4/IPv6 datagrams, ignored sources,
-oversized packets, non-response header packets, rejected response packets,
+The direct mDNS receiver also counts datagrams per IPv4/IPv6 receive window,
+ignored sources, oversized packets, non-response header packets, rejected response packets,
 responses without live details, live-record responses and receive-budget stops.
 A live-record response counter is not a count of confirmed devices. It grants no
 additional presence or identity authority. No packet bytes or peer identifiers
@@ -71,6 +71,8 @@ The original per-socket limit still stops on the 1,025th datagram, after admitti
 at most 1,024 for processing. The stopping datagram is included in received totals
 and the budget-stop count; all discarded traffic still consumes the budget.
 IPv4 and IPv6 retain separate receive budgets with aggregate diagnostic totals.
+These are receive-window counts; packets are not deduplicated across windows or
+matched to individual senders by the traffic counter.
 These diagnostics do not change discovery scheduling, requests, retries, packet
 or queue limits, certificate checks, or the overall scan deadline.
 
@@ -78,7 +80,8 @@ or queue limits, certificate checks, or the overall scan deadline.
 
 The checks below validate bounded parsing and transport behavior. Physical-device
 results and their remaining limits are recorded separately below. Keep the pull
-request as a draft while the unavailable Spotify responses remain unexplained.
+request as a draft while the cause of Spotify connection failures remains
+unresolved.
 
 Before the diagnostic extension, the source including the Gen1 short-ID
 correction passed:
@@ -128,6 +131,8 @@ The diagnostic extension passed:
   exercise numeric HTTP errors, malformed/truncated/oversized HTTP, unusable
   metadata, connection/write/read failures, TLS failure, deadline-clamped read
   timeouts and cancellation after a real loopback server receives the request.
+- Three additional focused metadata repetitions passed, including the corrected
+  deadline/read-timeout and in-flight cancellation cases.
 - Direct app and instrumentation builds with JDK 21; packaged permission/security
   audits passed.
 - API 36: `local-metadata` (28 checks), `failure-reporting` (35), `scan-details`
@@ -147,7 +152,51 @@ code tracks that clamping for classification without changing timeout values.
 The final host run above includes the correction. Physical diagnostic retesting
 is recorded separately from the earlier phone candidate below.
 
-## Physical-device validation (2026-10-31)
+## Diagnostic phone retest (2026-10-31)
+
+The authorized Pixel 8 (API 37) received the diagnostic candidate from commit
+`35a0a096fc4e673f03893d8534e8be4508bf65b8` as an in-place update. Installed bytes
+matched the signed candidate, permission grants were preserved, and its updated
+process started empty without an automatic scan. The candidate remains installed.
+
+Signed diagnostic candidate SHA-256:
+`a5ef00d4119b35862a05d985e6f465b2a85c78256cff80e581b2ac30f41a34f9`.
+Its application payload matched the development APK tested above; prior release
+outputs were again restored byte for byte. No release APK or tag was published.
+
+Two fresh foreground scans reached Partial after 36.31 and 35.96 seconds,
+including UI observation overhead. The complete method report was captured for
+each scan. Both accepted IPP printer information and Spotify metadata replies.
+Each also recorded a Spotify connection timeout; the second recorded an
+additional connection failure. These failed attempts did not reach an HTTP
+response, so their diagnostics do not show an HTTP authentication rejection or
+invalid metadata. The underlying cause of the connection failures remains open.
+
+Both scans reached the original IPv4 receive-window safety cap. About half the
+aggregate mDNS datagrams had a non-response header. This confirms that the receive
+budget includes substantial non-response traffic; it does not identify the
+senders, prove duplicate queries or establish that raising the cap is appropriate.
+The known native HTTP resolution failure did not recur in these two scans; it
+remains an intermittent limitation, not a resolved issue.
+
+Stop scan reached a terminal Partial report after 6.31 seconds including UI
+observation. Full per-method cancellation diagnostics were not collected. An
+initial attempt stopped at the foreground guard; after the user confirmed the
+app visible, the helper restored off-screen scan controls before the two fresh
+runs. Only that interrupted attempt's later terminal Partial state was checked.
+No app crash entry appeared in the app-UID crash buffer checked after the initial
+stop. This does not establish the cause of the transient foreground mismatch.
+
+The guarded journey verified the update, fresh scans and terminal cancellation.
+Raw UI remained in memory,
+local aggregate evidence stayed ignored, and no instrumentation was installed
+on the phone. Real per-device model/source-label accuracy, unobserved protocol
+families, trusted IPPS, deliberate Home/foreground-loss and Wi-Fi replacement
+transitions, and visual/TalkBack checks remain unverified for this candidate.
+These diagnostics explain failure categories without changing discovery limits
+or claiming the Partial scans finished all planned work.
+
+## Initial metadata phone validation (2026-10-31)
 
 An explicitly authorized Pixel 8 running API 37 received an in-place update from
 its existing production-signed preview to a candidate built from source commit

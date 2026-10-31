@@ -43,7 +43,15 @@ and adds aggregate mDNS receive counters. It retains the original work limits an
 fresh-response rules. It passed 20 host suites / 15,243 checks, direct app/instrumentation builds,
 package audits and four API 36 suites / 148 checks. An independent Deep review
 approved the change. Its validation is recorded separately from the earlier
-phone candidate; these reporting changes do not resolve discovery failures.
+phone candidate. A matching-signed diagnostic retest on the authorized Pixel 8
+(API 37) verified update bytes, grants and empty startup. Two fresh scans took
+about 36 seconds and remained Partial: Spotify recorded connection timeouts, with
+one additional connection failure in the second scan, and both reached the IPv4
+mDNS receive cap. Substantial non-response traffic consumed that receive budget.
+Stop scan again reached terminal Partial. The cause of the connection failures
+and the known intermittent native HTTP resolution limitation remain open. The
+metadata notes record exact artifacts, interrupted helper attempts and coverage
+limits; reporting changes do not resolve discovery failures.
 
 ## Known discovery limitation
 
