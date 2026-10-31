@@ -27,6 +27,7 @@ Read the [0.3.11 verification notes](docs/VERIFICATION-0.3.11.md) for completed 
 - Dark and light appearances, accessible text scaling, Lucide device pictograms and Back navigation that preserves list position.
 - Complete/Partial scan status with per-method results and reasons. IPv6 discovery uses advertised addresses and eligible local routes; it does not enumerate the IPv6 address space.
 - Offline IEEE prefix lookup for explicitly reported MAC addresses. An interface supplier is kept separate from a device-reported manufacturer.
+- Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 
 Results, filters, appearance and range choices stay in memory. Every scan starts fresh. A process restart requires a new scan. There is no saved inventory, history, cloud recognition, account, advertising, analytics, monitoring or background scanning. Explicit copy actions use Android's clipboard.
 

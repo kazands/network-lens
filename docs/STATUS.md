@@ -12,6 +12,22 @@ Native text styles now share scalable sizes and leading, with larger supporting 
 
 Version 0.3.8 avoids redundant presence probes after a validated response in the same scan and defers device-list snapshots until the existing presentation queue needs them. Independent detail lookups, fresh-scan isolation, confirmation rules, retry budgets and discovery deadlines remain. These changes do not resolve the intermittent DNS-SD limitation below. Controlled benchmarks and physical-device timing comparisons must distinguish CPU/allocation reductions from total scan duration and device coverage.
 
+## Local device metadata (unreleased)
+
+The source now adds Thread model/vendor TXT fields, targeted ESPHome/Shelly/WLED
+discovery and bounded local Shelly/WLED/Spotify Connect/IPP metadata queries.
+These changes retain fresh-response admission, source labels, unknown values and
+the existing scan deadline. Protocol fields and limits are documented in
+[LOCAL-METADATA.md](LOCAL-METADATA.md). Synthetic protocol and emulator checks do
+not establish compatibility or coverage on real devices.
+
+The current development build, including the Gen1 short-ID correction, passed
+20 host suites (14,131 checks), direct app/instrumentation builds, packaged
+permission/security audits and the focused API 36 metadata suite (24 checks).
+Earlier review testing covered API 26/36/37 and synthetic Android-bound metadata
+exchanges; the metadata notes distinguish those results from the final correction.
+Physical-device validation is pending before merge or a public APK release.
+
 ## Known discovery limitation
 
 Repeated physical-device scans reproduced intermittent resolution deadlines for HomeKit (`_hap._tcp`) and HTTP (`_http._tcp`). Android registrations sometimes supplied no usable address update within both bounded attempts. Other discovery methods continued, and the scan correctly remained Partial.

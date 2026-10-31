@@ -53,6 +53,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val excludedIpv6: MutableSet<String> = ConcurrentHashMap.newKeySet()
     @Volatile private var scanDeadline = Long.MAX_VALUE
     private val castRequests = ServiceAdmission(32)
+    private val metadataRequests = ServiceAdmission(96, 32)
+    private val metadataTimeouts = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     private val multicastNames = ServiceAdmission(128)
     private val wsPeers = ServiceAdmission(64)
     private val wsRecords = ServiceAdmission(256, 8)
@@ -118,6 +120,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         enriching = false
         workers.shutdownNow()
         enrichment.shutdownNow()
+        metadataTimeouts.shutdownNow()
         closeIo()
         cleanupNsd()
         mdnsAssembly.close()
@@ -147,7 +150,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     fun scan(cidr: String?, listener: Listener) {
         Thread({
             if (!ACTIVE.compareAndSet(false, true)) {
-                workers.shutdownNow(); enrichment.shutdownNow()
+                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow()
                 listener.finished(emptyList(), false, "Another scan is finishing. Try again shortly.")
                 return@Thread
             }
@@ -182,6 +185,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else IpRange.address(if (selected.prefix >= 31) selected.first else selected.first - 1) + "/" + selected.prefix + " · IPv4 + IPv6 advertised services"
                 total = hosts.size; started = true; accepting = true; enriching = true
                 health.begin("IPv4 checks"); health.skipped("UPnP descriptions", "No supported description advertised")
+                for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
                 observePhoneAddresses(net.addresses)
                 listener.progressSnapshot(0, total, ::snapshot)
                 val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(55)
@@ -267,7 +271,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else e.message ?: "Could not finish this scan."
             } finally {
                 accepting = false; enriching = false
-                workers.shutdownNow(); enrichment.shutdownNow(); closeIo(); cleanupNsd()
+                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow(); closeIo(); cleanupNsd()
                 health.finish(cancelled.get())
                 if (started && done.get() != total) health.truncated("IPv4 checks", "Address checks did not finish")
                 try {
@@ -772,6 +776,57 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {}; health.workFinished(source) }
         })) health.workFinished(source)
     }
+    /** Called only with current wire records, never Android's cached/native service metadata. */
+    private fun requestMetadata(d: Device, service: MdnsPacket.Service) {
+        if (!enriching || cancelled.get() || d.self || !freshResponders.contains(d.ip)) return
+        val peer = peerAddress(d.ip)
+        if (!inScope(peer)) return
+        val request = LocalMetadata.request(service) ?: return
+        val source = request.kind.source
+        // One attempt per peer/protocol: changing TXT paths or ports cannot grow work.
+        val admission = metadataRequests.admit(d.ip, request.kind.name)
+        if (admission == ServiceAdmission.Result.LIMIT) { health.truncated(source, "32-per-method / 96-total metadata limit reached"); return }
+        if (admission != ServiceAdmission.Result.ADMITTED) return
+        health.workStarted(source)
+        if (!submitEnrichment(DiscoveryWork.Lane.METADATA, source, Runnable {
+            val socket = Socket(); sockets.add(socket)
+            val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(2))
+            try {
+                if (!enriching || cancelled.get()) return@Runnable
+                if (System.nanoTime() >= deadline) { health.truncated(source, "Scan time limit reached"); return@Runnable }
+                net.check(context)
+                if (!inScope(peer) || !freshResponders.contains(d.ip)) return@Runnable
+                net.network!!.bindSocket(socket)
+                health.count(source, "requests")
+                val report = MetadataHttp.exchange(socket, peer, request, deadline, metadataTimeouts) { enriching && !cancelled.get() }
+                if (!enriching || cancelled.get()) return@Runnable
+                net.check(context)
+                if (!inScope(peer) || !freshResponders.contains(d.ip)) return@Runnable
+                if (report == null) {
+                    health.fail(source, "Advertised service returned no valid metadata response")
+                } else synchronized(d) {
+                    if (enriching && !cancelled.get()) {
+                        applyMetadata(d, report, source + " (reported)")
+                        health.count(source, if (report.hints.values.any { it.isNotEmpty() } || report.mac.isNotEmpty() || report.details.values.any { it.isNotEmpty() }) "metadata replies" else "no extra details")
+                    }
+                }
+            } catch (e: Exception) {
+                blocked(e)
+                if (!cancelled.get()) {
+                    if (!enriching || System.nanoTime() >= deadline) health.truncated(source, "Metadata time limit reached")
+                    else health.fail(source, "Advertised metadata unavailable; authentication or connection may be required")
+                }
+            } finally {
+                sockets.remove(socket); try { socket.close() } catch (_: IOException) {}
+                health.workFinished(source)
+            }
+        })) health.workFinished(source)
+    }
+    private fun applyMetadata(d: Device, report: LocalMetadata.Report, source: String) {
+        for ((field, value) in report.hints) d.hint(field, value, source, if (field == "Name") 90 else 80)
+        for ((field, value) in report.details) d.detail(field, value)
+        if (report.mac.isNotEmpty()) d.hardware(report.mac, source + " MAC address; may be another interface")
+    }
     private fun description(d: Device, responder: InetAddress, location: String?) {
         if (!enriching || !inScope(responder) || d.self) return
         val target = UpnpDescription.target(location, responder)
@@ -1198,12 +1253,13 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             if (!d.self) d.hint("Name", name, source + " instance", if (type.contains("http")) 25 else if (type.contains("androidtvremote2")) 85 else 65)
             if (!d.self) d.hint("Hostname", service.host, source + " host", 60)
             val attrs = service.attributes
-            val model = if (HomeKitInfo.applies(type)) attribute(attrs, "md", "model")
+            val model = if (type == "_meshcop._udp.") ""
+                else if (HomeKitInfo.applies(type)) attribute(attrs, "md", "model")
                 else if (type.contains("raop")) attribute(attrs, "am", "model", "md")
                 else if (type.contains("companion-link")) attribute(attrs, "rpMd", "model")
                 else if (type.contains("ipp") || type.contains("printer") || type.contains("pdl-datastream") || type.contains("scanner")) attribute(attrs, "ty", "usb_MDL", "mdl", "model", "product")
                 else attribute(attrs, "model", "md", "ty", "product", "usb_MDL", "mdl")
-            val manufacturer = attribute(attrs, "manufacturer", "usb_MFG", "mfg")
+            val manufacturer = if (type == "_meshcop._udp.") "" else attribute(attrs, "manufacturer", "usb_MFG", "mfg")
             d.hint("Model", model, source + " TXT", if (type.contains("device-info")) 20 else 80)
             d.hint("Manufacturer", manufacturer, source + " TXT", 80)
             if (!d.self) d.hint("Name", attribute(attrs, "fn", "friendlyname"), source + " friendly name", 90)
@@ -1223,6 +1279,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             else if (type.contains("smb")) d.hint("Device type", "File-sharing device", source, 40)
             d.hint("Firmware", attribute(attrs, "fv", "fwversion", "firmware"), source + " TXT", 80)
             d.hint("OS", attribute(attrs, "osvers", "os"), source + " TXT", 80)
+            applyMetadata(d, LocalMetadata.advertisement(type, attrs), source + " TXT")
             if (!d.self && HomeKitInfo.applies(type)) {
                 val homeKit = HomeKitInfo.parse(type, attrs)
                 d.hint("Device type", homeKit.kind, source + " category", if (homeKit.kind == "HomeKit accessory") 35 else 80)
@@ -1232,6 +1289,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             else if (!d.self && type == "_meshcop._udp.") d.hint("Device type", "Thread border router service", source + " service", 35)
         }
         maybeCast(d)
+        requestMetadata(d, service)
     }
     private fun readLegacyArp() {
         if (Build.VERSION.SDK_INT >= 29) return
