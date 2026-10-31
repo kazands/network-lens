@@ -45,8 +45,9 @@ HomeKit/HTTP Android resolution issue or measured coverage on real hardware.
 
 ## Development validation (2026-10-31)
 
-Physical-device validation is pending. Keep the pull request as a draft until
-that check is recorded; these results do not establish real-hardware coverage.
+The checks below validate bounded parsing and transport behavior. Physical-device
+results and their remaining limits are recorded separately below. Keep the pull
+request as a draft while the unavailable Spotify responses remain unexplained.
 
 The current source, including the Gen1 short-ID correction, passed:
 
@@ -87,10 +88,64 @@ That earlier review used development APK SHA-256
 A fresh independent Deep review found one minor Gen1 short-ID compatibility gap;
 the current source includes its correction and regression coverage.
 
-Real Thread/ESPHome/Shelly/WLED/Spotify/IPP hardware, real-network coverage/latency
-and trusted-IPPS success on Android hardware remain unverified. No household scan
-or physical-device operation was performed for these changes. The existing
-intermittent HomeKit/HTTP resolution limitation remains open.
+## Physical-device validation (2026-10-31)
+
+An explicitly authorized Pixel 8 running API 37 received an in-place update from
+its existing production-signed preview to a candidate built from source commit
+`505aa0e78fbbb04b933f3dd2010eeb74b8bcfbe3`. The candidate matched the installed
+app's signing identity. Installed APK bytes matched the prepared candidate,
+Android permission grants were preserved, and the updated process opened ready
+with an empty result list and no automatic scan. The tested candidate remains
+installed on that phone.
+
+Signed candidate APK SHA-256:
+`18e92c575fddf67a83d891583fb7286ce3fc45810557496d1a8c71145193e277`.
+Its application ZIP payload matched the tested development APK, excluding signing
+entries. Previous release outputs were preserved and restored byte for byte.
+This candidate has not been published as a release.
+
+| Check | Observed result |
+| --- | --- |
+| Existing installed preview: baseline foreground scan | Partial, about 36 seconds; mDNS type/hostname queries reached the 1,024-packet safety limit. |
+| Candidate: first fresh foreground scan | Partial, about 37 seconds; some advertised Spotify metadata was unavailable. |
+| Candidate: second fresh foreground scan | Partial, about 36 seconds; Spotify unavailability repeated, and native HTTP service resolution exhausted both bounded attempts without usable addresses. |
+| Candidate: Stop scan during discovery | Terminal Partial observed after about 7 seconds and remained stopped. Complete per-method cancellation diagnostics were not captured. |
+
+Times include UI observation overhead and are not engine benchmarks or evidence
+of a performance improvement. Every method diagnostic was captured for the
+baseline and both full candidate scans. The cancellation report remained intact,
+but the helper could not reach its disclosure through the long report; only its
+terminal Partial/stopped state was verified. Test-helper traversal/startup
+adjustments do not establish application defects.
+
+Both candidate scans accepted IPP printer information and Spotify Connect
+metadata replies. Other Spotify metadata attempts were unavailable in both scans;
+the generic diagnostic does not distinguish authentication, connection, response
+or device behavior, so the cause is unresolved. Shelly and WLED metadata queries
+were unused because no supported service was advertised. Successful mDNS query
+status alone does not establish that Thread or ESPHome hardware was present or
+that a retail model was identified correctly. Per-device field accuracy and source
+labels were not checked on this phone.
+
+The helper verified the specific authorized phone and focused-window owner before
+and after UI operations, stopping on foreground loss. No instrumentation was
+installed on the phone. Raw UI stayed in process memory; only local, ignored
+aggregate evidence and fixed method diagnostics were retained. Public notes omit
+household inventories and identifiers.
+
+The following remain unverified for this candidate:
+
+- Real Thread/ESPHome/Shelly/WLED compatibility and per-device model/source-label
+  accuracy; broader device coverage and repeatable latency measurements.
+- Trusted-IPPS success on Android hardware.
+- Home/foreground-loss and Wi-Fi replacement transitions on this physical
+  candidate; the guarded journey does not exercise those transitions.
+- Full per-method cancellation diagnostics and a visual/TalkBack audit.
+
+The existing intermittent HomeKit/HTTP resolution limitation remains open; HTTP
+resolution failed again in the second candidate scan. Keep the PR draft pending
+investigation of the unavailable Spotify metadata. Passing update, transport and
+reporting checks does not make these Partial scans Complete.
 
 ## Protocol references
 

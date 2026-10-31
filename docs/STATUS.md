@@ -26,7 +26,16 @@ The current development build, including the Gen1 short-ID correction, passed
 permission/security audits and the focused API 36 metadata suite (24 checks).
 Earlier review testing covered API 26/36/37 and synthetic Android-bound metadata
 exchanges; the metadata notes distinguish those results from the final correction.
-Physical-device validation is pending before merge or a public APK release.
+An authorized Pixel 8 (API 37) received the matching-signed candidate in place;
+installed bytes and preserved permission grants were verified. Its updated process
+started empty without an automatic scan. Two fresh foreground scans accepted IPP
+and Spotify metadata but remained Partial because some Spotify metadata was
+unavailable. One also reproduced the existing native HTTP resolution failure.
+Stop scan reached a terminal Partial state; full cancellation method diagnostics
+were not captured. See the metadata notes for artifact identity, observed timings
+and the exact limits. Keep the PR draft pending investigation of the unavailable
+Spotify responses. Real model accuracy, unobserved device families, trusted IPPS
+and physical lifecycle transitions remain unverified for this candidate.
 
 ## Known discovery limitation
 
