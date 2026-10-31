@@ -4,6 +4,20 @@ import java.util.TreeMap
 
 /** Track attempted work separately from IPv4 coverage. */
 class DiscoveryHealth {
+    /** Finite diagnostic vocabulary; never accept peer text, URLs or exception messages. */
+    enum class Diagnostic(val label: String) {
+        CONNECTION_TIMEOUT("connection timeouts"), CONNECTION_FAILED("connection failures"),
+        TLS_FAILED("TLS failures"), WRITE_FAILED("request write failures"),
+        READ_TIMEOUT("read timeouts"), READ_FAILED("response read failures"),
+        HTTP_STATUS("HTTP errors"), INVALID_HTTP("invalid HTTP responses"),
+        INVALID_METADATA("invalid metadata responses"), DEADLINE("metadata deadlines"),
+        REQUEST_FAILED("other request failures"),
+        MDNS_RECEIVED("packets received"), MDNS_IPV4("IPv4 packets"), MDNS_IPV6("IPv6 packets"),
+        MDNS_IGNORED_SOURCE("ignored source packets"), MDNS_OVERSIZED("oversized packets"),
+        MDNS_NON_RESPONSE("non-response packets"), MDNS_REJECTED("rejected response packets"),
+        MDNS_NO_LIVE_DETAILS("responses without live details"), MDNS_LIVE("live-record responses"),
+        MDNS_LIMIT("receive budget stops")
+    }
     private val starting = HashSet<String>()
     private val browsing = HashSet<String>()
     private val work = HashMap<String, Int>()
@@ -11,6 +25,7 @@ class DiscoveryHealth {
     private val states = TreeMap<String, String>()
     private val reasons = HashMap<String, LinkedHashSet<String>>()
     private val counters = TreeMap<String, MutableMap<String, Int>>()
+    private val diagnostics = TreeMap<String, MutableMap<Diagnostic, Int>>()
 
     @Synchronized fun begin(source: String) {
         if (!states.containsKey(source) || states.getValue(source).startsWith("Not used")) states[source] = "Running"
@@ -38,6 +53,10 @@ class DiscoveryHealth {
     @Synchronized fun count(source: String, event: String) {
         val values = counters.getOrPut(source) { TreeMap() }
         if (values.containsKey(event) || values.size < 6) values[event] = minOf(1000000, values.getOrDefault(event, 0) + 1)
+    }
+    @Synchronized fun diagnostic(source: String, event: Diagnostic) {
+        val values = diagnostics.getOrPut(source) { java.util.EnumMap(Diagnostic::class.java) }
+        values[event] = minOf(1000000, values.getOrDefault(event, 0) + 1)
     }
     @Synchronized fun skipped(source: String, reason: String) { states.putIfAbsent(source, "Not used · " + reason) }
     @Synchronized fun starting(type: String) { starting.add(type); begin("mDNS " + type) }
@@ -78,6 +97,10 @@ class DiscoveryHealth {
                 s.append(event).append(' ').append(count)
             }
             result[source] = s.toString()
+        }
+        for ((source, values) in diagnostics) {
+            val counts = values.entries.joinToString(", ") { (event, count) -> event.label + " " + count }
+            result[source] = result.getOrDefault(source, "Not used") + " · " + counts
         }
         return result
     }

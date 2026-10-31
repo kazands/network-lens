@@ -79,6 +79,17 @@ internal object MetadataChecks {
             applyReport.invoke(op, audio, info, "Spotify Connect device information (reported)")
             check(audio.model == "Fixture Speaker" && audio.manufacturer == "Fixture Audio" && audio.mac.isEmpty(), "HTTP report fields reach identity without inventing a MAC")
             check(audio.observations().all { it.source.contains("Spotify Connect") } && !audio.json().toString().contains("discard"), "HTTP provenance is retained and account/key/identifier fields are discarded")
+            val health = get(op, "health") as DiscoveryHealth
+            val source = LocalMetadata.Kind.SPOTIFY.source
+            MetadataHttp.recordFailure(health, source, MetadataHttp.Failure(MetadataHttp.Reason.HTTP_STATUS, 401), false)
+            MetadataHttp.recordFailure(health, source, MetadataHttp.Failure(MetadataHttp.Reason.READ_TIMEOUT), false)
+            check(op.sources()[source]?.let { it.contains("HTTP response error (401)") && it.contains("HTTP errors 1") && it.contains("read timeouts 1") } == true,
+                "Android scan sources retain precise fixed HTTP/read diagnostics")
+            val traffic = MdnsTraffic(health, false)
+            val query = MdnsPacket.query(listOf("_http._tcp.local"))
+            check(traffic.receive(query, query.size, 5353, true) == null, "Diagnostic query counters cannot add presence evidence")
+            check(op.sources()[MdnsTraffic.SOURCE]?.let { it.contains("packets received 1") && it.contains("non-response packets 1") } == true,
+                "Android scan sources expose aggregate receive categories")
             op.cancel(); gate.countDown()
             check(work.awaitTermination(3, TimeUnit.SECONDS), "Cancellation drains metadata workers")
             check((get(op, "metadataTimeouts") as ScheduledExecutorService).isShutdown, "Cancellation shuts down the deadline timer")
@@ -89,6 +100,7 @@ internal object MetadataChecks {
         val next = operation(test)
         try {
             check((get(next, "metadataRequests") as ServiceAdmission).size() == 0 && next.snapshot().isEmpty(), "A new scan inherits neither metadata requests nor device results")
+            check(next.sources().values.none { it.contains("HTTP errors 1") || it.contains("packets received 1") }, "A new Android scan inherits no diagnostic counters")
         } finally { next.cancel() }
     }
 }

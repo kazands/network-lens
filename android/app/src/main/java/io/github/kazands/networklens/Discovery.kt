@@ -802,9 +802,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (!enriching || cancelled.get()) return@Runnable
                 net.check(context)
                 if (!inScope(peer) || !freshResponders.contains(d.ip)) return@Runnable
-                if (report == null) {
-                    health.fail(source, "Advertised service returned no valid metadata response")
-                } else synchronized(d) {
+                synchronized(d) {
                     if (enriching && !cancelled.get()) {
                         applyMetadata(d, report, source + " (reported)")
                         health.count(source, if (report.hints.values.any { it.isNotEmpty() } || report.mac.isNotEmpty() || report.details.values.any { it.isNotEmpty() }) "metadata replies" else "no extra details")
@@ -813,8 +811,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             } catch (e: Exception) {
                 blocked(e)
                 if (!cancelled.get()) {
-                    if (!enriching || System.nanoTime() >= deadline) health.truncated(source, "Metadata time limit reached")
-                    else health.fail(source, "Advertised metadata unavailable; authentication or connection may be required")
+                    MetadataHttp.recordFailure(health, source, e, !enriching || System.nanoTime() >= deadline)
                 }
             } finally {
                 sockets.remove(socket); try { socket.close() } catch (_: IOException) {}
@@ -1071,7 +1068,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 net.network!!.bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 255; socket.soTimeout = 200
                 val group = InetAddress.getByName(if (ipv6) "ff02::fb%" + net.iface else "224.0.0.251")
                 socket.joinGroup(InetSocketAddress(group, 5353), iface)
-                val start = System.nanoTime(); var nextBatch = 0L; var enumerations = 0; var packets = 0
+                val start = System.nanoTime(); var nextBatch = 0L; var enumerations = 0
+                val traffic = MdnsTraffic(health, ipv6)
                 val typeAttempts = HashMap<String, Int>(); val typeNext = HashMap<String, Long>()
                 while (accepting && !cancelled.get()) {
                     val now = System.nanoTime()
@@ -1097,9 +1095,9 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     }
                     val bytes = ByteArray(MdnsPacket.MAX_PACKET + 1); val packet = DatagramPacket(bytes, bytes.size)
                     try { socket.receive(packet) } catch (_: SocketTimeoutException) { continue }
-                    if (++packets > 1024) { health.truncated(MDNS_SOURCE, "1024-packet safety limit reached"); break }
-                    if (packet.port != 5353 || !inScope(packet.address)) continue
-                    mdnsResolved(packet.address, MdnsPacket.parse(bytes, packet.length))
+                    val response = traffic.receive(bytes, packet.length, packet.port, inScope(packet.address))
+                    if (traffic.limited) break
+                    if (response != null) mdnsResolved(packet.address, response)
                 }
                 if (!cancelled.get()) health.ok(MDNS_SOURCE)
             } catch (e: Exception) { if (accepting && !cancelled.get()) { blocked(e); health.fail(MDNS_SOURCE, "Could not receive local multicast queries") } }
@@ -1323,7 +1321,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         private val NSD_HANDLE = ServiceHandle<NsdManager>()
         private val ACTIVE = AtomicBoolean()
         private val PORTS = intArrayOf(80, 443, 22, 445, 62078, 631, 8008)
-        private const val MDNS_SOURCE = "mDNS type and hostname queries"
+        private const val MDNS_SOURCE = MdnsTraffic.SOURCE
         private const val WSD_SOURCE = "WS-Discovery"
         private const val ICMP_SOURCE = "ICMP echo"
         private const val IPV6_SOURCE = "IPv6 service checks"

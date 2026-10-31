@@ -19,6 +19,8 @@ class MdnsPacket private constructor() {
         @JvmField val addresses: MutableMap<String, MutableSet<String>> = TreeMap()
         @JvmField val records: MutableList<Record> = ArrayList()
         @JvmField var freshResponse = false
+        /** Diagnostic only; does not authorize presence or identity. */
+        @JvmField var parsedResponse = false
 
         /** One complete current packet, with SRV/TXT and target address equal to the sender.
          * Proxy-only advertisements cannot qualify through this association. */
@@ -229,6 +231,7 @@ class MdnsPacket private constructor() {
                     }
                     pos[0] = end
                 }
+                result.parsedResponse = true
                 return result
             } catch (_: IllegalArgumentException) { return Result() }
             catch (_: IndexOutOfBoundsException) { return Result() }

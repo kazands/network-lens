@@ -74,7 +74,152 @@ object LocalMetadataTest {
         }
     }
 
+    private fun diagnostics() {
+        val source = LocalMetadata.Kind.SPOTIFY.source
+        val health = DiscoveryHealth().apply { workStarted(source) }
+        val timer = ScheduledThreadPoolExecutor(1)
+        val secret = "fixture-secret http://198.18.0.99/private"
+        val request = LocalMetadata.Request(LocalMetadata.Kind.SPOTIFY, 8080, "/info")
+        fun failure(socket: Socket, reason: MetadataHttp.Reason, active: Boolean = true) {
+            socket.use {
+                try {
+                    MetadataHttp.exchange(it, InetAddress.getLoopbackAddress(), request,
+                        System.nanoTime() + TimeUnit.SECONDS.toNanos(2), timer) { active }
+                    throw AssertionError("Expected diagnostic failure")
+                } catch (e: MetadataHttp.Failure) {
+                    check(e.reason == reason, "Transport failure retains its actual phase: $reason")
+                    check(!e.message.orEmpty().contains(secret), "Diagnostic exception message contains no peer text")
+                    MetadataHttp.recordFailure(health, source, e, false)
+                }
+            }
+        }
+        // Deterministic socket faults identify phases without relying on external network timing.
+        fun socket(connect: Exception? = null, write: Boolean = false, read: Exception? = null): Socket = object : Socket() {
+            override fun connect(endpoint: SocketAddress, timeout: Int) { connect?.let { throw it } }
+            override fun getOutputStream(): OutputStream = object : OutputStream() {
+                override fun write(value: Int) { if (write) throw IOException(secret) }
+            }
+            override fun getInputStream(): InputStream { throw read ?: IOException(secret) }
+        }
+        try {
+            failure(socket(connect = SocketTimeoutException(secret)), MetadataHttp.Reason.CONNECTION_TIMEOUT)
+            failure(socket(connect = ConnectException(secret)), MetadataHttp.Reason.CONNECTION_FAILED)
+            failure(socket(write = true), MetadataHttp.Reason.WRITE_FAILED)
+            failure(socket(read = SocketTimeoutException(secret)), MetadataHttp.Reason.READ_TIMEOUT)
+            failure(socket(read = SocketException(secret)), MetadataHttp.Reason.READ_FAILED)
+            failure(socket(connect = SecurityException(secret)), MetadataHttp.Reason.CONNECTION_FAILED)
+            val cancelledBefore = health.sources()
+            failure(socket(), MetadataHttp.Reason.CANCELLED, false)
+            check(health.sources() == cancelledBefore, "Cancellation adds neither failure counters nor failure reasons")
+            for (code in listOf(302, 401, 403, 404, 500, 503)) {
+                try { exchange(LocalMetadata.Kind.SPOTIFY, utf("HTTP/1.1 $code $secret\r\nContent-Length: 0\r\n\r\n")); throw AssertionError("HTTP error accepted") }
+                catch (e: MetadataHttp.Failure) {
+                    check(e.reason == MetadataHttp.Reason.HTTP_STATUS && e.httpStatus == code, "Keep numeric HTTP status without following redirects or guessing auth")
+                    check(!e.message.orEmpty().contains(secret), "HTTP reason phrase is not retained in diagnostic text")
+                    MetadataHttp.recordFailure(health, source, e, false)
+                }
+            }
+            for (reply in listOf("NOT-HTTP $secret\r\n", "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nx", "HTTP/1.1 200 OK\r\nContent-Length: 70000\r\n\r\n")) {
+                try { exchange(LocalMetadata.Kind.SPOTIFY, utf(reply)); throw AssertionError("Malformed HTTP accepted") }
+                catch (e: MetadataHttp.Failure) {
+                    check(e.reason == MetadataHttp.Reason.INVALID_HTTP, "Distinguish malformed, truncated or oversized HTTP from transport failure")
+                    MetadataHttp.recordFailure(health, source, e, false)
+                }
+            }
+            for (body in listOf("not JSON $secret", "{\"status\":102,\"spotifyError\":5}", "{}")) {
+                try { exchange(LocalMetadata.Kind.SPOTIFY, response(utf(body))); throw AssertionError("Invalid metadata accepted") }
+                catch (e: MetadataHttp.Failure) {
+                    check(e.reason == MetadataHttp.Reason.INVALID_METADATA, "Separate unusable protocol metadata from HTTP response errors")
+                    MetadataHttp.recordFailure(health, source, e, false)
+                }
+            }
+            MetadataHttp.recordFailure(health, source, MetadataHttp.Failure(MetadataHttp.Reason.TLS_FAILED), false)
+            MetadataHttp.recordFailure(health, source, IOException(secret), false)
+            health.workFinished(source)
+            val state = health.sources().getValue(source)
+            for (label in listOf("connection timeouts 1", "connection failures 2", "request write failures 1", "read timeouts 1", "response read failures 1", "HTTP errors 6", "invalid HTTP responses 3", "invalid metadata responses 3", "TLS failures 1", "other request failures 1")) {
+                check(state.contains(label), "All finite diagnostic counters survive the ordinary six-counter limit: $label")
+            }
+            check(state.startsWith("Failed") && health.summary().isNotEmpty(), "Failure diagnostics keep the scan Partial after work finishes")
+            check(!state.contains("fixture-secret") && !state.contains("198.18.") && !state.contains("/private"), "Scan diagnostics retain no response text or peer identifiers")
+            val deadlineHealth = DiscoveryHealth().apply { workStarted(source) }
+            MetadataHttp.recordFailure(deadlineHealth, source, MetadataHttp.Failure(MetadataHttp.Reason.CONNECTION_FAILED), true)
+            deadlineHealth.workFinished(source)
+            check(deadlineHealth.sources().getValue(source).startsWith("Truncated") && deadlineHealth.sources().getValue(source).contains("metadata deadlines 1"), "Overall deadline takes precedence and remains incomplete")
+            MetadataHttp.recordFailure(deadlineHealth, source, MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED), true)
+            check(deadlineHealth.sources().getValue(source).contains("metadata deadlines 2"), "Stopping enrichment at the deadline is not mistaken for user cancellation")
+            check(DiscoveryHealth().sources().isEmpty(), "A fresh scan inherits no diagnostic counters")
+        } finally { timer.shutdownNow() }
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+            val received = CountDownLatch(1)
+            val active = java.util.concurrent.atomic.AtomicBoolean(true)
+            val result = AtomicReference<Throwable?>()
+            val peer = Thread {
+                try { server.accept().use { socket -> readRequest(socket); received.countDown(); Thread.sleep(2000) } }
+                catch (_: Exception) {}
+            }.apply { isDaemon = true; start() }
+            val cancellationTimer = ScheduledThreadPoolExecutor(1)
+            val socket = Socket()
+            val client = Thread {
+                try { MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), request.copy(port = server.localPort),
+                    System.nanoTime() + TimeUnit.SECONDS.toNanos(2), cancellationTimer) { active.get() } }
+                catch (e: Throwable) { result.set(e) }
+                finally { socket.close() }
+            }.apply { isDaemon = true; start() }
+            try {
+                check(received.await(1, TimeUnit.SECONDS), "Cancellation fixture receives the metadata request before cancellation")
+                active.set(false); socket.close(); client.join(1500)
+                check(!client.isAlive && (result.get() as? MetadataHttp.Failure)?.reason == MetadataHttp.Reason.CANCELLED,
+                    "Closing an in-flight cancelled socket does not invent a network failure")
+            } finally { active.set(false); socket.close(); cancellationTimer.shutdownNow(); client.interrupt(); peer.interrupt(); client.join(1500); peer.join(1500) }
+        }
+    }
+
+    private fun mdnsTraffic() {
+        fun packet(ttl: Int = 120): ByteArray {
+            val bytes = ByteArrayOutputStream(); val out = DataOutputStream(bytes)
+            out.writeShort(0); out.writeShort(0x8400); out.writeShort(0); out.writeShort(1); out.writeInt(0)
+            out.writeByte(7); out.write(utf("fixture")); out.writeByte(5); out.write(utf("local")); out.writeByte(0)
+            out.writeShort(1); out.writeShort(1); out.writeInt(ttl); out.writeShort(4); out.write(byteArrayOf(198.toByte(), 18, 0, 2))
+            return bytes.toByteArray()
+        }
+        val health = DiscoveryHealth().apply { begin(MdnsTraffic.SOURCE) }
+        val v4 = MdnsTraffic(health, false); val v6 = MdnsTraffic(health, true)
+        val live = packet(); val empty = byteArrayOf(0, 0, 0x84.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        val parsed = v4.receive(live, live.size, 5353, true)!!
+        check(parsed.freshResponse && parsed.addresses == MdnsPacket.parse(live, live.size).addresses, "Diagnostics preserve current-response parsing and address evidence")
+        val goodbye = packet(0)
+        check(v4.receive(goodbye, goodbye.size, 5353, true)?.freshResponse == false, "A parsed goodbye remains insufficient for presence")
+        check(v4.receive(empty, empty.size, 5353, true)?.parsedResponse == true, "Empty responses are counted without asserting presence")
+        val query = MdnsPacket.query(listOf("_http._tcp.local"))
+        check(v4.receive(query, query.size, 5353, true) == null, "Non-response traffic does not reach presence processing")
+        check(v4.receive(live, live.size, 53, true) == null && v4.receive(live, live.size, 5353, false) == null, "Wrong ports and ineligible senders remain ignored")
+        val malformed = live.copyOf(live.size - 1)
+        check(v4.receive(malformed, malformed.size, 5353, true)?.freshResponse == false, "Malformed replies cannot acquire live evidence")
+        check(v4.receive(ByteArray(MdnsPacket.MAX_PACKET + 1), MdnsPacket.MAX_PACKET + 1, 5353, true) == null, "Oversized packets remain bounded and separately counted")
+        v6.receive(empty, empty.size, 5353, true)
+        val counts = health.sources().getValue(MdnsTraffic.SOURCE)
+        for (label in listOf("packets received 9", "IPv4 packets 8", "IPv6 packets 1", "ignored source packets 2", "oversized packets 1", "non-response packets 1", "rejected response packets 1", "responses without live details 3", "live-record responses 1")) {
+            check(counts.contains(label), "Aggregate mDNS classification is exact: $label")
+        }
+        check(!counts.contains("fixture") && !counts.contains("198.18."), "mDNS accounting exports only categories and counts")
+        val budgetHealth = DiscoveryHealth().apply { begin(MdnsTraffic.SOURCE) }
+        val budget = MdnsTraffic(budgetHealth, false)
+        repeat(1024) { check(budget.receive(empty, empty.size, 5353, true) != null && !budget.limited, "All original receive-budget slots remain available") }
+        check(budget.receive(live, live.size, 5353, true) == null && budget.limited, "The 1,025th packet stops the original bounded receive window")
+        val terminal = budgetHealth.sources()
+        check(terminal.getValue(MdnsTraffic.SOURCE).startsWith("Truncated") && terminal.getValue(MdnsTraffic.SOURCE).contains("packets received 1025"), "The budget-stopping datagram is counted and remains Partial")
+        budget.receive(live, live.size, 5353, true)
+        check(terminal == budgetHealth.sources(), "Stopped receive accounting retains no later packets")
+        val ignoredBudget = MdnsTraffic(DiscoveryHealth(), false)
+        repeat(1025) { ignoredBudget.receive(live, live.size, 1, false) }
+        check(ignoredBudget.limited, "Irrelevant traffic still consumes the hard safety budget")
+        check(MdnsTraffic(DiscoveryHealth(), false).receive(live, live.size, 5353, true)?.freshResponse == true, "A fresh receive window has no inherited budget or packet history")
+    }
+
     @JvmStatic fun main(args: Array<String>) {
+        diagnostics()
+        mdnsTraffic()
         val thread = LocalMetadata.advertisement("_meshcop._udp.", attrs("MN" to "Fixture Hub 2", "vn" to "Fixture Devices", "nn" to "Do not retain network"))
         check(thread.hints == mapOf("Model" to "Fixture Hub 2", "Manufacturer" to "Fixture Devices"), "Thread model/vendor use dedicated case-insensitive keys only")
         check(LocalMetadata.advertisement("_http._tcp.", attrs("mn" to "Not Thread", "vn" to "Wrong vendor")).hints.isEmpty(), "Thread keys do not apply to unrelated services")
@@ -174,7 +319,7 @@ object LocalMetadataTest {
             catch (_: IOException) { check(true, "Redirect/auth/oversized/ambiguous metadata response is unavailable") }
         }
         // A slow peer cannot keep an exchange alive by staying inside individual read timeouts.
-        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+        for (deadlineMs in listOf(180L, 2000L)) ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             val started = CountDownLatch(1)
             val peer = Thread {
                 try { server.accept().use { socket -> readRequest(socket); started.countDown(); Thread.sleep(1000) } }
@@ -183,10 +328,12 @@ object LocalMetadataTest {
             val timer = ScheduledThreadPoolExecutor(1)
             val began = System.nanoTime()
             try {
-                Socket().use { socket -> MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), LocalMetadata.Request(LocalMetadata.Kind.WLED, server.localPort, "/json/info"), began + TimeUnit.MILLISECONDS.toNanos(180), timer) { true } }
+                Socket().use { socket -> MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), LocalMetadata.Request(LocalMetadata.Kind.WLED, server.localPort, "/json/info"), began + TimeUnit.MILLISECONDS.toNanos(deadlineMs), timer) { true } }
                 throw AssertionError("Deadline not enforced")
-            } catch (_: IOException) {
-                check(started.await(1, TimeUnit.SECONDS) && TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began) < 900, "Overall exchange deadline closes a stalled peer")
+            } catch (e: MetadataHttp.Failure) {
+                check(e.reason == if (deadlineMs == 180L) MetadataHttp.Reason.DEADLINE else MetadataHttp.Reason.READ_TIMEOUT,
+                    "Real stalled transport distinguishes deadline $deadlineMs ms from ${e.reason}")
+                check(started.await(1, TimeUnit.SECONDS) && TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began) < 1500, "A stalled peer remains bounded")
             } finally { timer.shutdownNow(); peer.interrupt(); peer.join(1500) }
         }
         val timer = ScheduledThreadPoolExecutor(1)
@@ -214,8 +361,9 @@ object LocalMetadataTest {
             try {
                 Socket().use { socket -> MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), securePrinting.copy(port = server.localPort), System.nanoTime() + TimeUnit.SECONDS.toNanos(2), tlsTimer) { true } }
                 throw AssertionError("IPPS accepted a plaintext peer")
-            } catch (_: IOException) {
+            } catch (e: MetadataHttp.Failure) {
                 peer.join(3000)
+                check(e.reason == MetadataHttp.Reason.TLS_FAILED, "Secure endpoint failure is identified as TLS without a guessed authentication cause")
                 check(tlsBytes.get()?.first()?.toInt() == 22 && !extraConnection.get(), "IPPS uses TLS and never retries a failed secure exchange in plaintext")
             } finally { tlsTimer.shutdownNow(); peer.interrupt(); peer.join(1000) }
         }

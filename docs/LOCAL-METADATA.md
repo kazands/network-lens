@@ -43,13 +43,45 @@ Stopping discovery closes sockets, shuts down the metadata lane/timer and reject
 late results. These additions do not establish a fix for the existing intermittent
 HomeKit/HTTP Android resolution issue or measured coverage on real hardware.
 
+## Local diagnostics
+
+Scan method details distinguish connection failures/timeouts, TLS failures,
+request-write failures, response-read failures/timeouts, non-200 HTTP status codes,
+invalid/unsupported HTTP framing and unusable protocol metadata. A read or connect
+timeout shortened by the remaining overall budget is reported as a metadata
+deadline. Deadlines remain incomplete; other requested-metadata failures remain
+failed. User cancellation does not become a connection or read failure. A valid
+response omitting an optional model still leaves that field unknown.
+
+Each failure category has a fixed aggregate counter. HTTP diagnostics retain only
+the numeric status, without reason phrases, headers or bodies. Raw exception
+messages, endpoint addresses, advertised paths and device identifiers are not
+copied into diagnostic text. Counts stay in the current scan's RAM-only report.
+The original ordinary-counter limit remains; the additional diagnostic vocabulary
+is a finite enum and each counter saturates at one million.
+
+The direct mDNS receiver also counts received IPv4/IPv6 datagrams, ignored sources,
+oversized packets, non-response header packets, rejected response packets,
+responses without live details, live-record responses and receive-budget stops.
+A live-record response counter is not a count of confirmed devices. It grants no
+additional presence or identity authority. No packet bytes or peer identifiers
+are retained by the traffic counter.
+
+The original per-socket limit still stops on the 1,025th datagram, after admitting
+at most 1,024 for processing. The stopping datagram is included in received totals
+and the budget-stop count; all discarded traffic still consumes the budget.
+IPv4 and IPv6 retain separate receive budgets with aggregate diagnostic totals.
+These diagnostics do not change discovery scheduling, requests, retries, packet
+or queue limits, certificate checks, or the overall scan deadline.
+
 ## Development validation (2026-10-31)
 
 The checks below validate bounded parsing and transport behavior. Physical-device
 results and their remaining limits are recorded separately below. Keep the pull
 request as a draft while the unavailable Spotify responses remain unexplained.
 
-The current source, including the Gen1 short-ID correction, passed:
+Before the diagnostic extension, the source including the Gen1 short-ID
+correction passed:
 
 - `scripts/test.sh`: 20 suites, 14,131 checks, including 324 metadata checks and
   malformed-input/loopback HTTP/IPP/TLS fixtures. The new short-ID regression
@@ -87,6 +119,33 @@ That earlier review used development APK SHA-256
 `979975c1cc32ea7888503296c2017b70ce7f881bafa8a1f5cc70b317d78bf7e2`.
 A fresh independent Deep review found one minor Gen1 short-ID compatibility gap;
 the current source includes its correction and regression coverage.
+
+## Diagnostic extension validation (2026-10-31)
+
+The diagnostic extension passed:
+
+- All 20 host suites / 15,243 checks, including 1,436 metadata checks. New tests
+  exercise numeric HTTP errors, malformed/truncated/oversized HTTP, unusable
+  metadata, connection/write/read failures, TLS failure, deadline-clamped read
+  timeouts and cancellation after a real loopback server receives the request.
+- Direct app and instrumentation builds with JDK 21; packaged permission/security
+  audits passed.
+- API 36: `local-metadata` (28 checks), `failure-reporting` (35), `scan-details`
+  (63) and `split-mdns` (22): four suites / 148 checks, with installed app/test
+  bytes verified. The reporting checks include large text and both appearances.
+- A fresh independent Deep Kaz review of the complete diagnostic change:
+  Approve, with no unresolved substantive findings. The reviewer's own runtime
+  attempt was blocked by its restricted socket environment; passing runtime
+  results above come from the coordinator's supported test execution.
+
+Development APK SHA-256: `e091d3586849c03f8a64798d86c4a03122ca4d434b400e37f7dffc3571ebeee9`.
+Instrumentation APK SHA-256: `b92731e875e108470d1176e51072d6a66ef6aedf6ced8721f6d30fd11fec3b76`.
+
+An exact timeout-category regression initially failed: a read timeout clamped by
+remaining budget could fire fractionally before the absolute deadline. The final
+code tracks that clamping for classification without changing timeout values.
+The final host run above includes the correction. Physical diagnostic retesting
+is recorded separately from the earlier phone candidate below.
 
 ## Physical-device validation (2026-10-31)
 

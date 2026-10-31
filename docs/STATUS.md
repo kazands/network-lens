@@ -21,7 +21,8 @@ the existing scan deadline. Protocol fields and limits are documented in
 [LOCAL-METADATA.md](LOCAL-METADATA.md). Synthetic protocol and emulator checks do
 not establish compatibility or coverage on real devices.
 
-The current development build, including the Gen1 short-ID correction, passed
+Before the diagnostic extension, the build including the Gen1 short-ID correction
+passed
 20 host suites (14,131 checks), direct app/instrumentation builds, packaged
 permission/security audits and the focused API 36 metadata suite (24 checks).
 Earlier review testing covered API 26/36/37 and synthetic Android-bound metadata
@@ -36,6 +37,13 @@ were not captured. See the metadata notes for artifact identity, observed timing
 and the exact limits. Keep the PR draft pending investigation of the unavailable
 Spotify responses. Real model accuracy, unobserved device families, trusted IPPS
 and physical lifecycle transitions remain unverified for this candidate.
+
+The diagnostic extension classifies metadata transport, HTTP and protocol failures
+and adds aggregate mDNS receive counters. It retains the original work limits and
+fresh-response rules. It passed 20 host suites / 15,243 checks, direct app/instrumentation builds,
+package audits and four API 36 suites / 148 checks. An independent Deep review
+approved the change. Its validation is recorded separately from the earlier
+phone candidate; these reporting changes do not resolve discovery failures.
 
 ## Known discovery limitation
 
