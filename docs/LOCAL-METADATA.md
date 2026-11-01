@@ -239,7 +239,7 @@ Rejected signed phone candidate SHA-256:
 `11b453df3592903766ea056d40435c7e3e0c5040fb430716c03022c4214f5818`.
 These are historical trial artifacts, not the retained candidate.
 
-## Native and wire correlation diagnostics (phone validation pending)
+## Native and wire correlation diagnostics (2026-11-01)
 
 Modern Android service-resolution failures now record a fixed aggregate category
 for their matching current-scan wire evidence: not observed, observed with no
@@ -274,7 +274,50 @@ not rerun for this increment. A fresh independent Deep review identified a minor
 late-completion expiry gap. Its new regression failed before the correction;
 bounded diagnostic completion timestamps fixed it, and targeted independent
 verification confirmed the finding resolved without a verified regression.
-Physical measurements will be recorded after the guarded phone check.
+Physical measurements and their limits are recorded below.
+
+## Correlation phone validation (2026-11-01)
+
+The authorized Pixel 8 (API 37) received the reviewed diagnostic candidate from
+`e892814` as an in-place update. Installed APK bytes matched the signed artifact,
+permission grants were preserved, and startup was empty without automatic scanning.
+Application payload matched the development APK tested on the emulators. Existing
+release outputs were preserved and restored byte for byte; no release was published.
+
+Signed diagnostic candidate SHA-256:
+`6f5a51bbecf0566d9c456fff58d66de66eedfc1227331e4b490b34c1a80631d0`.
+
+Three full foreground scan reports were captured, including every advertised
+method row. They reached Partial after 37.27, 36.87 and 36.27 seconds including UI
+observation. All three reported native HomeKit/HTTP and direct mDNS as OK; none
+hit a receive budget. Aggregate datagrams were 1,161 / 1,102 / 1,191 and response
+decodes 458 / 443 / 456. IPP metadata succeeded in all three. Spotify returned
+3 / 3 / 2 metadata replies from 5 / 5 / 4 requests; each report recorded a connection
+timeout and a connection failure. These failures retained Partial status.
+
+No terminal native failure occurred in these full scans, so real-phone failure-time
+wire categories and late-reply classifications were not exercised. This does not
+establish a fix or distinguish stale cache from missed/silent replies. Controlled
+native-failure and late-wire Android fixtures cover those paths separately.
+A separate Stop check reached Partial after 16.26 seconds including UI observation;
+its full method report marked unfinished work stopped/incomplete. There was no
+terminal native failure in that stopped report either.
+
+Reader interruptions are not counted as extra successful measurements. An earlier
+37.60-second scan had no retained complete report and was excluded. The faster
+reader failed its row-completeness check; a later no-new-row shortcut could also
+stop inside a long diagnostic card. Bounded forward/reverse reads through dialog
+padding replaced those shortcuts. A read-only check confirmed one display and
+identified the chat app as the input-focus owner while Network Lens remained
+visible. The foreground guard was kept unchanged; report capture resumed only
+with Network Lens focused. No foreign app content or household identifiers were
+retained or published.
+
+This reviewed diagnostic build remains installed. It adds evidence for the next
+natural native failure; it does not add background scans, persistent logs or a
+connectivity workaround. Native root cause, Spotify availability, broader hardware
+coverage/model accuracy, trusted IPPS, physical Home/Wi-Fi replacement transitions
+and a fresh TalkBack audit remain unverified.
 
 ## Retained reliability candidate validation (2026-10-31)
 
@@ -311,8 +354,9 @@ The complete method report contains no claim that every device was discovered.
 A separate Stop scan check reached terminal Partial after 6.82 seconds including
 UI observation; its complete method report was captured. Unfinished methods were
 explicitly marked stopped/incomplete. Connection failures already observed before
-cancellation remained visible. The retained candidate remains installed; no
-private connection probe or rejected resolver path remains in it. Deliberate
+cancellation remained visible. That retained candidate is historical; the correlation diagnostic candidate above
+supersedes its installation state. No private connection probe or rejected resolver
+path is part of either retained build. Deliberate
 physical Home/Wi-Fi replacement transitions, per-device model accuracy, broader
 hardware families, trusted IPPS and a fresh visual/TalkBack audit remain unverified.
 

@@ -78,15 +78,17 @@ availability limitations remain open. Exact measurements, rejected experiment
 boundaries and final-candidate checks are recorded in
 [LOCAL-METADATA.md](LOCAL-METADATA.md). The PR remains draft.
 
-The restored matching-signed candidate is installed on the authorized Pixel 8.
+The earlier restored matching-signed candidate was verified on the authorized
+Pixel 8.
 Its source matches reviewed `9df32e6`; direct builds/audits passed, and its rebuilt
 artifact passed two focused API 37 suites / 45 checks. The final fresh phone scan
 took 37.75 seconds including UI observation: HomeKit, HTTP, direct mDNS and IPP were
 OK, while one Spotify connection timeout kept it Partial. This successful native
 sample does not erase the intermittent failures reproduced in the rejected trial.
 Stop scan reached terminal Partial after 6.82 seconds including UI observation,
-with complete method diagnostics captured. The retained build remains installed;
-private probes and the rejected native path are absent. No release was published.
+with complete method diagnostics captured. That candidate is historical; the
+diagnostic build below supersedes it.
+Private probes and the rejected native path are absent. No release was published.
 
 ## Native and wire diagnostics (unreleased)
 
@@ -102,10 +104,16 @@ deadlines or Partial reporting.
 It passed 22 host suites / 16,079 checks, direct app/instrumentation builds, package
 audits, API 37 five suites / 141 checks and API 36 four suites / 110 checks. A minor
 expiry issue found by independent Deep review was reproduced and corrected;
-targeted verification confirmed the fix. The signed candidate is ready. Phone
-measurement has not run: the foreground guard stopped preflight before update,
-and the previously validated build remains installed. Results and limitations
-will be updated after the authorized guarded measurement.
+targeted verification confirmed the fix. The signed diagnostic candidate from
+`e892814` is installed, with bytes/grants/empty startup verified. Three fully
+captured phone scans took 37.27, 36.87 and 36.27 seconds including UI observation.
+HomeKit, HTTP, direct mDNS and IPP were OK; Spotify connection failures kept all
+three Partial. No terminal native failure occurred, so the real-phone wire-failure
+classification and native root cause remain unverified. Stop reached Partial after
+16.26 seconds with its complete report captured. Tooling interruptions were excluded:
+the reader's false end-of-report shortcut was corrected, and read-only focus checks
+identified the chat app owning input while Network Lens was visible. The foreground
+guard remains unchanged. See the metadata notes for artifacts and exact limits.
 
 ## Known discovery limitation
 
