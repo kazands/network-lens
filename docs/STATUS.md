@@ -53,16 +53,40 @@ and the known intermittent native HTTP resolution limitation remain open. The
 metadata notes record exact artifacts, interrupted helper attempts and coverage
 limits; reporting changes do not resolve discovery failures.
 
-## mDNS reliability pass (in progress)
+## mDNS reliability pass (unreleased)
 
 The current branch separates raw receive traffic from full response decoding,
 adds current-scan question/known-answer suppression and retains finite byte,
 packet, record and time limits. A mixed-traffic regression reproduces the old
 premature stop and passes with the revised receiver. All 21 host suites / 15,790
 checks, direct builds, package audits and five API 36 suites / 159 checks passed.
-A fresh independent Deep review approved the mDNS implementation. Real-network
-measurement and final production validation are still in progress; source and
-scope details are recorded in [LOCAL-METADATA.md](LOCAL-METADATA.md).
+A fresh independent Deep review approved the mDNS implementation. Two controlled
+Pixel 8 (API 37) measurement scans avoided the receive cap; both direct mDNS
+method reports were OK. They still ended Partial: Spotify connections failed,
+and native HomeKit/HTTP resolution deadlines recurred in the second scan.
+Extra bounded Spotify TCP retries did not recover the failing paths: IPv4
+remained timed out and IPv6 was actively refused. A separate computer on the
+direct LAN also found one currently advertised IPv4 Spotify port unavailable
+through both 400 ms and 1,000 ms attempts; three others opened within 400 ms.
+These aggregate results do not prove an identical failing peer across clients.
+Longer connections have not demonstrated a workaround. An exact-name-filtered
+API 37 discovery trial initially returned usable HomeKit/HTTP data, but extended
+phone validation reproduced both failures through that API and its fallback.
+The extra resolver path and tests were reverted; retained code matches `9df32e6`.
+The mDNS receive-limit improvement remains, while native-resolution and Spotify
+availability limitations remain open. Exact measurements, rejected experiment
+boundaries and final-candidate checks are recorded in
+[LOCAL-METADATA.md](LOCAL-METADATA.md). The PR remains draft.
+
+The restored matching-signed candidate is installed on the authorized Pixel 8.
+Its source matches reviewed `9df32e6`; direct builds/audits passed, and its rebuilt
+artifact passed two focused API 37 suites / 45 checks. The final fresh phone scan
+took 37.75 seconds including UI observation: HomeKit, HTTP, direct mDNS and IPP were
+OK, while one Spotify connection timeout kept it Partial. This successful native
+sample does not erase the intermittent failures reproduced in the rejected trial.
+Stop scan reached terminal Partial after 6.82 seconds including UI observation,
+with complete method diagnostics captured. The retained build remains installed;
+private probes and the rejected native path are absent. No release was published.
 
 ## Known discovery limitation
 

@@ -92,7 +92,9 @@ Current-scan traffic reduction has two bounded mechanisms:
 Record/admission/queue limits, selected-Wi-Fi binding and the overall scan-work
 deadline remain. Source-detail entries are capped at 1,024 characters so the
 finite additional counters survive terminal reporting; source keys/counts remain
-bounded. These changes do not establish real-network improvement until measured.
+bounded. The physical measurements below establish behavior in the observed
+scans; they do not establish complete device coverage or elimination of
+intermittent failures.
 
 ## Development validation (2026-10-31)
 
@@ -116,7 +118,7 @@ correction passed:
 - Whitespace and repository hygiene checks, including changed/new working-tree
   files. Local logs and emulator artifacts remain ignored.
 
-Current development APK SHA-256:
+Development APK SHA-256 for the short-ID correction:
 `0da7d67015642d4c903f102c3bdd59013310e487c40379bccad3622225ed5e40`.
 Instrumentation APK SHA-256:
 `8f53439b91378bb8a0bd23a292f59aede58c7111591d9686c6d81127deba64d7`.
@@ -141,7 +143,7 @@ That earlier review used development APK SHA-256
 A fresh independent Deep review found one minor Gen1 short-ID compatibility gap;
 the current source includes its correction and regression coverage.
 
-## mDNS reliability validation (in progress)
+## mDNS reliability validation (2026-10-31)
 
 A mixed-traffic regression against the prior receiver failed at response 125 after
 900 query packets. The revised receiver accepts the same 900 queries plus 500
@@ -157,11 +159,125 @@ mistyped test mode ran the default smoke suite; its 67 checks are not counted as
 retry coverage or in the 159-check total. A fresh independent Deep Kaz review
 approved the complete mDNS change with no substantive findings.
 
-Physical measurement is in progress using a private same-app test candidate that
-also measures bounded TCP-only retries for failed Spotify endpoints. That
-experiment is not a production connectivity fix. Its source injection and APK
-remain ignored; normal source and prior release outputs were restored exactly.
-The PR remains draft pending measured findings and final-candidate validation.
+Two controlled foreground measurements on the authorized Pixel 8 (API 37)
+used a private matching-signed candidate based on `9df32e6`, plus bounded
+TCP-only Spotify retry counters. Both scans remained Partial, after 37.61 and
+38.34 seconds including UI observation. The complete method reports were captured.
+The main direct mDNS method was OK in both: 1,125 and 1,140 aggregate datagrams,
+430 and 453 response decodes, 18 and 4 coalesced questions, and 95 and 104 known
+answers sent. Neither run reached a receive limit. These are traffic/work counts,
+not device counts; they do not prove an overall traffic reduction or full coverage.
+The second scan still reproduced native HomeKit and HTTP resolution deadlines.
+
+Each scan recorded an IPv4 Spotify connection failure that remained a timeout
+through additional TCP-only attempts capped at 400 ms and 1,000 ms; an IPv6
+failure was actively refused on both additional attempts. Retries used the same current peer,
+advertised port and selected Wi-Fi, within the original request deadline. Other
+Spotify endpoints returned valid metadata. A separate bounded computer probe on
+the directly attached LAN found four current IPv4 Spotify endpoints: three opened
+within 400 ms; one timed out at both 400 and 1,000 ms. Aggregate-only evidence does
+not establish that it was the identical endpoint observed by the phone, but it
+shows that an advertised Spotify port can also be unavailable from another client.
+No HTTP response was received for these connection failures, so they do not
+establish an authentication or metadata-parser defect. Longer/repeated connections
+have not demonstrated recovery and are not added to production policy.
+
+A second private experiment replaced only the API 37 first resolution attempt
+with an exact-instance `DiscoveryRequest`, bound to the selected Network with
+`FLAG_NO_PICKER`; the second attempt retained the existing service-info API. Two
+fresh scans took 40.46 and 35.93 seconds including UI observation. HomeKit and HTTP
+method reports were OK in both; direct mDNS also avoided its receive limits.
+Spotify connection failures still kept both scans Partial. Because native failures
+were intermittent even before this experiment, two successful runs supported
+trying the bounded alternative but do not establish a permanent cure or its root cause.
+
+The extended matching-signed trial from `771a281` then ran two more fresh scans
+(37.53 and 38.89 seconds including UI observation) plus Stop scan. The first
+returned usable HomeKit/HTTP data. The second reproduced addressless resolution
+failures for both types through the filtered request and its service-info
+fallback. Both full scans avoided the direct mDNS receive limit and remained
+Partial. Stop scan reached terminal Partial after 7.11 seconds including UI
+observation, with complete method diagnostics captured. These results do not
+establish the alternative API as a reliable workaround in this environment.
+
+The resolver change and its extra tests were reverted in `59396a0`. The retained
+application, tests and build scripts are byte-for-byte the committed `9df32e6`
+implementation. No additional native discovery path or Spotify retry remains.
+The [Android filtered-discovery API](https://developer.android.com/reference/android/net/nsd/NsdManager#registerServiceInfoCallback(android.net.nsd.DiscoveryRequest,%20java.util.concurrent.Executor,%20android.net.nsd.NsdManager.ServiceInfoCallback))
+is available, but availability and correct API use do not guarantee responses.
+The existing direct-current-response recovery remains; unresolved native
+candidates are not silently promoted or relabelled as successful discoveries.
+
+Private experiment source and APKs remain ignored. Prior release outputs were
+restored exactly after each preparation. The PR remains draft; neither the
+Spotify failures nor intermittent native failures are claimed solved.
+
+## Rejected native resolver experiment validation (2026-10-31)
+
+Before the physical recurrence, `771a281` passed 21 host suites / 15,790 checks,
+direct development/instrumentation builds and packaged permission/security audits.
+API 37 passed six suites / 130 checks: permission 17, resolver-upgrade 23,
+local-metadata 28, split-mdns 22, service-retries 9 and fresh-presence 31. API 36
+passed four suites / 80 checks: resolver-upgrade 21, local-metadata 28, split-mdns
+22 and service-retries 9. Installed app/test hashes were verified. These tested
+correct API use, deadlines, fallback, cleanup and admission; they did not establish
+real-device resolution reliability. API 26 was not rerun for that experiment.
+A fresh independent Deep Kaz review approved code correctness with no substantive
+findings; runtime verification remained the coordinator's responsibility.
+The two matrices belong to the rejected experiment, not the retained mDNS build.
+
+The synthetic Network fixture was corrected to `Network.fromNetworkHandle` before
+those passing runs. Initial emulator attempts stopped before tests because the
+emulators were unavailable or still booting. Final matrices used fully booted
+isolated emulators with software graphics; interruptions are not counted as passes.
+
+Rejected development APK SHA-256:
+`95b93e6d58dc9499f1eaa7a490274274d6af93a685537d749decc549c20c7b71`.
+Rejected instrumentation APK SHA-256:
+`2acf291b1fe1f4b38fb823a27eb04dbde0bc11273756e362dea7ebb8f32f6e36`.
+Rejected signed phone candidate SHA-256:
+`11b453df3592903766ea056d40435c7e3e0c5040fb430716c03022c4214f5818`.
+These are historical trial artifacts, not the retained candidate.
+
+## Retained reliability candidate validation (2026-10-31)
+
+After rejecting the native trial, `59396a0` restores application/test/build-script
+contents identical to reviewed `9df32e6`. The rebuilt app and instrumentation
+passed direct builds and package audits. Two focused API 37 suites passed on the
+rebuilt artifact, with installed hashes verified: resolver-upgrade 17 and
+local-metadata 28, for 45 checks. The retained source's broader 21-suite host and
+five-suite API 36 results remain the mDNS-stage results above; the rejected
+experiment's 210 emulator checks are not counted as retained functionality.
+
+Restored development APK SHA-256:
+`169b52f94c93827f9d03bc85345f941866b5a05f7e402c2429e55e1a0de2730c`.
+Restored instrumentation APK SHA-256:
+`e5e7981b0f79d857165cd0dc269650316d68a31b64347dbbc8b154af15aaf46a`.
+Matching-signed retained candidate SHA-256:
+`4e27b3d6b52ed71e9ed4c33e2e6724b7e9b5e0faeaea7e8b44008c5e4ddc3d9d`.
+Its application ZIP payload matches the restored development APK. Prior release
+outputs were preserved and restored byte for byte; no release artifact or tag was
+published.
+
+The authorized Pixel 8 received the retained candidate as an in-place update.
+Installed bytes matched that signed APK, permission grants were preserved, and
+startup was empty without an automatic scan. Its fresh foreground scan reached
+Partial after 37.75 seconds including UI observation. The foreground guard stopped
+report capture; after the user confirmed readiness, the intact report was captured
+without reinstalling or repeating that scan. HomeKit, HTTP, direct mDNS and IPP
+method reports were OK. Spotify returned three metadata replies from four
+requests; one connection timeout kept the scan Partial. Direct mDNS counted 1,182
+aggregate datagrams and 453 response decodes, coalesced 10 questions and sent 102
+known answers. No receive limit was hit.
+The complete method report contains no claim that every device was discovered.
+
+A separate Stop scan check reached terminal Partial after 6.82 seconds including
+UI observation; its complete method report was captured. Unfinished methods were
+explicitly marked stopped/incomplete. Connection failures already observed before
+cancellation remained visible. The retained candidate remains installed; no
+private connection probe or rejected resolver path remains in it. Deliberate
+physical Home/Wi-Fi replacement transitions, per-device model accuracy, broader
+hardware families, trusted IPPS and a fresh visual/TalkBack audit remain unverified.
 
 ## Diagnostic extension validation (2026-10-31)
 
@@ -197,7 +313,8 @@ is recorded separately from the earlier phone candidate below.
 The authorized Pixel 8 (API 37) received the diagnostic candidate from commit
 `35a0a096fc4e673f03893d8534e8be4508bf65b8` as an in-place update. Installed bytes
 matched the signed candidate, permission grants were preserved, and its updated
-process started empty without an automatic scan. The candidate remains installed.
+process started empty without an automatic scan. This is a historical test
+candidate; the later reliability validation supersedes its installation state.
 
 Signed diagnostic candidate SHA-256:
 `a5ef00d4119b35862a05d985e6f465b2a85c78256cff80e581b2ac30f41a34f9`.
@@ -243,8 +360,8 @@ its existing production-signed preview to a candidate built from source commit
 `505aa0e78fbbb04b933f3dd2010eeb74b8bcfbe3`. The candidate matched the installed
 app's signing identity. Installed APK bytes matched the prepared candidate,
 Android permission grants were preserved, and the updated process opened ready
-with an empty result list and no automatic scan. The tested candidate remains
-installed on that phone.
+with an empty result list and no automatic scan. This is a historical candidate;
+the later reliability validation supersedes its installation state.
 
 Signed candidate APK SHA-256:
 `18e92c575fddf67a83d891583fb7286ce3fc45810557496d1a8c71145193e277`.
