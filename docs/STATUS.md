@@ -115,6 +115,26 @@ the reader's false end-of-report shortcut was corrected, and read-only focus che
 identified the chat app owning input while Network Lens was visible. The foreground
 guard remains unchanged. See the metadata notes for artifacts and exact limits.
 
+## Per-endpoint metadata outcomes (unreleased)
+
+Device details now distinguish each endpoint's metadata success, refusal, routing
+failure, timeout, protocol error, work limit and unfinished/stopped lookup. The
+protocol, address family and attempted port remain attached to that endpoint.
+Other current observations supplying its displayed model/manufacturer are shown
+with their sources. Grouped addresses do not borrow these alternatives from one
+another. This adds no requests, retries, cloud recognition or saved history.
+
+The increment passed 22 host suites / 16,209 checks, direct app/instrumentation
+builds, package permission/security audits, five API 37 modes / 987 checks and
+four API 36 modes / 956 checks. Layout coverage includes both appearances,
+320dp/411dp widths and normal/200% font settings. An initial layout assertion
+counted trailing whitespace; native measurements confirmed visible text fit and
+the corrected assertion passed. A System UI not responding dialog interrupted
+the first API 36 reporting run; its rerun passed. A fresh independent Deep Kaz
+review approved the complete increment with no substantive findings. Physical
+validation of this increment is pending. Existing native/Spotify limitations
+remain open; reporting these outcomes does not resolve them.
+
 ## Known discovery limitation
 
 Repeated physical-device scans reproduced intermittent resolution deadlines for HomeKit (`_hap._tcp`) and HTTP (`_http._tcp`). Android registrations sometimes supplied no usable address update within both bounded attempts. Other discovery methods continued, and the scan correctly remained Partial.

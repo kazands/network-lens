@@ -7,6 +7,7 @@ class DiscoveryHealth {
     /** Finite diagnostic vocabulary; never accept peer text, URLs or exception messages. */
     enum class Diagnostic(val label: String) {
         CONNECTION_TIMEOUT("connection timeouts"), CONNECTION_FAILED("connection failures"),
+        CONNECTION_REFUSED("connection refusals"), ROUTING_FAILED("routing failures"),
         TLS_FAILED("TLS failures"), WRITE_FAILED("request write failures"),
         READ_TIMEOUT("read timeouts"), READ_FAILED("response read failures"),
         HTTP_STATUS("HTTP errors"), INVALID_HTTP("invalid HTTP responses"),

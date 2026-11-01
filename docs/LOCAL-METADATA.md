@@ -45,6 +45,26 @@ HomeKit/HTTP Android resolution issue or measured coverage on real hardware.
 
 ## Local diagnostics
 
+Each endpoint's details now include its admitted Shelly, WLED, Spotify Connect
+and IPP lookup outcomes, labelled by protocol, IPv4/IPv6 and the attempted port
+(with TLS for IPPS). Success without an optional model/manufacturer is explicit.
+Connection refusal and routing failures require typed platform evidence; generic
+connection failures remain generic. Read timeouts, HTTP errors, invalid metadata,
+work limits, unfinished lookups and Stop remain distinct. A failed lookup does
+not revoke independently confirmed presence or change Partial reporting.
+
+The same panel identifies other current observations supplying that endpoint's
+displayed model/manufacturer. It does not borrow a grouped address's details,
+guess a brand from a MAC vendor, or issue additional fallback queries. Alternative
+sources are evaluated from current observations, so a later local response can
+appear alongside an earlier HTTP failure. Unknown values remain unknown.
+
+These outcomes have four slots per endpoint, live only in session memory and are
+copied with progress/retained device snapshots. Stop/finalization seal pending
+outcomes against late worker updates. A fresh scan has no inherited outcomes.
+The explicit Copy device details action includes the source-labelled outcomes;
+there is no automatic export, logging or persistence of endpoint diagnostics.
+
 Scan method details distinguish connection failures/timeouts, TLS failures,
 request-write failures, response-read failures/timeouts, non-200 HTTP status codes,
 invalid/unsupported HTTP framing and unusable protocol metadata. A read or connect

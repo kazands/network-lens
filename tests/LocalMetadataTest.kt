@@ -104,6 +104,7 @@ object LocalMetadataTest {
         try {
             failure(socket(connect = SocketTimeoutException(secret)), MetadataHttp.Reason.CONNECTION_TIMEOUT)
             failure(socket(connect = ConnectException(secret)), MetadataHttp.Reason.CONNECTION_FAILED)
+            failure(socket(connect = NoRouteToHostException(secret)), MetadataHttp.Reason.ROUTING_FAILED)
             failure(socket(write = true), MetadataHttp.Reason.WRITE_FAILED)
             failure(socket(read = SocketTimeoutException(secret)), MetadataHttp.Reason.READ_TIMEOUT)
             failure(socket(read = SocketException(secret)), MetadataHttp.Reason.READ_FAILED)
@@ -137,7 +138,7 @@ object LocalMetadataTest {
             MetadataHttp.recordFailure(health, source, IOException(secret), false)
             health.workFinished(source)
             val state = health.sources().getValue(source)
-            for (label in listOf("connection timeouts 1", "connection failures 2", "request write failures 1", "read timeouts 1", "response read failures 1", "HTTP errors 6", "invalid HTTP responses 3", "invalid metadata responses 3", "TLS failures 1", "other request failures 1")) {
+            for (label in listOf("connection timeouts 1", "connection failures 2", "routing failures 1", "request write failures 1", "read timeouts 1", "response read failures 1", "HTTP errors 6", "invalid HTTP responses 3", "invalid metadata responses 3", "TLS failures 1", "other request failures 1")) {
                 check(state.contains(label), "All finite diagnostic counters survive the ordinary six-counter limit: $label")
             }
             check(state.startsWith("Failed") && health.summary().isNotEmpty(), "Failure diagnostics keep the scan Partial after work finishes")
@@ -230,6 +231,7 @@ object LocalMetadataTest {
 
     @JvmStatic fun main(args: Array<String>) {
         diagnostics()
+        lookupOutcomes()
         mdnsTraffic()
         val thread = LocalMetadata.advertisement("_meshcop._udp.", attrs("MN" to "Fixture Hub 2", "vn" to "Fixture Devices", "nn" to "Do not retain network"))
         check(thread.hints == mapOf("Model" to "Fixture Hub 2", "Manufacturer" to "Fixture Devices"), "Thread model/vendor use dedicated case-insensitive keys only")
@@ -382,5 +384,45 @@ object LocalMetadataTest {
         repeat(2000) { val fuzz = ByteArray(random.nextInt(1024)); random.nextBytes(fuzz); IppInfo.parse(fuzz); LocalMetadata.parse(LocalMetadata.Kind.WLED, fuzz) }
         check(true, "Malformed binary/JSON fixtures do not crash or hang")
         println("PASS · $checks local metadata protocol, privacy, path and bounded transport checks")
+    }
+
+    private fun lookupOutcomes() {
+        val request = LocalMetadata.Request(LocalMetadata.Kind.SPOTIFY, 8080, "/private-fixture-path")
+        val pending = MetadataLookups()
+        check(pending.queue(request), "First current lookup gets one endpoint slot")
+        repeat(100) { check(!pending.queue(request.copy(port = 8100 + it)), "Advertised port churn cannot replace or grow an endpoint lookup") }
+        check(pending.snapshot().single().port == 8080, "Diagnostics identify the port actually attempted")
+        val report = LocalMetadata.parse(LocalMetadata.Kind.SPOTIFY, utf("""{"status":101,"spotifyError":0}"""))!!
+        val copy = pending.copy()
+        pending.success(request.kind, report)
+        val success = pending.snapshot().single()
+        check(success.state == MetadataLookups.State.SUCCESS && !success.model && !success.manufacturer,
+            "Valid response without optional identity is a success with explicit missing fields")
+        pending.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.READ_TIMEOUT))
+        pending.finish(true)
+        check(pending.snapshot().single() == success, "Cleanup and late errors cannot rewrite a completed response")
+        check(copy.snapshot().single().state == MetadataLookups.State.QUEUED, "Progress copies own their diagnostic state")
+        copy.finish(true)
+        copy.success(request.kind, LocalMetadata.Report(mapOf("Model" to "Fixture model")))
+        copy.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.CONNECTION_FAILED))
+        copy.finish(false)
+        check(copy.snapshot().single().state == MetadataLookups.State.STOPPED, "A stopped snapshot rejects late response/failure and repeated finish")
+        check(!copy.queue(request.copy(kind = LocalMetadata.Kind.WLED)), "Terminal scans reject new diagnostic work")
+        val fresh = MetadataLookups()
+        check(fresh.snapshot().isEmpty(), "A new endpoint/scan has no previous outcomes")
+        for (kind in LocalMetadata.Kind.values()) fresh.queue(request.copy(kind = kind))
+        check(fresh.snapshot().size == 4, "Endpoint diagnostics remain bounded by the four allowed protocols")
+        fresh.limit(LocalMetadata.Kind.WLED)
+        fresh.incomplete(LocalMetadata.Kind.SHELLY)
+        fresh.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.HTTP_STATUS, 403, IOException("fixture-secret")))
+        fresh.finish(false)
+        check(fresh.snapshot().single { it.kind == LocalMetadata.Kind.WLED }.state == MetadataLookups.State.WORK_LIMIT, "Unattempted work limits are distinct from transport failure")
+        check(fresh.snapshot().single { it.kind == LocalMetadata.Kind.IPP }.state == MetadataLookups.State.INCOMPLETE, "Unfinished queued work stays incomplete")
+        check(fresh.snapshot().single { it.kind == request.kind }.description() == "HTTP response error (403)", "HTTP diagnostics retain only a fixed reason and numeric status")
+        check(!fresh.snapshot().toString().contains("fixture-secret") && !fresh.snapshot().toString().contains("private-fixture-path"), "Outcomes retain neither causes nor advertised paths")
+        for (reason in MetadataHttp.Reason.values()) {
+            val outcome = MetadataLookups().apply { queue(request); failure(request.kind, MetadataHttp.Failure(reason)) }
+            check(outcome.snapshot().single().description() == reason.detail, "Each transport category reaches its endpoint without losing specificity")
+        }
     }
 }

@@ -120,6 +120,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         cancelled.set(true)
         accepting = false
         enriching = false
+        finishMetadataLookups(true)
         workers.shutdownNow()
         enrichment.shutdownNow()
         metadataTimeouts.shutdownNow()
@@ -274,6 +275,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else e.message ?: "Could not finish this scan."
             } finally {
                 accepting = false; enriching = false
+                finishMetadataLookups(cancelled.get())
                 workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow(); closeIo(); cleanupNsd()
                 health.finish(cancelled.get())
                 if (started && done.get() != total) health.truncated("IPv4 checks", "Address checks did not finish")
@@ -780,6 +782,9 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         })) health.workFinished(source)
     }
     /** Called only with current wire records, never Android's cached/native service metadata. */
+    private fun finishMetadataLookups(stopped: Boolean) {
+        for (d in found.values) synchronized(d) { d.metadataLookups.finish(stopped) }
+    }
     private fun requestMetadata(d: Device, service: MdnsPacket.Service) {
         if (!enriching || cancelled.get() || d.self || !freshResponders.contains(d.ip)) return
         val peer = peerAddress(d.ip)
@@ -788,8 +793,16 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         val source = request.kind.source
         // One attempt per peer/protocol: changing TXT paths or ports cannot grow work.
         val admission = metadataRequests.admit(d.ip, request.kind.name)
-        if (admission == ServiceAdmission.Result.LIMIT) { health.truncated(source, "32-per-method / 96-total metadata limit reached"); return }
+        if (admission == ServiceAdmission.Result.LIMIT) {
+            synchronized(d) {
+                if (enriching && !cancelled.get() && d.metadataLookups.queue(request)) d.metadataLookups.limit(request.kind)
+            }
+            health.truncated(source, "32-per-method / 96-total metadata limit reached"); return
+        }
         if (admission != ServiceAdmission.Result.ADMITTED) return
+        synchronized(d) {
+            if (!enriching || cancelled.get() || !d.metadataLookups.queue(request)) return
+        }
         health.workStarted(source)
         if (!submitEnrichment(DiscoveryWork.Lane.METADATA, source, Runnable {
             val socket = Socket(); sockets.add(socket)
@@ -808,19 +821,26 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 synchronized(d) {
                     if (enriching && !cancelled.get()) {
                         applyMetadata(d, report, source + " (reported)")
+                        d.metadataLookups.success(request.kind, report)
                         health.count(source, if (report.hints.values.any { it.isNotEmpty() } || report.mac.isNotEmpty() || report.details.values.any { it.isNotEmpty() }) "metadata replies" else "no extra details")
                     }
                 }
             } catch (e: Exception) {
                 blocked(e)
                 if (!cancelled.get()) {
-                    MetadataHttp.recordFailure(health, source, e, !enriching || System.nanoTime() >= deadline)
+                    val failure = AndroidMetadataFailure.classify(e, !enriching || System.nanoTime() >= deadline)
+                    d.metadataLookups.failure(request.kind, failure)
+                    MetadataHttp.recordFailure(health, source, failure, false)
                 }
             } finally {
+                d.metadataLookups.incomplete(request.kind)
                 sockets.remove(socket); try { socket.close() } catch (_: IOException) {}
                 health.workFinished(source)
             }
-        })) health.workFinished(source)
+        })) {
+            d.metadataLookups.limit(request.kind)
+            health.workFinished(source)
+        }
     }
     private fun applyMetadata(d: Device, report: LocalMetadata.Report, source: String) {
         for ((field, value) in report.hints) d.hint(field, value, source, if (field == "Name") 90 else 80)

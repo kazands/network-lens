@@ -6,6 +6,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.net.NoRouteToHostException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLSocket
@@ -17,6 +18,8 @@ internal object MetadataHttp {
     enum class Reason(val detail: String, val event: DiscoveryHealth.Diagnostic?) {
         CONNECTION_TIMEOUT("Connection timed out", DiscoveryHealth.Diagnostic.CONNECTION_TIMEOUT),
         CONNECTION_FAILED("Connection failed", DiscoveryHealth.Diagnostic.CONNECTION_FAILED),
+        CONNECTION_REFUSED("Connection refused", DiscoveryHealth.Diagnostic.CONNECTION_REFUSED),
+        ROUTING_FAILED("No route to endpoint", DiscoveryHealth.Diagnostic.ROUTING_FAILED),
         TLS_FAILED("TLS handshake or secure transport failed", DiscoveryHealth.Diagnostic.TLS_FAILED),
         WRITE_FAILED("Request write failed", DiscoveryHealth.Diagnostic.WRITE_FAILED),
         READ_TIMEOUT("Response read timed out", DiscoveryHealth.Diagnostic.READ_TIMEOUT),
@@ -25,7 +28,8 @@ internal object MetadataHttp {
         INVALID_HTTP("Invalid or unsupported HTTP response", DiscoveryHealth.Diagnostic.INVALID_HTTP),
         INVALID_METADATA("No valid metadata in response", DiscoveryHealth.Diagnostic.INVALID_METADATA),
         DEADLINE("Metadata time limit reached", DiscoveryHealth.Diagnostic.DEADLINE),
-        CANCELLED("Metadata request cancelled", null)
+        CANCELLED("Metadata request cancelled", null),
+        REQUEST_FAILED("Metadata request could not complete", DiscoveryHealth.Diagnostic.REQUEST_FAILED)
     }
     class Failure(val reason: Reason, val httpStatus: Int? = null, cause: Exception? = null) :
         IOException(reason.detail + if (httpStatus != null) " ($httpStatus)" else "", cause)
@@ -104,6 +108,7 @@ internal object MetadataHttp {
                 e is UpnpDescription.ResponseException -> Reason.INVALID_HTTP
                 e is SSLException || stage == Stage.TLS -> Reason.TLS_FAILED
                 stage == Stage.CONNECT && e is SocketTimeoutException -> Reason.CONNECTION_TIMEOUT
+                stage == Stage.CONNECT && e is NoRouteToHostException -> Reason.ROUTING_FAILED
                 stage == Stage.CONNECT -> Reason.CONNECTION_FAILED
                 stage == Stage.WRITE -> Reason.WRITE_FAILED
                 e is SocketTimeoutException -> Reason.READ_TIMEOUT
