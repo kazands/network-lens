@@ -131,9 +131,13 @@ four API 36 modes / 956 checks. Layout coverage includes both appearances,
 counted trailing whitespace; native measurements confirmed visible text fit and
 the corrected assertion passed. A System UI not responding dialog interrupted
 the first API 36 reporting run; its rerun passed. A fresh independent Deep Kaz
-review approved the complete increment with no substantive findings. Physical
-validation of this increment is pending. Existing native/Spotify limitations
-remain open; reporting these outcomes does not resolve them.
+review approved the complete increment with no substantive findings. The signed
+candidate from `dbf7828` was updated in place on the authorized Pixel 8: installed
+bytes, preserved grants and empty startup were verified. One fresh scan reached
+Partial after 36.12 seconds including UI observation. Input focus then left the
+app, so the guard stopped before the new endpoint outcomes or Stop could be
+checked. Those physical checks remain incomplete. Existing native/Spotify
+limitations remain open; reporting these outcomes does not resolve them.
 
 ## Known discovery limitation
 

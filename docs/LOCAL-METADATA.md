@@ -65,6 +65,26 @@ outcomes against late worker updates. A fresh scan has no inherited outcomes.
 The explicit Copy device details action includes the source-labelled outcomes;
 there is no automatic export, logging or persistence of endpoint diagnostics.
 
+The outcome increment from `dbf7828` passed 22 host suites / 16,209 checks, direct
+app/instrumentation builds and packaged permission/security audits. API 37 passed
+five modes / 987 checks; API 36 passed four modes / 956 checks. Both ran metadata,
+typography, failure-reporting and session-only; API 37 also ran fresh-presence.
+A fresh independent Deep Kaz review approved the complete increment with no
+substantive findings. Its independent host execution reached nine passing suites
+before a sandbox loopback restriction; the coordinator completed all 22.
+
+The tested development APK SHA-256 is
+`b2a5dcc204cb671600f4583b8cc1710ee5619ebb164986d4b777ba3656674766`.
+The private matching-signed phone candidate SHA-256 is
+`33caf50942b4f006aaac99faf39b127815e89c20a5e78a708ff74d280cbae650`;
+its application payload matches the tested APK. Existing release outputs were
+restored byte for byte. The authorized Pixel 8 verified installed bytes, preserved
+grants and empty startup. A fresh scan reached Partial after 36.12 seconds
+including UI observation. The foreground guard then stopped the journey before
+endpoint-outcome capture or Stop; those checks remain incomplete. An earlier
+handoff stopped before installation and performed no scan. No release was
+published. These observations do not establish a discovery fix.
+
 Scan method details distinguish connection failures/timeouts, TLS failures,
 request-write failures, response-read failures/timeouts, non-200 HTTP status codes,
 invalid/unsupported HTTP framing and unusable protocol metadata. A read or connect
