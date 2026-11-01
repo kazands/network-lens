@@ -12,6 +12,10 @@ import org.xml.sax.helpers.DefaultHandler
 
 /** Same-peer, credential-free HTTP descriptions; no redirects or child fetches. */
 class UpnpDescription private constructor() {
+    /** Fixed parser failures, separate from an IOException raised by the transport. */
+    internal open class ResponseException(message: String) : IOException(message)
+    internal class HttpStatusException(val statusCode: Int) : ResponseException("HTTP status $statusCode")
+
     companion object {
         const val MAX_BODY = 65536
 
@@ -52,53 +56,57 @@ class UpnpDescription private constructor() {
             val stream = BufferedInputStream(input, 1024)
             val headerBytes = intArrayOf(0)
             val status = line(stream, headerBytes, 8192)
-            if (!status.matches(Regex("HTTP/1\\.[01] 200(?: .*)?"))) throw IOException("No description response")
+            if (!status.matches(Regex("HTTP/1\\.[01] 200(?: .*)?"))) {
+                val code = Regex("HTTP/1\\.[01] ([1-5][0-9]{2})(?: .*)?").matchEntire(status)?.groupValues?.get(1)?.toInt()
+                if (code != null) throw HttpStatusException(code)
+                throw ResponseException("Invalid HTTP status line")
+            }
             val headers = HashMap<String, String>()
             var i = 0
             while (true) {
-                if (i++ >= 64) throw IOException("Too many headers")
+                if (i++ >= 64) throw ResponseException("Too many headers")
                 val s = line(stream, headerBytes, 8192)
                 if (s.isEmpty()) break
                 val colon = s.indexOf(':')
-                if (colon < 1 || s[0] == ' ' || s[0] == '\t') throw IOException("Invalid header")
+                if (colon < 1 || s[0] == ' ' || s[0] == '\t') throw ResponseException("Invalid header")
                 val key = s.substring(0, colon).lowercase(Locale.ROOT)
                 val value = s.substring(colon + 1).javaTrim()
-                if (headers.put(key, value) != null) throw IOException("Repeated header")
+                if (headers.put(key, value) != null) throw ResponseException("Repeated header")
             }
             val encoding = headers["content-encoding"]
-            if (encoding != null && !encoding.equals("identity", true)) throw IOException("Encoded body unsupported")
+            if (encoding != null && !encoding.equals("identity", true)) throw ResponseException("Encoded body unsupported")
             val transfer = headers["transfer-encoding"]
             val length = headers["content-length"]
-            if (transfer != null && length != null) throw IOException("Ambiguous body framing")
+            if (transfer != null && length != null) throw ResponseException("Ambiguous body framing")
             val body = ByteArrayOutputStream()
             if (transfer != null) {
-                if (!transfer.equals("chunked", true)) throw IOException("Unsupported transfer encoding")
+                if (!transfer.equals("chunked", true)) throw ResponseException("Unsupported transfer encoding")
                 val chunkHeaders = intArrayOf(0)
                 repeat(2048) {
                     val size = line(stream, chunkHeaders, 16384)
-                    if (!size.matches(Regex("[0-9a-fA-F]{1,6}"))) throw IOException("Invalid chunk size")
+                    if (!size.matches(Regex("[0-9a-fA-F]{1,6}"))) throw ResponseException("Invalid chunk size")
                     val n = Integer.parseInt(size, 16)
-                    if (n > MAX_BODY - body.size()) throw IOException("Description too large")
+                    if (n > MAX_BODY - body.size()) throw ResponseException("Description too large")
                     if (n == 0) {
                         repeat(32) { if (line(stream, chunkHeaders, 16384).isEmpty()) return body.toByteArray() }
-                        throw IOException("Too many trailers")
+                        throw ResponseException("Too many trailers")
                     }
                     copy(stream, body, n)
-                    if (stream.read() != 13 || stream.read() != 10) throw IOException("Invalid chunk ending")
+                    if (stream.read() != 13 || stream.read() != 10) throw ResponseException("Invalid chunk ending")
                 }
-                throw IOException("Too many chunks")
+                throw ResponseException("Too many chunks")
             }
             if (length != null) {
-                if (!length.matches(Regex("[0-9]{1,6}"))) throw IOException("Invalid body length")
+                if (!length.matches(Regex("[0-9]{1,6}"))) throw ResponseException("Invalid body length")
                 val n = Integer.parseInt(length)
-                if (n > MAX_BODY) throw IOException("Description too large")
+                if (n > MAX_BODY) throw ResponseException("Description too large")
                 copy(stream, body, n)
             } else {
                 val buffer = ByteArray(2048)
                 while (true) {
                     val n = stream.read(buffer)
                     if (n == -1) break
-                    if (body.size() + n > MAX_BODY) throw IOException("Description too large")
+                    if (body.size() + n > MAX_BODY) throw ResponseException("Description too large")
                     body.write(buffer, 0, n)
                 }
             }
@@ -110,7 +118,7 @@ class UpnpDescription private constructor() {
             val buffer = ByteArray(2048)
             while (n > 0) {
                 val got = input.read(buffer, 0, minOf(n, buffer.size))
-                if (got < 1) throw IOException("Truncated body")
+                if (got < 1) throw ResponseException("Truncated body")
                 out.write(buffer, 0, got)
                 n -= got
             }
@@ -120,11 +128,11 @@ class UpnpDescription private constructor() {
             val bytes = ByteArrayOutputStream()
             while (true) {
                 val c = input.read()
-                if (c == -1) throw IOException("Truncated header")
-                if (++count[0] > maximum || bytes.size() > 2048) throw IOException("Header limit")
+                if (c == -1) throw ResponseException("Truncated header")
+                if (++count[0] > maximum || bytes.size() > 2048) throw ResponseException("Header limit")
                 if (c == 10) {
                     val value = bytes.toByteArray()
-                    if (value.isEmpty() || value[value.size - 1].toInt() != 13) throw IOException("Invalid line ending")
+                    if (value.isEmpty() || value[value.size - 1].toInt() != 13) throw ResponseException("Invalid line ending")
                     return String(value, 0, value.size - 1, StandardCharsets.ISO_8859_1)
                 }
                 bytes.write(c)

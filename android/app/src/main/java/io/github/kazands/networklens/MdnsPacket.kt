@@ -19,6 +19,8 @@ class MdnsPacket private constructor() {
         @JvmField val addresses: MutableMap<String, MutableSet<String>> = TreeMap()
         @JvmField val records: MutableList<Record> = ArrayList()
         @JvmField var freshResponse = false
+        /** Diagnostic only; does not authorize presence or identity. */
+        @JvmField var parsedResponse = false
 
         /** One complete current packet, with SRV/TXT and target address equal to the sender.
          * Proxy-only advertisements cannot qualify through this association. */
@@ -121,6 +123,78 @@ class MdnsPacket private constructor() {
                 require(bytes.size() <= 1200) { "DNS question size limit" }
                 return bytes.toByteArray()
             } catch (e: IOException) { throw AssertionError(e) }
+        }
+
+        /** Only complete, empty-answer multicast questions can defer our own identical query.
+         * Query answer sections are never consumed as presence, identity or cached records. */
+        internal fun multicastQuestions(data: ByteArray, length: Int): List<Question> {
+            if (length !in 12..1200 || length > data.size) return emptyList()
+            try {
+                if (u16(data, 0) != 0 || u16(data, 2) != 0 || u16(data, 4) !in 1..8 ||
+                    u16(data, 6) != 0 || u16(data, 8) != 0 || u16(data, 10) != 0) return emptyList()
+                val pos = intArrayOf(12); val out = ArrayList<Question>()
+                repeat(u16(data, 4)) {
+                    val owner = name(data, length, pos)
+                    if (pos[0] + 4 > length || !safeLabels(owner.labels)) return emptyList()
+                    val kind = u16(data, pos[0]); val cls = u16(data, pos[0] + 2)
+                    pos[0] += 4
+                    // QU, probes, foreign domains and unsupported question kinds do not coalesce.
+                    if (cls != 1 || kind !in listOf(1, 12, 16, 28, 33) ||
+                        !(owner.value.endsWith(".local", true) || owner.value.endsWith(".in-addr.arpa", true) ||
+                          owner.value.endsWith(".ip6.arpa", true))) return emptyList()
+                    out.add(Question(owner.labels.toList(), kind))
+                }
+                return if (pos[0] == length) out else emptyList()
+            } catch (_: IllegalArgumentException) { return emptyList() }
+            catch (_: IndexOutOfBoundsException) { return emptyList() }
+        }
+
+        /** RFC 6762 section 7.2: a complete, at-most-four-packet known-PTR-answer sequence.
+         * If the whole sequence cannot fit, send an ordinary query without suppression. */
+        internal fun queryPackets(names: List<String>, answers: List<Record>): List<ByteArray> {
+            val base = query(names)
+            if (answers.isEmpty() || answers.size > 64) return listOf(base)
+            val owners = names.map { key(it.split('.')) }.toSet()
+            fun wireName(labels: List<String>): ByteArray {
+                require(safeLabels(labels))
+                val bytes = ByteArrayOutputStream()
+                for (label in labels) {
+                    val value = label.toByteArray(StandardCharsets.UTF_8)
+                    bytes.write(value.size); bytes.write(value)
+                }
+                bytes.write(0); return bytes.toByteArray()
+            }
+            val records = try {
+                answers.map { r ->
+                    require(r.kind == 12 && key(r.owner) in owners && r.ttl in 1..0xffffffffL &&
+                        r.owner.last().equals("local", true) && r.target.last().equals("local", true))
+                    val target = wireName(r.target)
+                    val bytes = ByteArrayOutputStream(); val out = DataOutputStream(bytes)
+                    out.write(wireName(r.owner)); out.writeShort(12); out.writeShort(1)
+                    out.writeInt(r.ttl.toInt()); out.writeShort(target.size); out.write(target)
+                    bytes.toByteArray()
+                }
+            } catch (_: IllegalArgumentException) { return listOf(base) }
+            catch (_: NoSuchElementException) { return listOf(base) }
+            val packets = ArrayList<ByteArray>(); var bytes = ByteArrayOutputStream().apply { write(base) }
+            var count = 0
+            fun finish(more: Boolean) {
+                val packet = bytes.toByteArray()
+                packet[2] = if (more) 2 else 0 // TC; all other query flags stay zero.
+                packet[6] = (count ushr 8).toByte(); packet[7] = count.toByte()
+                packets.add(packet)
+            }
+            for (record in records) {
+                if (bytes.size() + record.size > 1200) {
+                    finish(true)
+                    if (packets.size >= 4) return listOf(base)
+                    bytes = ByteArrayOutputStream().apply { write(ByteArray(12)) }; count = 0
+                }
+                if (bytes.size() + record.size > 1200) return listOf(base)
+                bytes.write(record); count++
+            }
+            finish(false)
+            return packets
         }
 
         @JvmStatic fun parse(data: ByteArray?, length: Int): Result {
@@ -229,6 +303,7 @@ class MdnsPacket private constructor() {
                     }
                     pos[0] = end
                 }
+                result.parsedResponse = true
                 return result
             } catch (_: IllegalArgumentException) { return Result() }
             catch (_: IndexOutOfBoundsException) { return Result() }

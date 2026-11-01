@@ -15,10 +15,14 @@ class MdnsAssembly {
     private class Attempt { var sent = 0; var next = 0L }
     private val peers = LinkedHashMap<String, Peer>()
     private val attempts = HashMap<String, Attempt>()
+    // Diagnostic history only. Never used for identity, presence, queries or known answers.
+    private class Observation(var completeAt: Long? = null)
+    private val observedInstances = HashMap<String, Observation>()
+    private var observationLimited = false
     @JvmField var limited = false
     private var closed = false
 
-    @Synchronized fun close() { closed = true; peers.clear(); attempts.clear() }
+    @Synchronized fun close() { closed = true; peers.clear(); attempts.clear(); observedInstances.clear() }
     private fun setKey(owner: List<String>, kind: Int) = MdnsPacket.key(owner) + "|" + kind
     private fun peerKey(peer: InetAddress) = peer.address.joinToString("") { "%02x".format(it.toInt() and 255) }
     private fun equal(a: MdnsPacket.Record, b: MdnsPacket.Record): Boolean =
@@ -43,6 +47,13 @@ class MdnsAssembly {
         val key = peerKey(sender)
         if (!peers.containsKey(key) && peers.size >= 128) { limited = true; return emptyList() }
         val peer = peers.getOrPut(key) { Peer(sender) }
+        if (packet.parsedResponse) for (record in packet.records) {
+            val labels = when (record.kind) { 12 -> record.target; 16, 33 -> record.owner; else -> continue }
+            if (MdnsPacket.instanceType(labels).isEmpty()) continue
+            val instance = MdnsPacket.key(labels)
+            if (instance in observedInstances || observedInstances.size < 256) observedInstances.getOrPut(instance) { Observation() }
+            else observationLimited = true
+        }
         var count = usedRecords(); var bytes = usedBytes()
         fun remove(entries: MutableList<Entry>, predicate: (Entry) -> Boolean) {
             val removed = entries.filter(predicate)
@@ -80,6 +91,7 @@ class MdnsAssembly {
             }
         }
         val complete = complete(peer)
+        rememberComplete(peer, now)
         peer.lastComplete = complete.map { signature(it) }.toSet()
         return complete
     }
@@ -95,6 +107,7 @@ class MdnsAssembly {
         val out = LinkedHashMap<InetAddress, List<MdnsPacket.Service>>()
         for (peer in peers.values) {
             val current = complete(peer)
+            rememberComplete(peer, now)
             val newlyReady = current.filter { signature(it) !in peer.lastComplete }
             peer.lastComplete = current.map { signature(it) }.toSet()
             if (newlyReady.isNotEmpty()) out[peer.address] = newlyReady
@@ -130,14 +143,90 @@ class MdnsAssembly {
     private fun records(peer: Peer, labels: List<String>, kind: Int) = peer.sets[setKey(labels, kind)]?.map { it.record } ?: emptyList()
     private fun instances(peer: Peer): List<List<String>> = peer.sets.values.flatten().map { it.record }
         .filter { it.kind == 12 }.map { it.target }.distinctBy { MdnsPacket.key(it) }
+
+    internal enum class WireEvidence { NOT_OBSERVED, HISTORY_ONLY, INCOMPLETE, COMPLETE, UNAVAILABLE }
+
+    /** A diagnostic snapshot of captured replies, never proof that an absent reply is stale. */
+    @Synchronized internal fun wireEvidence(name: String?, type: String, now: Long): WireEvidence {
+        val labels = diagnosticLabels(name, type) ?: return WireEvidence.UNAVAILABLE
+        if (closed) return WireEvidence.UNAVAILABLE
+        expire(now)
+        val key = MdnsPacket.key(labels)
+        var current = false
+        for (peer in peers.values) {
+            val ptr = records(peer, labels.drop(1), 12).any { MdnsPacket.key(it.target) == key }
+            val srvs = records(peer, labels, 33)
+            val txt = records(peer, labels, 16)
+            if (ptr || srvs.isNotEmpty() || txt.isNotEmpty()) current = true
+            if (completeInstance(peer, labels)) return WireEvidence.COMPLETE
+        }
+        if (current) return WireEvidence.INCOMPLETE
+        if (key in observedInstances) return WireEvidence.HISTORY_ONLY
+        return if (observationLimited || limited) WireEvidence.UNAVAILABLE else WireEvidence.NOT_OBSERVED
+    }
+
+    /** Completion history is diagnostic only and outlives the short identity-record lifetime. */
+    @Synchronized internal fun wireCompleteAfter(name: String, type: String, after: Long): Boolean {
+        if (closed) return false
+        val labels = diagnosticLabels(name, type) ?: return false
+        return observedInstances[MdnsPacket.key(labels)]?.completeAt?.let { it - after > 0 } == true
+    }
+    private fun rememberComplete(peer: Peer, now: Long) {
+        for (instance in instances(peer)) if (completeInstance(peer, instance))
+            observedInstances[MdnsPacket.key(instance)]?.completeAt = now
+    }
+    private fun completeInstance(peer: Peer, instance: List<String>): Boolean {
+        if (records(peer, instance.drop(1), 12).none { MdnsPacket.key(it.target) == MdnsPacket.key(instance) }) return false
+        val srv = records(peer, instance, 33).singleOrNull() ?: return false
+        if (records(peer, instance, 16).size != 1 || srv.port !in 1..65535) return false
+        return (records(peer, srv.target, 1) + records(peer, srv.target, 28)).any {
+            Arrays.equals(Address.bytes(it.address), peer.address.address)
+        }
+    }
+
+    internal companion object {
+        internal fun diagnosticLabels(name: String?, type: String): List<String>? {
+            if (name == null || name.length !in 1..128 || type.length > 128 ||
+                name.toByteArray(Charsets.UTF_8).size !in 1..63 || name.any {
+                    Character.isISOControl(it) || Character.getType(it) == Character.FORMAT.toInt() || it == '\ufffd'
+                }) return null
+            val canonical = LocalServices.canonicalType(type)
+            if (canonical.isEmpty()) return null
+            return listOf(name) + canonical.removeSuffix(".").split('.') + "local"
+        }
+    }
+
+    /** Suppress only PTRs backed by complete, current same-sender services in this scan.
+     * Advertised TTL is aged from receipt; the shorter assembly retention is not the wire TTL. */
+    @Synchronized internal fun knownAnswers(v6: Boolean, names: List<String>, now: Long): List<MdnsPacket.Record> {
+        if (closed) return emptyList()
+        expire(now)
+        val owners = names.map { MdnsPacket.key(it.split('.')) }.toSet()
+        val out = LinkedHashMap<String, MdnsPacket.Record>()
+        for (peer in peers.values) {
+            if ((peer.address.address.size == 16) != v6) continue
+            val complete = complete(peer).map { MdnsPacket.key(listOf(it.name) + it.type.removeSuffix(".").split('.') + "local") }.toSet()
+            for (entries in peer.sets.values) for (entry in entries) {
+                val r = entry.record
+                if (r.kind != 12 || MdnsPacket.key(r.owner) !in owners || MdnsPacket.key(r.target) !in complete) continue
+                val age = maxOf(0L, now - entry.received)
+                val elapsed = TimeUnit.NANOSECONDS.toSeconds(age) + if (age % TimeUnit.SECONDS.toNanos(1) == 0L) 0 else 1
+                val ttl = r.ttl - elapsed
+                if (ttl <= 0 || ttl < (r.ttl + 1) / 2) continue
+                val key = MdnsPacket.key(r.owner) + "|" + MdnsPacket.key(r.target)
+                val prior = out[key]
+                if (prior == null && out.size >= 64) return emptyList()
+                if (prior == null || ttl < prior.ttl) out[key] = r.copy(ttl = ttl, flush = false)
+            }
+        }
+        return out.values.toList()
+    }
     private fun complete(peer: Peer): List<MdnsPacket.Service> {
         val out = ArrayList<MdnsPacket.Service>()
         for (instance in instances(peer)) {
+            if (!completeInstance(peer, instance)) continue
             val srv = records(peer, instance, 33).singleOrNull() ?: continue
             val txt = records(peer, instance, 16).singleOrNull() ?: continue
-            if (srv.port !in 1..65535) continue
-            val addresses = records(peer, srv.target, 1) + records(peer, srv.target, 28)
-            if (addresses.none { Arrays.equals(Address.bytes(it.address), peer.address.address) }) continue
             val type = MdnsPacket.instanceType(instance)
             if (type.isEmpty()) continue
             val service = MdnsPacket.Service(SafeText.label(instance[0], 128), type)
