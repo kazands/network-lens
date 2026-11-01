@@ -12,6 +12,7 @@ import android.content.*
 import android.content.pm.*
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Network
 import android.net.nsd.NsdServiceInfo
 import android.os.*
 import android.view.*
@@ -3076,6 +3077,8 @@ class SmokeInstrumentation : Instrumentation() {
             update.setAccessible(true)
             var done: Field = requestType.getDeclaredField("done")
             var usable: Field = requestType.getDeclaredField("usable")
+            val lost = Discovery::class.java.getDeclaredMethod("modernLost", requestType, NsdServiceInfo::class.java)
+            lost.isAccessible = true
             var active: Field = Discovery::class.java.getDeclaredField("modernActive")
             var healthField: Field = Discovery::class.java.getDeclaredField("health")
             done.setAccessible(true)
@@ -3101,6 +3104,28 @@ class SmokeInstrumentation : Instrumentation() {
                         "Explicit update-policy fixture responder",
                         true,
                     ) as Device?)
+                val unrelated = NsdServiceInfo().apply {
+                    serviceName = "Other synthetic instance"
+                    serviceType = first.serviceType
+                    network = live.network
+                    hostAddresses = listOf(InetAddress.getByName(live.ip))
+                }
+                update.invoke(updates, request, unrelated)
+                lost.invoke(updates, request, unrelated)
+                check(!usable.getBoolean(request) && !done.getBoolean(request),
+                    "An exact-instance callback ignores another service's updates and loss")
+                unrelated.serviceName = first.serviceName
+                unrelated.serviceType = "_other-fixture._tcp."
+                update.invoke(updates, request, unrelated)
+                lost.invoke(updates, request, unrelated)
+                check(!usable.getBoolean(request) && !done.getBoolean(request),
+                    "A matching instance name on a different service type is ignored")
+                unrelated.serviceType = first.serviceType
+                unrelated.network = Network.fromNetworkHandle((424242L shl 32) or 0xcafed00dL)
+                update.invoke(updates, request, unrelated)
+                lost.invoke(updates, request, unrelated)
+                check(!usable.getBoolean(request) && !done.getBoolean(request),
+                    "Updates and loss from another Android Network cannot finish the selected request")
                 update.invoke(updates, request, first)
                 check(
                     !(usable.getBoolean(request)),
@@ -3223,6 +3248,16 @@ class SmokeInstrumentation : Instrumentation() {
                     status.contains("failed 1"),
                     "The first observable terminal failure includes its final counter as well as both attempt reasons",
                 )
+                if (Build.VERSION.SDK_INT >= 37) {
+                    val registered = requestType.getDeclaredField("registered").apply { isAccessible = true }
+                    check(registered.getBoolean(request) && status.contains("First attempt: Name-filtered discovery:"),
+                        "API 37 accepts the exact-name discovery request and retains its bounded first-attempt result")
+                    check(status.contains("Service-info resolution:"),
+                        "An unresolved filtered request falls back once to the service-info resolver")
+                }
+                val callbacks = Discovery::class.java.getDeclaredField("nsdCallbacks").apply { isAccessible = true }
+                check((active.get(unresolved) as Set<*>).isEmpty() && (callbacks.get(unresolved) as List<*>).isEmpty(),
+                    "Terminal resolution releases active callback capacity")
                 check(
                     (((SystemClock.uptimeMillis() - began)).toLong() < (11000).toLong()),
                     "The unchanged hard deadline and single retry remain bounded",
