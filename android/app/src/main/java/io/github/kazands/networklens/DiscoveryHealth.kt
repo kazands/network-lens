@@ -20,7 +20,14 @@ class DiscoveryHealth {
         MDNS_DECODED("response decodes"), MDNS_QUERY_DECODED("query decodes"),
         MDNS_QUERY_SKIPPED("queries beyond suppression budget"),
         MDNS_COALESCED("questions coalesced"), MDNS_SENT("query packets sent"),
-        MDNS_KNOWN_ANSWERS("known answers sent")
+        MDNS_KNOWN_ANSWERS("known answers sent"),
+        NSD_WIRE_NOT_OBSERVED("native failures: wire not observed"),
+        NSD_WIRE_HISTORY("native failures: wire seen, none retained"),
+        NSD_WIRE_INCOMPLETE("native failures: wire incomplete"),
+        NSD_WIRE_COMPLETE("native failures: wire complete"),
+        NSD_WIRE_UNAVAILABLE("native failures: correlation unavailable"),
+        NSD_WIRE_LATER_OBSERVED("wire observed after native failure"),
+        NSD_WIRE_LATER_COMPLETE("wire complete after native failure")
     }
     private val starting = HashSet<String>()
     private val browsing = HashSet<String>()

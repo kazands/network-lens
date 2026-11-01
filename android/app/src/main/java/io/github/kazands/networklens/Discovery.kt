@@ -69,6 +69,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val mdnsQuestions = LinkedHashMap<String, ReverseQuestion>()
     private val mdnsRetries = MdnsRetries()
     private val mdnsAssembly = MdnsAssembly()
+    private val nativeServiceEvidence = NativeServiceEvidence(mdnsAssembly)
     private val mdnsQuestionSuppression = MdnsQuestionSuppression()
     private val directServices: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val modernQueue: Queue<ModernRequest> = ArrayDeque()
@@ -1038,6 +1039,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             // A live snapshot must not observe Failed before its prior-attempt
             // reason and terminal counter have been published.
             synchronized(health) {
+                nativeServiceEvidence.failed(request.info.serviceName, type, System.nanoTime())?.let { health.diagnostic("mDNS " + type, it) }
                 health.resolveFailed(key, reason)
                 if (request.previousFailure.isNotEmpty()) health.fail("mDNS " + type, "First attempt: " + request.previousFailure)
                 health.count("mDNS " + type, "failed")
@@ -1325,6 +1327,10 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         } catch (_: Exception) {}
     }
     @Synchronized private fun cleanupNsd() {
+        for ((type, later) in nativeServiceEvidence.finish(System.nanoTime())) {
+            if (later.observed > 0) health.diagnostic("mDNS " + type, DiscoveryHealth.Diagnostic.NSD_WIRE_LATER_OBSERVED, later.observed)
+            if (later.complete > 0) health.diagnostic("mDNS " + type, DiscoveryHealth.Diagnostic.NSD_WIRE_LATER_COMPLETE, later.complete)
+        }
         mdnsQuestionSuppression.close()
         resolverTimeouts.removeCallbacksAndMessages(null)
         for (browse in legacyBrowses) health.truncated("mDNS " + browse.type, if (cancelled.get()) "Scan stopped before this type was checked" else "Scan window ended before this type was checked")

@@ -239,6 +239,43 @@ Rejected signed phone candidate SHA-256:
 `11b453df3592903766ea056d40435c7e3e0c5040fb430716c03022c4214f5818`.
 These are historical trial artifacts, not the retained candidate.
 
+## Native and wire correlation diagnostics (phone validation pending)
+
+Modern Android service-resolution failures now record a fixed aggregate category
+for their matching current-scan wire evidence: not observed, observed with no
+retained graph, current incomplete graph, current complete same-sender graph, or
+correlation unavailable. The first category means only that the bounded receiver
+did not capture a matching PTR/SRV/TXT record; it does not prove stale Android
+cache or an absent device. Queries and native callbacks do not supply wire evidence.
+Earlier/withdrawn records and records dropped by retention limits can produce the
+history-only category; it is not current presence or identity.
+
+Failure-time snapshots are supplemented at native cleanup with counters for wire
+evidence first observed after failure and graphs completed after failure.
+Completion timestamps are retained for this diagnostic even when the underlying
+identity records expire. A maximum of 256 wire-instance history entries and 256
+native failures are kept in scan RAM. Invalid/unmatchable native identifiers and
+exhausted correlation capacity remain explicitly unavailable. Only fixed labels
+and counts enter the report; names, addresses and attributes are not exported by
+this correlation. Records from different sender addresses never combine into a complete
+graph. A fresh scan inherits no history; cleanup is idempotent and rejects late
+writes. The existing Partial/failure policy, native APIs, retries, discovery
+packets, admission limits and deadlines remain.
+
+These diagnostics identify captured evidence and timing. They do not establish a
+fix for the native-resolution issue or Spotify connection failures.
+
+Automated validation passed: 22 host suites / 16,079 checks, including 289 new
+correlation checks; direct app/instrumentation builds and package audits; API 37
+five suites / 141 checks (resolver-upgrade 21, failure-reporting 39, split-mdns 22,
+local-metadata 28, fresh-presence 31); API 36 four suites / 110 checks (the same
+suites except fresh-presence). Installed app/test hashes were verified. API 26 was
+not rerun for this increment. A fresh independent Deep review identified a minor
+late-completion expiry gap. Its new regression failed before the correction;
+bounded diagnostic completion timestamps fixed it, and targeted independent
+verification confirmed the finding resolved without a verified regression.
+Physical measurements will be recorded after the guarded phone check.
+
 ## Retained reliability candidate validation (2026-10-31)
 
 After rejecting the native trial, `59396a0` restores application/test/build-script

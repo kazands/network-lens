@@ -3223,6 +3223,30 @@ class SmokeInstrumentation : Instrumentation() {
                     status.contains("failed 1"),
                     "The first observable terminal failure includes its final counter as well as both attempt reasons",
                 )
+                check(status.contains("native failures: wire not observed 1"),
+                    "An unresolved native candidate is labelled by captured evidence without claiming stale cache")
+                val wire = Discovery::class.java.getDeclaredField("mdnsAssembly").apply { isAccessible = true }
+                    .get(unresolved) as MdnsAssembly
+                val labels = listOf(missing.serviceName) + listOf("_devicelens-fixture", "_tcp", "local")
+                val host = listOf("correlation-fixture", "local")
+                val synthetic = MdnsPacket.Result().apply {
+                    parsedResponse = true
+                    records.add(MdnsPacket.Record(labels.drop(1), 12, 120, false, target = labels))
+                    records.add(MdnsPacket.Record(labels, 33, 120, false, target = host, port = 8080))
+                    records.add(MdnsPacket.Record(labels, 16, 120, false))
+                    records.add(MdnsPacket.Record(host, 1, 120, false, address = live.ip))
+                }
+                wire.accept(InetAddress.getByName(live.ip), synthetic, System.nanoTime())
+                val cleanup = Discovery::class.java.getDeclaredMethod("cleanupNsd").apply { isAccessible = true }
+                cleanup.invoke(unresolved)
+                val correlated = unresolved.sources().getValue("mDNS _devicelens-fixture._tcp.")
+                check(correlated.startsWith("Failed") && correlated.contains("wire observed after native failure 1") &&
+                    correlated.contains("wire complete after native failure 1"),
+                    "Cleanup correlates synthetic late replies while retaining the native failure")
+                check(unresolved.snapshot().isEmpty(), "Diagnostic graph correlation alone cannot add presence or identity")
+                cleanup.invoke(unresolved)
+                check(unresolved.sources().getValue("mDNS _devicelens-fixture._tcp.") == correlated,
+                    "Repeated cleanup cannot publish duplicate correlation counters")
                 check(
                     (((SystemClock.uptimeMillis() - began)).toLong() < (11000).toLong()),
                     "The unchanged hard deadline and single retry remain bounded",
@@ -6197,6 +6221,16 @@ class SmokeInstrumentation : Instrumentation() {
         check(trafficDetail.length > 512 && trafficDetail.length <= 1024, "Finite traffic diagnostics require the expanded bounded report entry")
         check(ScanReport("", false, "", 0, 0, 1, trafficHealth.sources()).sources[source] == trafficDetail,
             "Terminal reports retain all traffic counters without silently truncating them")
+        val nativeHealth = DiscoveryHealth().apply {
+            fail(source, "x".repeat(80)); fail(source, "y".repeat(80))
+            for (event in listOf("failed", "found", "live service records", "resolved", "retried", "limited")) count(source, event)
+            for (event in DiscoveryHealth.Diagnostic.values()) if (event.name.startsWith("NSD_")) diagnostic(source, event, 256)
+        }
+        val nativeDetail = nativeHealth.sources().getValue(source)
+        check(nativeDetail.length <= 1024 && nativeDetail.contains("wire complete after native failure 256"),
+            "The full finite native-correlation vocabulary fits the existing source-detail bound")
+        check(ScanReport.from(ScanReport("", false, "", 0, 0, 1, nativeHealth.sources()).json())!!.sources[source] == nativeDetail,
+            "Terminal serialization preserves correlation counters without adding identifiers")
         check(
             store.retainIfCurrent(store.token(), live.key, Collections.emptyList(), report),
             "Failure fixture retains a report without inventing devices",
