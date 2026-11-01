@@ -999,39 +999,19 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 override fun onServiceInfoCallbackUnregistered() {}
                 override fun onServiceLost() { synchronized(this@Discovery) { finishModern(request, request.usable, "Service disappeared before resolution") } }
                 override fun onServiceUpdated(info: NsdServiceInfo) { modernUpdated(request, info) }
-                override fun onServiceLost(info: NsdServiceInfo) { modernLost(request, info) }
             }
             request.startedAt = System.nanoTime()
             request.timeout = Runnable { synchronized(this@Discovery) {
                 val state = if (request.emptyUpdate) "updates had no local addresses" else if (request.registered) "registered; no addresses" else "registration unconfirmed"
-                finishModern(request, request.usable, (if (Build.VERSION.SDK_INT >= 37 && request.attempt == 0) "Name-filtered discovery: " else "Service-info resolution: ") + "No usable service data after " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - request.startedAt) + " ms (" + state + ")")
+                finishModern(request, request.usable, "No usable service data after " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - request.startedAt) + " ms (" + state + ")")
             } }
             resolverTimeouts.postDelayed(request.timeout!!, 4000); nsdCallbacks.add(request.callback!!)
-            try {
-                // API 37 can rediscover one exact instance instead of relying on a
-                // cached browse-to-resolve handoff. The second attempt retains the
-                // existing service-info API; both share the same hard work bounds.
-                if (Build.VERSION.SDK_INT >= 37 && request.attempt == 0) {
-                    val discovery = android.net.nsd.DiscoveryRequest.Builder(canonicalType(request.info.serviceType).removeSuffix("."))
-                        .setNetwork(net.network)
-                        .setServiceNameFilter(android.os.PatternMatcher(request.info.serviceName, android.os.PatternMatcher.PATTERN_LITERAL))
-                        .setFlags(android.net.nsd.DiscoveryRequest.FLAG_NO_PICKER).build()
-                    nsd!!.registerServiceInfoCallback(discovery, java.util.concurrent.Executor { it.run() }, request.callback!!)
-                } else nsd!!.registerServiceInfoCallback(request.info, java.util.concurrent.Executor { it.run() }, request.callback!!)
-            }
+            try { nsd!!.registerServiceInfoCallback(request.info, java.util.concurrent.Executor { it.run() }, request.callback!!) }
             catch (e: Exception) { blocked(e); finishModern(request, false, "Android registration threw " + e.javaClass.simpleName) }
         }
     }
-    private fun sameModernService(request: ModernRequest, info: NsdServiceInfo): Boolean =
-        info.serviceName?.equals(request.info.serviceName, true) == true &&
-            canonicalType(info.serviceType) == canonicalType(request.info.serviceType) &&
-            (info.network == null || info.network == net.network)
-    @Synchronized private fun modernLost(request: ModernRequest, info: NsdServiceInfo) {
-        if (!accepting || request.done || !sameModernService(request, info)) return
-        finishModern(request, request.usable, "Service disappeared before resolution")
-    }
     @Synchronized private fun modernUpdated(request: ModernRequest, info: NsdServiceInfo) {
-        if (!accepting || request.done || !sameModernService(request, info)) return
+        if (!accepting || request.done) return
         if (info.hostAddresses.isEmpty() || info.network != null && net.network != info.network) { request.emptyUpdate = true; return }
         if (info.hostAddresses.none { candidateAllowed(it, info.serviceType) }) {
             info.hostAddresses.forEach(::excludedV6); request.emptyUpdate = true; return
