@@ -88,6 +88,25 @@ Stop scan reached terminal Partial after 6.82 seconds including UI observation,
 with complete method diagnostics captured. The retained build remains installed;
 private probes and the rejected native path are absent. No release was published.
 
+## Native and wire diagnostics (unreleased)
+
+The next increment correlates terminal modern Android service-resolution failures
+with captured current-scan records. Fixed counters distinguish no matching wire
+observation, history without a retained graph, incomplete or complete current
+graphs, and unavailable correlation. Cleanup also counts replies and complete
+graphs arriving after native failure, retaining only bounded diagnostic completion
+timestamps beyond identity expiry. A missing reply is not proof of stale cache.
+These diagnostics do not change discovery APIs, retries, identity admission,
+deadlines or Partial reporting.
+
+It passed 22 host suites / 16,079 checks, direct app/instrumentation builds, package
+audits, API 37 five suites / 141 checks and API 36 four suites / 110 checks. A minor
+expiry issue found by independent Deep review was reproduced and corrected;
+targeted verification confirmed the fix. The signed candidate is ready. Phone
+measurement has not run: the foreground guard stopped preflight before update,
+and the previously validated build remains installed. Results and limitations
+will be updated after the authorized guarded measurement.
+
 ## Known discovery limitation
 
 Repeated physical-device scans reproduced intermittent resolution deadlines for HomeKit (`_hap._tcp`) and HTTP (`_http._tcp`). Android registrations sometimes supplied no usable address update within both bounded attempts. Other discovery methods continued, and the scan correctly remained Partial.
