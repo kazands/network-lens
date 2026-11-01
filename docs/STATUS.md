@@ -134,10 +134,16 @@ the first API 36 reporting run; its rerun passed. A fresh independent Deep Kaz
 review approved the complete increment with no substantive findings. The signed
 candidate from `dbf7828` was updated in place on the authorized Pixel 8: installed
 bytes, preserved grants and empty startup were verified. One fresh scan reached
-Partial after 36.12 seconds including UI observation. Input focus then left the
-app, so the guard stopped before the new endpoint outcomes or Stop could be
-checked. Those physical checks remain incomplete. Existing native/Spotify
-limitations remain open; reporting these outcomes does not resolve them.
+Partial after 36.12 seconds including UI observation. After a foreground handoff,
+read-only inspection captured five Spotify outcomes across all four filtered
+groups: three IPv4 successes, one IPv4 connection timeout and one IPv6 refusal.
+These match the aggregate five requests/three replies and the two failure
+counters. Two endpoint panels showed current model/manufacturer alternatives.
+An optional follow-up to attribute those alternatives specifically to the failed
+outcomes stopped because the chat app held input focus. That attribution,
+physical Stop on this candidate and its full method report remain unverified.
+Existing native/Spotify limitations remain open; these diagnostics do not resolve
+unavailable endpoints.
 
 ## Known discovery limitation
 

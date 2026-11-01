@@ -80,9 +80,20 @@ The private matching-signed phone candidate SHA-256 is
 its application payload matches the tested APK. Existing release outputs were
 restored byte for byte. The authorized Pixel 8 verified installed bytes, preserved
 grants and empty startup. A fresh scan reached Partial after 36.12 seconds
-including UI observation. The foreground guard then stopped the journey before
-endpoint-outcome capture or Stop; those checks remain incomplete. An earlier
-handoff stopped before installation and performed no scan. No release was
+including UI observation. The foreground guard initially stopped report capture.
+A later authorized read-only handoff inspected every filtered Spotify group,
+capturing five endpoint outcomes: three IPv4 successes, one IPv4 connection
+timeout and one IPv6 refusal. Their count matches the method's five requests,
+three metadata replies, one timeout and one refusal. Two endpoint panels showed
+current model/manufacturer alternatives. No additional discovery was started
+during the inspection.
+
+An optional follow-up to associate those alternatives with the particular failed
+outcomes first encountered a stale ADB connection, then stopped before UI work
+because the chat app owned input focus. The failed-outcome association, physical
+Stop on this candidate and a complete method report remain unverified. The
+guard was unchanged. An earlier handoff stopped before installation and performed
+no scan. No household identifiers or screenshots were retained. No release was
 published. These observations do not establish a discovery fix.
 
 Scan method details distinguish connection failures/timeouts, TLS failures,
