@@ -119,7 +119,7 @@ class MainActivity : Activity() {
             } else { range = ""; query = "" }
         }
         render()
-        presentation.execute { MacVendors.load(applicationContext); ui { render() } }
+        presentation.execute { MacVendors.load(applicationContext); DeviceCatalogLoader.load(applicationContext); ui { render() } }
     }
     private class ViewState(a: MainActivity) {
         val demo = a.demo
@@ -417,11 +417,14 @@ class MainActivity : Activity() {
         val rows = list ?: return
         deviceRows.clear()
         val shown = ArrayList<Device>(); val term = query.lowercase(Locale.ROOT).javaTrim()
-        for (group in groupsForDisplay()) for (d in group.endpoints()) {
-            val recognition = d.locallyRecognized()
-            val all = (group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services + " " +
-                recognition?.description.orEmpty() + " " + recognition?.category?.label.orEmpty()).lowercase(Locale.ROOT)
-            if (all.contains(term)) { shown.add(group); break }
+        for (group in groupsForDisplay()) {
+            val labels = group.presentation()
+            for (d in group.endpoints()) {
+                val recognition = d.identifiedProduct()
+                val all = (labels.title + " " + labels.subtitle + " " + group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services + " " +
+                    recognition?.product?.title.orEmpty() + " " + recognition?.product?.category?.label.orEmpty()).lowercase(Locale.ROOT)
+                if (all.contains(term)) { shown.add(group); break }
+            }
         }
         var addresses = 0
         for (d in shown) addresses += d.endpoints().size
@@ -458,7 +461,6 @@ class MainActivity : Activity() {
         private val ipv4: TextView
         private val ipv6: TextView
         private val hardware: TextView
-        private val model: TextView
         private val role: TextView
         private var current: Device? = null
         private var drawable = 0
@@ -469,11 +471,10 @@ class MainActivity : Activity() {
             icon = ImageView(this@MainActivity); icon.imageTintList = ColorStateList.valueOf(ink); icon.scaleType = ImageView.ScaleType.FIT_CENTER
             icon.setPadding(dp(6), dp(6), dp(6), dp(6)); icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; addView(icon, lp(40, 40))
             val labels = column(); labels.setPadding(dp(12), 0, dp(7), 0)
-            name = text("", 16, ink, true); name.maxLines = 2; labels.addView(name)
+            name = text("", 16, ink, true); labels.addView(name)
             role = text("", AppTypography.METADATA, muted, false); role.setPadding(0, dp(5), 0, 0); labels.addView(role)
             ipv4 = addressLabel(accent); ipv6 = addressLabel(muted); labels.addView(ipv4); labels.addView(ipv6)
             hardware = text("", AppTypography.METADATA, muted, false); hardware.setPadding(0, dp(5), 0, 0); labels.addView(hardware)
-            model = text("", AppTypography.METADATA, muted, false); model.setPadding(0, dp(5), 0, 0); labels.addView(model)
             addView(labels, LayoutParams(0, -2, 1f)); addView(text("›", 24, muted, false))
             setOnClickListener { selected = current!!.copy(); detailScroll = null; restoredDetailY = 0; expandedDetails.clear(); render() }
         }
@@ -488,7 +489,8 @@ class MainActivity : Activity() {
             current = group; separator = lastLine
             val visual = DeviceIcon.forGroup(group)
             if (drawable != visual.drawable) { drawable = visual.drawable; icon.setImageResource(drawable) }
-            value(name, group.title()); value(role, if (group.self) "This phone" else if (group.gateway) "Router" else "")
+            val identity = group.presentation()
+            value(name, identity.title); value(role, identity.subtitle)
             var v4 = ""; var v6 = ""
             for (endpoint in group.endpoints()) {
                 val address = Address.bytes(endpoint.ip) ?: continue
@@ -496,16 +498,19 @@ class MainActivity : Activity() {
                 else if (v6.isEmpty() || v6.lowercase(Locale.ROOT).startsWith("fe80:") && !endpoint.ip.lowercase(Locale.ROOT).startsWith("fe80:")) v6 = endpoint.ip
             }
             value(ipv4, if (v4.isEmpty()) "" else "IPv4  " + v4); value(ipv6, if (v6.isEmpty()) "" else "IPv6  " + v6)
-            value(hardware, if (group.mac.isEmpty()) "MAC not available" else "MAC   " + group.mac)
-            hardware.typeface = if (group.mac.isEmpty()) AppTypography.face(AppTypography.METADATA, false) else Typeface.MONOSPACE
-            val vendor = MacVendors.lookup(group.mac)
-            val recognition = group.groupRecognition()
-            value(model, recognition?.let { "Locally recognized · " + it.description }
-                ?: group.model.ifEmpty { if (vendor.isEmpty()) "" else "MAC vendor · " + vendor })
-            contentDescription = group.title() + ", " + visual.label + ", " + group.endpoints().size + " IP addresses, " +
-                (if (v4.isEmpty()) "" else "IPv4 " + v4 + ", ") + (if (v6.isEmpty()) "" else "IPv6 " + v6 + ", ") +
-                (if (group.mac.isEmpty()) "MAC not available" else "MAC " + group.mac) + (if (vendor.isEmpty()) "" else ", MAC vendor " + vendor) +
-                (recognition?.let { ", locally recognized as " + it.description } ?: "") + ", open details"
+            value(hardware, if (group.mac.isEmpty()) "" else "MAC   " + group.mac)
+            hardware.typeface = Typeface.MONOSPACE
+            val recognition = group.groupProduct()
+            val spoken = arrayListOf(identity.title)
+            if (identity.subtitle.isNotEmpty()) spoken.add(identity.subtitle)
+            val addresses = group.endpoints().size
+            spoken.add("$addresses IP " + if (addresses == 1) "address" else "addresses")
+            if (v4.isNotEmpty()) spoken.add("IPv4 $v4")
+            if (v6.isNotEmpty()) spoken.add("IPv6 $v6")
+            if (group.mac.isNotEmpty()) spoken.add("MAC ${group.mac}")
+            if (recognition != null) spoken.add("locally recognized product")
+            spoken.add("open details")
+            contentDescription = spoken.joinToString(", ")
             invalidate()
         }
         override fun onDraw(canvas: Canvas) {
@@ -518,7 +523,7 @@ class MainActivity : Activity() {
         val previousY = detailScroll?.scrollY ?: restoredDetailY
         val scroll = ScrollView(this); detailScroll = scroll
         val body = column(); body.setPadding(dp(23), dp(14), dp(23), dp(30)); scroll.addView(body); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        val title = text(d.title(), 26, ink, true); title.letterSpacing = -.01f; body.addView(title); space(body, 8)
+        val title = text(d.presentation().title, 26, ink, true); title.letterSpacing = -.01f; body.addView(title); space(body, 8)
         body.addView(text(if (d.self) "This phone" else if (d.gateway) "Wi-Fi gateway" else "Details from your scan", 13, muted, false)); space(body, 21)
         if (d.endpoints().size > 1) { body.addView(text("" + d.endpoints().size + " IP addresses grouped together. Each address keeps its own reported details.", 13, accent, true)); space(body, 16) }
         for (endpoint in d.endpoints()) {
@@ -531,6 +536,7 @@ class MainActivity : Activity() {
             else if (endpoint.latency >= 0) { space(addresses, 12); detailRow(addresses, "Response time (TCP)", "" + endpoint.latency + " ms") }
             body.addView(addresses); space(body, 16)
             val facts = panel(); facts.setPadding(dp(18), dp(10), dp(18), dp(10)); val missing = ArrayList<String>()
+            if (endpoint.name.isNotEmpty()) detailRow(facts, "Network name", endpoint.name)
             val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Device type", endpoint.kind, "device type"))
             for (item in identity) { if (item[1].isEmpty()) missing.add(item[2]) else detailRow(facts, item[0], item[1]) }
             val vendor = MacVendors.lookup(endpoint.mac)
@@ -543,12 +549,13 @@ class MainActivity : Activity() {
                 unknown.setPadding(0, dp(10), 0, dp(5)); facts.addView(unknown)
             }
             body.addView(facts); space(body, 8)
-            endpoint.locallyRecognized()?.let { match ->
+            endpoint.identifiedProduct()?.let { match ->
                 val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
                 recognized.addView(text("Locally recognized", 16, ink, true))
-                detailRow(recognized, if (match.familyOnly) "Device family" else "Device", match.description)
-                detailRow(recognized, "Device type", match.category.label)
-                recognized.addView(text("Inferred from the reported model code using offline Recog rules.", 14, muted, false))
+                detailRow(recognized, if (match.product.familyOnly) "Device family" else "Device", match.product.title)
+                if (match.product.category != DeviceCatalog.Category.UNSPECIFIED) detailRow(recognized, "Device type", match.product.category.label)
+                recognized.addView(text(if (match.recog != null) "Inferred from the reported model code using offline Recog rules."
+                    else "Interpreted from current reported model data using the local product catalogue.", 14, muted, false))
                 body.addView(recognized); space(body, 8)
             }
             val lookups = endpoint.metadataLookupRows()
@@ -600,22 +607,22 @@ class MainActivity : Activity() {
         field(panel, "Observed / advertised ports", if (endpoint.ports.isEmpty()) "None reported" else endpoint.ports.toString(), false)
         for ((key, value) in endpoint.details) if (key !in listOf("ONVIF hardware (advertised)", "OS (advertised)", "Firmware (advertised)", "ICMP response time", "ICMPv6 response time")) field(panel, key, value, false)
         for (hint in endpoint.observations()) field(panel, "Reported " + hint.field.lowercase(Locale.ROOT) + " · " + hint.source, hint.value, false)
-        endpoint.locallyRecognized()?.let { match ->
+        endpoint.identifiedProduct()?.let { match ->
             field(panel, "Local recognition source", match.source, false)
             field(panel, "Recognition input", match.input, false)
         }
     }
     private fun deviceText(group: Device): String {
-        val text = StringBuilder(group.title())
+        val text = StringBuilder(group.presentation().title)
         for (d in group.endpoints()) {
             text.append("\n\nIP: ").append(d.ip).append("\nMAC: ").append(d.mac.ifEmpty { "Not available" }).append("\nMAC source: ").append(reported(d.macSource))
-                .append("\nHostname: ").append(reported(d.hostname)).append("\nManufacturer: ").append(reported(d.manufacturer)).append("\nModel: ").append(reported(d.model))
+                .append("\nNetwork name: ").append(reported(d.name)).append("\nHostname: ").append(reported(d.hostname)).append("\nManufacturer: ").append(reported(d.manufacturer)).append("\nModel: ").append(reported(d.model))
             val vendor = MacVendors.lookup(d.mac)
             if (d.kind.isNotEmpty()) text.append("\nDevice type: ").append(d.kind)
-            d.locallyRecognized()?.let { match ->
-                text.append("\nLocally recognized").append(if (match.familyOnly) " family: " else ": ").append(match.description)
-                    .append("\nRecognized device type: ").append(match.category.label)
-                    .append("\nRecognition source: ").append(match.source).append("\nRecognition input: ").append(match.input)
+            d.identifiedProduct()?.let { match ->
+                text.append("\nLocally recognized").append(if (match.product.familyOnly) " family: " else ": ").append(match.product.title)
+                if (match.product.category != DeviceCatalog.Category.UNSPECIFIED) text.append("\nRecognized device type: ").append(match.product.category.label)
+                text.append("\nRecognition source: ").append(match.source).append("\nRecognition input: ").append(match.input)
             }
             for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
             d.details["HomeKit setup (advertised)"]?.let { text.append("\nHomeKit setup (advertised): ").append(it) }

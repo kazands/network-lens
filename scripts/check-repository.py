@@ -8,7 +8,9 @@ ROOT_FILES = {'.gitignore', 'README.md', 'LICENSE', 'NOTICE', 'CONTRIBUTING.md',
 ROOT_DIRS = {'android', 'scripts', 'tests', 'store-listing', 'docs', '.github'}
 PRIVATE_PARTS = {'.tools', '.codex', '.codex-attachments', 'evidence', 'artifacts', 'downloads', '__pycache__', '.gradle', '.kotlin', 'build'}
 PRIVATE_SUFFIXES = {'.jks', '.keystore', '.pem', '.key', '.p12', '.pfx', '.apk', '.aab', '.idsig', '.log'}
-BINARY_ASSETS = {'android/app/src/main/res/raw/ieee_mac_vendors.bin',
+BINARY_ASSETS = {'android/catalog-original/nist-hardware.json.gz',
+                 'android/app/src/main/res/raw/product_models.gz',
+                 'android/app/src/main/res/raw/ieee_mac_vendors.bin',
                  'android/branding/network-lens-approved-mockup.png',
                  'android/branding/network-lens-hyperreal.png',
                  'android/app/src/main/res/drawable-nodpi/network_lens_logo.png',

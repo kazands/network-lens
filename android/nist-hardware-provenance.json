@@ -1,0 +1,53 @@
+{
+  "source": "NIST National Vulnerability Database Official CPE Dictionary",
+  "documentation": "https://nvd.nist.gov/products/cpe",
+  "accessed": "2026-11-14",
+  "scope": "All hardware (part h) API entries; minimal names, IDs, English titles and deprecation flags. No vulnerability records or household observations.",
+  "notice": "NIST states the CPE Dictionary may be used voluntarily and is not subject to copyright in the United States. NIST attribution retained; no NIST endorsement.",
+  "rows": 64985,
+  "snapshot_sha256": "7455f375ff3d78d3689f9022a6c46207ffa7602040eb60d70bc87df441a2ade9",
+  "pages": [
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=0",
+      "sha256": "8b3cd0a749225f97ee5145caa57175e4fb914828332d907afdd446326c0511e1",
+      "timestamp": "2026-11-14T18:23:56.027",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=10000",
+      "sha256": "3b573c3ebdcb38e23fda781771a06c19d21820c278246d6612deed73ddf17207",
+      "timestamp": "2026-11-14T18:24:14.023",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=20000",
+      "sha256": "0420c5d89d4c139fa492cff2ba9c38acc87488e2d873fd564692ddf99245cd21",
+      "timestamp": "2026-11-14T18:24:34.303",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=30000",
+      "sha256": "f871036b1771cfaf60a1d189a24388b1386866281211641dfd25cba89bf4e2bc",
+      "timestamp": "2026-11-14T18:24:56.807",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=40000",
+      "sha256": "3e442daebeb0551475b6f0418af2c01226ecec2b9045fc19bfed367c28f2b274",
+      "timestamp": "2026-11-14T18:25:15.380",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=50000",
+      "sha256": "a58dabe4d603257fe3890ca4492e52cb4d1d22a378fd8ed9a9917a12e0e423d8",
+      "timestamp": "2026-11-14T18:25:36.330",
+      "entries": 10000
+    },
+    {
+      "url": "https://services.nvd.nist.gov/rest/json/cpes/2.0?cpeMatchString=cpe:2.3:h:&resultsPerPage=10000&startIndex=60000",
+      "sha256": "a673336d1e86004118c266072328668ad296be746af8798c881c11b58bcfec38",
+      "timestamp": "2026-11-14T18:25:58.737",
+      "entries": 4985
+    }
+  ]
+}

@@ -1,5 +1,30 @@
 # Third-party code and assets
 
+## Public product catalogue facts
+
+The manufacturer-qualified catalogue combines a filtered NIST CPE hardware
+snapshot with the Google Play device facts published by
+`androidtrackers/certified-android-devices` at commit
+`dc47abd4e6d16ebc7e4428b933b0a388a2ddf9f0`, under MIT, Copyright (c) 2019
+yshalsager. The complete MIT notice is retained in `catalog-original/LICENSE`
+and packaged in `app/src/main/res/raw/android_catalog_license.txt`. The original
+mirror JSON and a UTF-8 conversion of Google's public CSV are retained for
+cross-checking; 156 mismatching mirror rows are rejected. No upstream sync code
+is incorporated. Source: https://github.com/androidtrackers/certified-android-devices .
+
+NIST permits voluntary use of the Official CPE Dictionary and states that it is
+not subject to copyright in the United States. NIST attribution and limitations
+are packaged in `app/src/main/res/raw/nist_catalog_notice.txt`. The compact
+hardware input snapshot retains CPE names, IDs, English titles and deprecation
+flags. No vulnerability data is incorporated and a catalogue match implies no
+vulnerability finding or NIST endorsement. Source: https://nvd.nist.gov/products/cpe .
+
+`android-catalog-provenance.json`, `nist-hardware-provenance.json` and
+`product-catalog-provenance.json` record exact hashes, primary validation,
+exclusions and merge rules. The build verifies the generated compressed table
+offline. The table neither supplies presence nor turns an IEEE interface vendor
+into a reported manufacturer. It adds no cloud service, paid licence or account.
+
 ## Rapid7 Recog model mappings
 
 The exact offline model-code table derives from Rapid7 Recog at commit

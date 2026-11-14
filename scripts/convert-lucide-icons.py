@@ -9,7 +9,8 @@ ICONS = {'router': 'router', 'smartphone': 'smartphone', 'printer': 'printer',
          'lightbulb': 'lightbulb', 'lock-keyhole': 'lock', 'plug': 'plug',
          'toggle-left': 'switch', 'thermometer': 'thermostat', 'activity': 'sensor',
          'bell-ring': 'doorbell', 'fan': 'fan', 'laptop': 'laptop',
-         'monitor': 'monitor', 'tablet': 'tablet', 'tv-minimal-play': 'tv_player'}
+         'monitor': 'monitor', 'tablet': 'tablet', 'tv-minimal-play': 'tv_player',
+         'server': 'recorder', 'gamepad-2': 'game_console'}
 ANDROID = 'http://schemas.android.com/apk/res/android'
 ET.register_namespace('android', ANDROID)
 

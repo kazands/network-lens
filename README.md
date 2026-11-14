@@ -30,6 +30,8 @@ Read the [0.3.12 verification notes](docs/VERIFICATION-0.3.12.md) for completed 
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 - Offline Recog descriptions and category icons for a limited set of current mDNS model codes. Interpretations remain separate from reported fields; see [coverage and provenance](docs/RECOG.md).
 
+The unreleased working source adds canonical device names and a free offline product catalogue across thousands of brands. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md) and [development status](docs/STATUS.md).
+
 Results, filters, appearance and range choices stay in memory. Every scan starts fresh. A process restart requires a new scan. There is no saved inventory, history, cloud recognition, account, advertising, analytics, monitoring or background scanning. Explicit copy actions use Android's clipboard.
 
 ## Limits

@@ -161,9 +161,9 @@ internal object RecogChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    for (d in fixtures.dropLast(1)) layout(all.single { it.text.toString() == "Locally recognized · ${d.locallyRecognized()!!.description}" }, "List $label")
+                    for (d in fixtures.dropLast(1)) layout(all.single { it.text.toString() == d.identifiedProduct()!!.product.title }, "List $label")
                     val rows = get(activity, "deviceRows") as Map<String, View>
-                    check(rows[fixtures[0].ip]!!.contentDescription.contains("locally recognized as MacBook Pro"), "List $label exposes recognition to accessibility")
+                    check(rows[fixtures[0].ip]!!.contentDescription.contains("Apple MacBook Pro") && rows[fixtures[0].ip]!!.contentDescription.contains("locally recognized product"), "List $label exposes recognition to accessibility")
                     if (scale == 1f) capture(activity, "list-$label")
                     all.filterIsInstance<EditText>().single().setText("laptop")
                 }
@@ -178,7 +178,7 @@ internal object RecogChecks {
                     check(all.any { it.text.toString() == "MacBookPro18,3" } && all.any { it.text.toString().contains("manufacturer") && it.text.toString().startsWith("Not reported:") },
                         "Details $label retain the reported code and unknown manufacturer")
                     layout(all.single { it.text.toString() == "Locally recognized" }, "Recognition heading $label")
-                    layout(all.single { it.text.toString() == fixtures[0].locallyRecognized()!!.description }, "Recognition description $label")
+                    all.filter { it.text.toString() == fixtures[0].identifiedProduct()!!.product.title }.forEach { layout(it, "Recognition description $label") }
                     layout(all.single { it.text.toString() == "Inferred from the reported model code using offline Recog rules." }, "Recognition explanation $label")
                     if (width == 320 && scale == 2f || width == 411 && scale == 1f) {
                         val scroll = get(activity, "detailScroll") as ScrollView
@@ -197,7 +197,7 @@ internal object RecogChecks {
                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
                     check(copied.contains("Model: MacBookPro18,3\n") && copied.contains("Manufacturer: Not reported") &&
-                        copied.contains("Locally recognized: MacBook Pro") && copied.contains("Recognition source: Recog") &&
+                        copied.contains("Locally recognized: Apple MacBook Pro") && copied.contains("Recognition source: Recog") &&
                         copied.contains("Recognition input: mDNS current _device-info._tcp. TXT · model=MacBookPro18,3"),
                         "Copy $label separates reported fields from the sourced interpretation")
                     activity.onBackPressed()
@@ -218,9 +218,9 @@ internal object RecogChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    layout(all.single { it.text.toString() == "Locally recognized · $description" }, "Shared $code list")
+                    layout(all.single { it.text.toString() == "Apple $description" }, "Shared $code list")
                     val row = (get(activity, "deviceRows") as Map<String, View>).getValue(d.ip)
-                    check(row.contentDescription.contains("locally recognized as $description"), "Shared $code accessibility retains the conservative description")
+                    check(row.contentDescription.contains("Apple $description") && row.contentDescription.contains("locally recognized product"), "Shared $code accessibility retains the conservative description")
                     row.performClick()
                 }
                 settle(test)
@@ -228,11 +228,11 @@ internal object RecogChecks {
                     val all = texts(activity.window.decorView)
                     check(all.any { it.text.toString() == "Device family" } && all.any { it.text.toString() == code },
                         "Shared $code details distinguish the interpreted family from the reported code")
-                    layout(all.single { it.text.toString() == description }, "Shared $code detail description")
+                    all.filter { it.text.toString() == "Apple $description" }.forEach { layout(it, "Shared $code detail description") }
                     all.single { it.text.toString() == "Copy device details" }.performClick()
                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
-                    check(copied.contains("Model: $code\n") && copied.contains("Locally recognized family: $description\n"),
+                    check(copied.contains("Model: $code\n") && copied.contains("Locally recognized family: Apple $description\n"),
                         "Shared $code clipboard keeps the raw model and conservative family separate")
                     val scroll = get(activity, "detailScroll") as ScrollView
                     var panel: View = all.single { it.text.toString() == "Locally recognized" }

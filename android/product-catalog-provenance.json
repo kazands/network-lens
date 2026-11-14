@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "generated_sha256": "5d4255d7394f82b977727ddedb8b47ed0cd4ae7a2cbee52d123621af83573b2d",
+  "generated_bytes": 1781979,
+  "uncompressed_sha256": "f0fffa49fa22b34d6cead9da9053b8e1d21398e1beb9e3fb8af7117eef033e4c",
+  "uncompressed_bytes": 22523466,
+  "sources": [
+    "android/android-catalog-provenance.json",
+    "android/nist-hardware-provenance.json"
+  ],
+  "counts": {
+    "nist_entries": 64985,
+    "nist_ineligible_entries": 2222,
+    "component_entries_excluded": 8573,
+    "ambiguous_aliases_excluded": 600,
+    "cross_source_conflicts": 78,
+    "qualified_model_aliases": 256338,
+    "product_titles": 86540,
+    "brands": 5263
+  },
+  "alias_source_counts": {
+    "Android": 81272,
+    "NIST": 175204
+  },
+  "largest_brand_groups": {
+    "hp": 40085,
+    "cisco": 15189,
+    "samsung": 10592,
+    "lenovo": 9492,
+    "dell": 7481,
+    "siemens": 6372,
+    "huawei": 4935,
+    "intel": 3554,
+    "schneider-electric": 2788,
+    "mitsubishielectric": 2634,
+    "zte": 2473,
+    "tct (alcatel)": 2304,
+    "tp-link": 2298,
+    "hpe": 2234,
+    "lge": 2018,
+    "sharp": 1872,
+    "asus": 1773,
+    "sony": 1732,
+    "supermicro": 1656,
+    "moxa": 1624
+  },
+  "selection": "Exact reported manufacturer and model only. No names, MAC prefixes, Device codenames or fuzzy matching. Redundant brand prefixes are explicit generated aliases and pass the same ambiguity checks. Reject ambiguous aliases, including cross-source disagreement. NIST matches are product-family interpretations; no form factor, edition, SKU, hardware revision or vulnerability claim is inferred from a CPE name.",
+  "nist_component_filter": "Exclude explicit CPU/processor/chip/controller/adapter records and component-focused vendors unless a named NUC, server, appliance or development kit. Hardware part h only, nondeprecated, one English title. CPE product spelling and underscore-to-space equivalents are exact aliases; an explicit full title without its brand is also accepted. Canonical NIST titles contain the brand and product token, using English-title case only where the same token appears exactly. Extra SKU/version prose is discarded; unmatched tokens retain their literal spelling. Version fields never supply a revision."
+}

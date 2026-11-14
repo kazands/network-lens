@@ -154,6 +154,22 @@
       "url": "https://github.com/lucide-icons/lucide/blob/main/icons/tv-minimal-play.svg",
       "accessed": "2026-11-13",
       "sha256": "fff112133c9932fbf775ae5726cfe9e7e6a1aecf224a2e0ffcd39c9806f198a0"
+    },
+    {
+      "name": "server",
+      "path": "icons/server.svg",
+      "git_blob_sha": "a8b6ad92b3cc90688bfaa4d259dce75b26c81d2e",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/server.svg",
+      "accessed": "2026-11-14",
+      "sha256": "f7bea54b609dc488f3b848995014041846b2443fd2a880653e9e583d7a034f61"
+    },
+    {
+      "name": "gamepad-2",
+      "path": "icons/gamepad-2.svg",
+      "git_blob_sha": "bc7f08c59863d3eb8e48febaf8d17bd30ca41e1b",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/gamepad-2.svg",
+      "accessed": "2026-11-14",
+      "sha256": "b0671de7afbebdafc4d655d867d9851947170b906fb187e749410039df867509"
     }
   ]
 }

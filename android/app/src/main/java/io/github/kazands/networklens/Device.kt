@@ -31,6 +31,7 @@ class Device : Grouping.Endpoint {
     @JvmField val details: MutableMap<String, String> = LinkedHashMap()
     private var hints = IdentityHints()
     private var recognition = Recog.Evidence()
+    private var catalogue = DeviceCatalog.Evidence()
     internal var metadataLookups = MetadataLookups()
         private set
 
@@ -73,9 +74,36 @@ class Device : Grouping.Endpoint {
         val candidate = matches.singleOrNull() ?: return null
         return candidate.takeIf { endpoints.all { it.recognitionCompatible(candidate) } }
     }
+    @Synchronized internal fun identifiedProduct(): DeviceCatalog.Match? =
+        catalogue.match()?.takeIf { productCompatible(it) } ?: locallyRecognized()?.let(DeviceCatalog::fromRecog)
+
+    @Synchronized private fun productCompatible(match: DeviceCatalog.Match): Boolean {
+        match.recog?.let { return recognitionCompatible(it) }
+        if (locallyRecognized() != null || !catalogue.compatible(match.product)) return false
+        if (IdentityHints.specific(model) && !match.product.acceptsModel(model)) return false
+        // Include manually populated/legacy fields without promoting them into catalogue evidence.
+        val selected = DeviceCatalog.Evidence()
+        selected.offer("Manufacturer", manufacturer, "Selected reported field")
+        selected.offer("Model", model, "Selected reported field")
+        return selected.compatible(match.product)
+    }
+    internal fun groupProduct(): DeviceCatalog.Match? {
+        val endpoints = endpoints()
+        val matches = endpoints.mapNotNull { it.identifiedProduct() }
+        val candidate = matches.firstOrNull() ?: return null
+        if (matches.any { it.product.id != candidate.product.id }) return null
+        return candidate.takeIf { endpoints.all { it.productCompatible(candidate) } }
+    }
+    internal fun presentation(): DevicePresentation.Labels {
+        val product = groupProduct()?.product
+        val role = if (product == null || product.category == DeviceCatalog.Category.UNSPECIFIED) DeviceIcon.categoryLabel(this) else ""
+        return DevicePresentation.labels(name, hostname, model, role, product, self, gateway)
+    }
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
         if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
-            recognition.observeReport(field, SafeText.label(value, 160))
+            val cleanValue = SafeText.label(value, 160)
+            recognition.observeReport(field, cleanValue)
+            catalogue.offer(field, cleanValue, SafeText.label(source, 128))
         }
         val hint = hints.offer(field, value, source, priority) ?: return
         when (field) {
@@ -162,9 +190,10 @@ class Device : Grouping.Endpoint {
             for (h in hints.observations()) observations.put(JSONObject().put("field", h.field).put("value", h.value)
                 .put("source", h.source).put("priority", h.priority))
             out.put("observations", observations)
-            locallyRecognized()?.let { match -> out.put("localRecognition", JSONObject()
-                .put("description", match.description).put("deviceType", match.category.label)
-                .put("familyOnly", match.familyOnly).put("source", match.source).put("input", match.input)) }
+            identifiedProduct()?.let { match -> out.put("localRecognition", JSONObject()
+                .put("description", match.product.title).put("deviceType", match.product.category.label)
+                .put("recognizedBrand", match.product.brand).put("familyOnly", match.product.familyOnly)
+                .put("source", match.source).put("input", match.input)) }
         } catch (_: JSONException) {}
         return out
     }
@@ -179,6 +208,7 @@ class Device : Grouping.Endpoint {
         copy.groupLinks.addAll(groupLinks); copy.ports.addAll(ports); copy.services.addAll(services)
         copy.evidence.addAll(evidence); copy.details.putAll(details); copy.hints = hints.copy()
         copy.recognition = recognition.copy()
+        copy.catalogue = catalogue.copy()
         copy.metadataLookups = metadataLookups.copy()
         for (member in members) copy.members.add(member.copy())
         return copy

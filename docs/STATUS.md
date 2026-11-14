@@ -4,6 +4,94 @@ Network Lens 0.3.12 is a development preview. It uses the application ID `io.git
 
 The latest release checks are recorded in [VERIFICATION-0.3.12.md](VERIFICATION-0.3.12.md). Earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md), package-identity checks in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md), and typography/IPv6 layout verification in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
 
+## Clear device identities and global catalogue (unreleased)
+
+The source now puts canonical product names first and keeps useful custom network
+names below them. It bundles **86,540 product/family titles across 5,263 brands**,
+indexed by 256,338 manufacturer-qualified spellings, plus the existing 156 Apple
+Recog codes and reviewed family/profile overrides. The broad sources are a
+filtered public NIST CPE hardware snapshot and a pinned MIT-licensed Android
+model mirror cross-checked against Google's public list. This is worldwide
+hardware coverage beyond Android, including printer, router, computer, storage,
+camera, TV and console examples. It is not a complete physical inventory or a
+promise that every listed model can be identified by this scanner.
+
+Broad matches require a current reported manufacturer and exact model; names,
+MAC vendors and cached advertisements cannot supply them. Ambiguous aliases
+and cross-source conflicts are excluded. NIST-derived names use only supported
+product-family precision, discarding unsupported SKU/revision prose. Unknown
+form factors keep icons justified by current services. Reviewed profiles select
+a recorder icon for the Hikvision NVR, streaming icon for SHIELD, and controller
+icon for PlayStation 5. Read-only bounded PS5 discovery supplies genuine console
+model evidence; a PS5-like name alone cannot identify it. Missing-MAC explanations
+remain in Details. Reported names/models, manufacturer, interface vendor and
+recognition inputs/sources remain separate. Nothing is retained across scans.
+
+The catalogue loads once from a compressed public asset on a worker, using
+streaming bounded validation and binary-search lookups. It adds no paid licence,
+account, per-scan request or cloud recognition. NIST updates its public XML
+nightly; this app currently uses a pinned snapshot from 2026-11-14. An optional
+verified online catalogue download is a separate possible addition; no device
+identifiers need to leave the phone to fetch public catalogue updates.
+See [DEVICE-IDENTITIES.md](DEVICE-IDENTITIES.md) for data, notices, source access,
+selection, evidence conflicts, grouping and PlayStation wire limits.
+
+Initial feature verification passed all 26 host suites / 29,839 checks, direct
+app/instrumentation builds and packaged permission/security audits. The catalogue suite also passed in a host JVM
+limited to 128 MiB heap; this is not a phone memory/performance measurement.
+That APK passed nine modes / 1,654 checks on each of API 36 and 37:
+device identities (269), Recog (298), typography (829), local metadata (49),
+session-only (39), fresh presence (31), navigation (31), HomeKit (69) and failure
+reporting (39). Installed app and test APK bytes were verified. Native canonical
+titles, icons, search, clipboard, full IPv4/IPv6 wrapping, family Details and
+Back were checked at 320dp/411dp, normal/200% text and both appearances. Synthetic
+screenshots were inspected; some include Android's transient clipboard preview
+after explicit copy checks. An initial earlier matrix was obstructed by confirmed
+System UI ANR dialogs on both test emulators; those were dismissed before the
+successful reruns. The supplementary Impeccable source detector reported no
+findings; native layout verification came from the emulator checks and images.
+
+Initial implementation APK SHA-256:
+`0e239ec12374ec7e27f73b9b53ba73c6eb7181fd41df720876bb9be856f6304d`.
+API 36/37 instrumentation APK SHA-256:
+`fc151daa79349e528bb23c8741f5903c8a786ea05694309fa60b592d4fa0ce06`.
+The same application APK also passed the focused device-identities mode / 269
+checks on API 26, including full catalogue loading, the canonical-name fixtures
+and both appearances/text scales. Its initial scroll assertion positioned the
+list at bottom padding, clipping 27 pixels of a row that fitted the viewport;
+the harness now aligns the row itself. This changed test positioning only.
+The API 26 rerun used instrumentation APK SHA-256
+`06ccaec32bd43376a25cedb54246a0b47e0dcaf32050552a73427baebdff5399`.
+Its artifacts are under `artifacts/global-catalog-api26-verified`. The other eight
+modes were not run on API 26 for this change.
+
+Ignored verification artifacts use `artifacts/global-catalog-final-*`;
+`global-catalog-heap-check.log` records the host heap check.
+
+Review corrections on 2026-11-14 remove two response-order dependencies. Up to
+eight distinct model spellings remain available for qualification after the
+manufacturer or catalogue loads; conflicting reports and overflow still suppress
+recognition. A trusted PS5 console response can corroborate an earlier ordinary
+model report, retaining its source even after display-observation eviction.
+Both regressions failed against the preceding code before their fixes.
+
+After those corrections, all 26 host suites / 29,914 checks, direct application
+and instrumentation builds, and packaged permission/security audits passed.
+API 26 passed device-identities / 300 checks. API 37 passed device-identities
+(300), Recog (298), local metadata (49) and fresh presence (31): 678 checks total.
+The app and test APK bytes installed on both isolated emulators were verified.
+The other modes and API 36 were not rerun for these logic corrections.
+Artifacts are under `artifacts/catalogue-review-fixes-*`.
+Corrected development APK SHA-256:
+`6d4269f39eb6e6f65ac223316b5d7a461b6bd1d1016fd0e8ac215a9959b604d7`.
+Corrected instrumentation APK SHA-256:
+`3212fc23f8af6b6287b0f7422b909a99923bcb687d55640de9714bad7245696e`.
+
+Physical PS5 discovery, household model accuracy, TalkBack operation and phone
+scan performance remain unverified. No phone was operated or release published.
+The public 0.3.12 download remains the previously verified release. These changes
+do not resolve the discovery limitations below.
+
 ## Offline model recognition (0.3.12)
 
 The source now interprets 156 exact current mDNS device-info model codes using
