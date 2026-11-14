@@ -64,7 +64,19 @@ internal object RecogChecks {
         }
         val fixtures = listOf(device("MacBookPro18,3", 10), device("iPad14,1", 11), device("Macmini9,1", 12),
             device("AppleTV11,1", 13), device("AudioAccessory5,1", 14), device("FixtureUnknown99,1", 15))
+        val sharedModels = listOf("MacBookPro15,1" to "MacBook Pro (15-inch)",
+            "MacBookPro15,2" to "MacBook Pro (13-inch, Four Thunderbolt 3 ports)",
+            "Macmini3,1" to "Mac mini (2009)")
+        val sharedFixtures = sharedModels.mapIndexed { n, (code, _) -> device(code, 60 + n) }
         try {
+            for ((n, expected) in sharedModels.withIndex()) {
+                val (code, description) = expected
+                val d = sharedFixtures[n]
+                check(d.locallyRecognized()?.let { it.code == code && it.description == description && it.familyOnly } == true,
+                    "Current $code response retains only the shared model details")
+                check(d.model == code && d.manufacturer.isEmpty() && !d.seen && d.json().getJSONObject("localRecognition").getBoolean("familyOnly"),
+                    "Shared $code preserves its reported code, unknown manufacturer and independent presence")
+            }
             val laptop = fixtures[0]
             check(laptop.locallyRecognized()?.category == Recog.Category.LAPTOP, "Current-wire device-info reaches offline recognition")
             check(laptop.model == "MacBookPro18,3" && laptop.manufacturer.isEmpty() && laptop.mac.isEmpty() && laptop.kind.isEmpty(),
@@ -193,6 +205,52 @@ internal object RecogChecks {
                 settle(test)
                 main(test) {
                     check(get(activity, "selected") == null && (get(activity, "deviceRows") as Map<*, *>).size == 1, "Back $label preserves the recognition search")
+                }
+            }
+            // The final configuration above is 320dp, 200% text, dark appearance.
+            for ((n, expected) in sharedModels.withIndex()) {
+                val (code, description) = expected
+                val d = sharedFixtures[n]
+                main(test) {
+                    set(activity, "selected", null); set(activity, "devices", listOf(d)); set(activity, "groupedSource", null)
+                    set(activity, "query", ""); render()
+                }
+                settle(test)
+                main(test) {
+                    val all = texts(activity.window.decorView)
+                    layout(all.single { it.text.toString() == "Locally recognized · $description" }, "Shared $code list")
+                    val row = (get(activity, "deviceRows") as Map<String, View>).getValue(d.ip)
+                    check(row.contentDescription.contains("locally recognized as $description"), "Shared $code accessibility retains the conservative description")
+                    row.performClick()
+                }
+                settle(test)
+                main(test) {
+                    val all = texts(activity.window.decorView)
+                    check(all.any { it.text.toString() == "Device family" } && all.any { it.text.toString() == code },
+                        "Shared $code details distinguish the interpreted family from the reported code")
+                    layout(all.single { it.text.toString() == description }, "Shared $code detail description")
+                    all.single { it.text.toString() == "Copy device details" }.performClick()
+                    val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
+                    check(copied.contains("Model: $code\n") && copied.contains("Locally recognized family: $description\n"),
+                        "Shared $code clipboard keeps the raw model and conservative family separate")
+                    val scroll = get(activity, "detailScroll") as ScrollView
+                    var panel: View = all.single { it.text.toString() == "Locally recognized" }
+                    while (panel.parent !== scroll.getChildAt(0)) panel = panel.parent as View
+                    scroll.scrollTo(0, panel.top)
+                }
+                settle(test)
+                main(test) {
+                    val heading = texts(activity.window.decorView).single { it.text.toString() == "Locally recognized" }
+                    val visible = android.graphics.Rect()
+                    check(heading.getLocalVisibleRect(visible) && visible.height() == heading.height,
+                        "Shared $code family heading remains fully visible after scrolling settles")
+                    capture(activity, "family-$code-320dp-2x-dark")
+                    activity.onBackPressed()
+                }
+                settle(test)
+                main(test) {
+                    check(get(activity, "selected") == null, "Shared $code details return to the list")
                 }
             }
         } finally {

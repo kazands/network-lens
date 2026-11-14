@@ -36,7 +36,10 @@ CONSERVATIVE_DESCRIPTIONS = {
     'MacBookPro11,1': 'MacBook Pro (Retina, 13-inch)',
     'MacBookPro11,2': 'MacBook Pro (Retina, 15-inch)',
     'MacBookPro11,3': 'MacBook Pro (Retina, 15-inch)',
+    'MacBookPro15,1': 'MacBook Pro (15-inch)',
+    'MacBookPro15,2': 'MacBook Pro (13-inch, Four Thunderbolt 3 ports)',
     'MacPro5,1': 'Mac Pro',
+    'Macmini3,1': 'Mac mini (2009)',
     'iMac9,1': 'iMac (Early 2009)',
     'iMac15,1': 'iMac (Retina 5K, 27-inch)',
 }
@@ -44,6 +47,7 @@ DESCRIPTION_REFERENCES = [
     'https://support.apple.com/en-us/102869',  # MacBook Air
     'https://support.apple.com/en-us/108052',  # MacBook Pro
     'https://support.apple.com/en-us/102887',  # Mac Pro
+    'https://support.apple.com/en-us/102852',  # Mac mini
     'https://support.apple.com/en-us/108054',  # iMac
 ]
 

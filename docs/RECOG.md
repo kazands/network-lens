@@ -78,7 +78,7 @@ Board IDs, OS rules, broad family/prefix rules and the ambiguous `iMac10,1` /
 `hw.certainty=0.10`; the selected entries expose only **Apple TV** and a TV media
 player category, without a generation or a fabricated confidence percentage.
 
-Sixteen further Mac identifiers are shared across years or screen sizes. Local
+Nineteen further Mac identifiers are shared across years or screen sizes. Local
 generation overrides retain only the common product family/details and mark
 these entries `familyOnly`; exact code matching does not choose a retail variant.
 For example, `MacBookAir7,2` no longer selects 2017 over 2015, `MacPro5,1` no longer
@@ -86,9 +86,10 @@ selects 2012 over 2010, and `iMac9,1` no longer selects a 24-inch screen over 20
 The generated provenance records every override and the Apple reference pages
 used to check [MacBook Air](https://support.apple.com/en-us/102869),
 [MacBook Pro](https://support.apple.com/en-us/108052),
-[Mac Pro](https://support.apple.com/en-us/102887) and
+[Mac Pro](https://support.apple.com/en-us/102887),
+[Mac mini](https://support.apple.com/en-us/102852) and
 [iMac](https://support.apple.com/en-us/108054). Upstream files remain byte-for-byte
-intact. Regression tests cover all 16 conservative descriptions.
+intact. Regression tests cover all 19 conservative descriptions.
 
 Data refreshes are intentional maintenance changes: inspect the new upstream
 content and license, update the pinned hashes and selection policy, regenerate,
@@ -100,6 +101,46 @@ python3 scripts/generate-recog-models.py --check
 
 The host-test and direct app-build scripts run this check automatically.
 
+## Shared identifier correction verification (2026-11-14)
+
+The follow-up review identified three further shared identifiers whose generated
+descriptions selected an unsupported variant. The generator now retains these
+common details and marks each entry `familyOnly=true`:
+
+| Reported code | Conservative description |
+| --- | --- |
+| `MacBookPro15,1` | MacBook Pro (15-inch) |
+| `MacBookPro15,2` | MacBook Pro (13-inch, Four Thunderbolt 3 ports) |
+| `Macmini3,1` | Mac mini (2009) |
+
+The new host regression failed against the prior table. After regeneration, all
+23 host suites / 19,574 checks passed, including 3,365 Recog checks. The supported
+direct app and instrumentation builds passed, along with packaged permission and
+security audits. The retained upstream XML/license blob identities and packaged
+license bytes remain unchanged. Coverage remains 156 codes, with 19 conservative
+Mac descriptions and six family-only Apple TV descriptions.
+
+The development APK SHA-256 is
+`de9dbf1937bf65082bd0ae007f69aaed50e82bf26436062383fba9318d0d5641`;
+the final instrumentation APK SHA-256 is
+`97da4f1fb0c2900dac3aa46bbc06c037ec02bd1d2498792f5422ecf6663aec0f`.
+The runner verified both installed APK hashes on each isolated emulator.
+
+The focused `recog` mode passed 276 checks on each of API 36 and 37. Thirty-three
+new assertions cover the three corrected codes through current-service admission,
+JSON, list/accessibility text, the Device family label, reported-code preservation,
+clipboard output, Back and narrow 200% text layouts. After inspecting the initial
+273-check captures, the fixture was updated to let scrolling settle before capture
+and check that each recognition heading remains fully visible. The final 276-check
+runs passed. Synthetic MacBook Pro and Mac mini captures were visually inspected.
+
+Both emulators booted with confirmed System UI ANR dialogs, which were closed
+before app testing. The other five modes in the earlier six-mode matrices below
+were not rerun for this table-only production correction. Real-device accuracy,
+API 26 runtime behavior, physical TalkBack and whole-scan performance remain
+unverified. No physical device was operated or release published; the existing
+discovery limitations remain open.
+
 ## Review corrections verification (2026-11-13)
 
 Three review corrections are committed separately: conservative descriptions for
@@ -110,13 +151,13 @@ unchanged, and the packaged license matches the retained terms byte-for-byte.
 
 All 23 host suites / 19,571 checks passed, including 3,362 Recog checks. The
 supported direct app and instrumentation builds passed, as did the packaged
-permission and security audits. The current development APK SHA-256 is
+permission and security audits. That development APK SHA-256 is
 `adf88ad73085472dffccadcef04df67411b1d978bff3351c5681001a0ba06a48`;
 the instrumentation APK SHA-256 is
 `bb46eb83a892990d1aada4f57c99ce976b09f69b9afc789c4e9b9d72c1bdc44c`.
 Both installed binaries were hash-verified on each selected emulator.
 
-| Current emulator matrix | Result |
+| Earlier emulator matrix | Result |
 | --- | --- |
 | API 36: recog, local-metadata, typography, session-only, fresh-presence, navigation | All six passed; 1,222 checks |
 | API 37: same six modes | All six passed; 1,222 checks |
@@ -132,7 +173,7 @@ visually inspected. The latter retained complete recognition-panel wrapping.
 
 Before testing, API 36 again booted with a confirmed System UI ANR dialog.
 It was closed on the isolated emulator and the full matrix then passed without
-an application change. The current APK is 1,932,192 bytes. No physical device
+an application change. That APK is 1,932,192 bytes. No physical device
 was operated or release published. Real-device coverage/accuracy, API 26 runtime
 behavior, physical TalkBack use and whole-scan performance remain unverified.
 The existing discovery limitations remain open.

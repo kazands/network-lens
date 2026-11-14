@@ -14,16 +14,17 @@ searched. Missing manufacturer/MAC values remain unknown. Conflicting evidence
 suppresses recognition; native cached callbacks cannot supply the input. No
 network request, permission, persistent history or runtime dependency was added.
 
-Review corrections keep descriptions conservative for 16 shared model codes,
+Review corrections keep descriptions conservative for 19 shared model codes,
 retain conflicts for the entire scan despite display-observation eviction, and
 test the DNS-SD first-duplicate-value rule through raw packets.
 
-All 23 host suites / 19,571 checks, direct app/instrumentation builds and packaged
-permission/security audits passed. The corrected candidate passed six emulator
-modes / 1,222 checks on each of API 36 and 37, including recognition, metadata,
-typography, session-only, fresh-presence and navigation. Synthetic light list and
-dark narrow 200% text details screenshots were inspected. A confirmed API 36
-System UI ANR dialog was closed before testing; the full matrix then passed.
+All 23 host suites / 19,574 checks, direct app/instrumentation builds and packaged
+permission/security audits passed. The latest shared-identifier correction passed
+the focused recognition mode / 276 checks on each of API 36 and 37, including
+family-labelled details, reported codes, clipboard and narrow 200% text. Synthetic
+corrected-family screenshots were inspected. Confirmed System UI ANR dialogs on
+both emulators were closed before testing. The earlier six-mode matrices remain
+recorded separately; the other five modes were not rerun for this table correction.
 Physical model accuracy, coverage and scan performance remain unverified; no
 phone install or release was performed. The existing discovery limitations below
 remain open. See [RECOG.md](RECOG.md) for selection policy, exact artifacts and

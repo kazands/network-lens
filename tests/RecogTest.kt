@@ -101,7 +101,10 @@ object RecogTest {
             "MacBookPro11,1" to "MacBook Pro (Retina, 13-inch)",
             "MacBookPro11,2" to "MacBook Pro (Retina, 15-inch)",
             "MacBookPro11,3" to "MacBook Pro (Retina, 15-inch)",
+            "MacBookPro15,1" to "MacBook Pro (15-inch)",
+            "MacBookPro15,2" to "MacBook Pro (13-inch, Four Thunderbolt 3 ports)",
             "MacPro5,1" to "Mac Pro",
+            "Macmini3,1" to "Mac mini (2009)",
             "iMac9,1" to "iMac (Early 2009)",
             "iMac15,1" to "iMac (Retina 5K, 27-inch)"
         )
