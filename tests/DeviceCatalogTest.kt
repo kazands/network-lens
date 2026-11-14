@@ -51,6 +51,17 @@ object DeviceCatalogTest {
             offer("Model", "PS5", ""); offer("Model", "Unknown", "Fixture model")
         }
         check(rejected.match() == null, "Rejected and generic observations cannot seed a catalogue match")
+        val manyAliases = DeviceCatalog.Product("fixture:aliases", "Fixture", "Fixture model", DeviceCatalog.Category.UNSPECIFIED,
+            (1..9).mapTo(HashSet()) { "fixture alias $it" })
+        val bounded = DeviceCatalog.Evidence().apply {
+            repeat(8) { offer("Model", "Fixture alias ${it + 1}", "Current fixture model") }
+        }
+        check(bounded.compatible(manyAliases), "Retained unresolved models can all corroborate the same product")
+        val withinBound = bounded.copy()
+        bounded.offer("Model", "Fixture alias 9", "Current fixture model")
+        repeat(20) { bounded.offer("Model", "Fixture alias 1", "Later corroborating fixture") }
+        check(!bounded.compatible(manyAliases) && !bounded.copy().compatible(manyAliases) && withinBound.compatible(manyAliases),
+            "Evidence overflow fails closed for the scan without changing earlier copies")
         val apple = DeviceCatalog.fromRecog(Recog.lookup("MacBookAir10,1")!!)
         check(apple.product.title == "Apple MacBook Air (M1, 2020)" && apple.source.contains(RecogModels.REVISION), "Existing Recog product gains a canonical brand while preserving rule provenance")
         check(DeviceCatalog.fromRecog(Recog.lookup("AppleTV11,1")!!).product.title == "Apple TV", "A product already containing its brand does not repeat it")

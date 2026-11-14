@@ -107,7 +107,11 @@ the family. A model or manufacturer alone is never used to fill in the other's
 reported field. The recognized brand stays inside the separate interpretation.
 IEEE MAC vendor lookup remains independent and cannot authorize a product match.
 
-One bounded model/source, normalized manufacturer and manufacturer source are retained per endpoint.
+Up to eight distinct model spellings, the first model/source, normalized
+manufacturer and manufacturer source are retained per endpoint. Alias validation
+waits for the required manufacturer and catalogue to be available, so equivalent
+make-and-model and model-only reports work in either arrival order. Every retained
+model must agree with the selected product; exceeding the bound suppresses recognition.
 Conflicting specific model or manufacturer reports suppress recognition for the
 rest of the scan, including when their display observations are evicted. Known
 aliases of the same product may corroborate one another. Sources and values are

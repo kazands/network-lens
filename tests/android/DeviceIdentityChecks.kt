@@ -62,6 +62,17 @@ internal object DeviceIdentityChecks {
             val copy = d.copy(); d.hint("Manufacturer", "Fixture rival", "Synthetic conflicting maker", 80)
             check(d.identifiedProduct() == null && copy.identifiedProduct() != null, "$code conflicts suppress the broad match without changing previous snapshots")
         }
+        val printerReports = listOf("Manufacturer" to "HP Inc.", "Model" to "LaserJet P4015", "Model" to "HP LaserJet P4015")
+        for (order in listOf(listOf(0, 1, 2), listOf(0, 2, 1), listOf(1, 0, 2), listOf(1, 2, 0), listOf(2, 0, 1), listOf(2, 1, 0))) {
+            val printer = Device().apply { ip = "192.0.2.81" }
+            for (n in order) printerReports[n].let { (field, value) -> printer.hint(field, value, "Synthetic current printer response $n", 80) }
+            check(printer.presentation().title == "HP LaserJet P4015" && !printer.seen && printer.manufacturer == "HP Inc.", "Printer reports $order resolve without inventing presence or replacing reported manufacturer")
+            val snapshot = printer.copy()
+            printer.hint("Model", "Fixture conflicting printer", "Z conflicting printer response", 80)
+            repeat(12) { printer.hint("Model", "LaserJet P4015", "A later printer response $it", 90) }
+            check(printer.observations().filter { it.field == "Model" }.let { it.size == 8 && it.none { h -> h.value == "Fixture conflicting printer" } }, "Printer conflict $order reaches display-observation eviction")
+            check(printer.identifiedProduct() == null && printer.copy().identifiedProduct() == null && snapshot.presentation().title == "HP LaserJet P4015", "Printer conflict $order survives eviction while earlier snapshots stay independent")
+        }
         val recorder = model("DS-7608NI-I2/8P", 10).apply {
             hint("Name", "DS-7608NI-I2/8P", "Synthetic current name", 80)
             hint("Device type", "Network surveillance device", "Synthetic surveillance service", 80)

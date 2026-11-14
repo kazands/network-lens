@@ -51,6 +51,45 @@ object ProductModelIndexTest {
         check(printer.match()?.product?.let {it.title=="HP LaserJet P4015" && it.familyOnly}==true,"A CPE product code cannot invent its English-title SKU or revision")
         printer.offer("Model","LaserJet P4015","Current model-only response")
         check(printer.match()?.product?.title=="HP LaserJet P4015","Corroborating make-and-model and model-only reports do not create a false conflict")
+        val printerReports=listOf(Triple("Manufacturer","HP Inc.","Current manufacturer"),
+            Triple("Model","LaserJet P4015","Current model-only response"),Triple("Model","HP LaserJet P4015","Current IPP model"))
+        for (order in listOf(listOf(0,1,2),listOf(0,2,1),listOf(1,0,2),listOf(1,2,0),listOf(2,0,1),listOf(2,1,0))) {
+            val pending=DeviceCatalog.Evidence()
+            for (n in order) printerReports[n].let { (field,value,source)->pending.offer(field,value,source) }
+            check(pending.match()?.product?.title=="HP LaserJet P4015","Equivalent printer reports recognize in order $order")
+            check(pending.copy().match()?.product?.title=="HP LaserJet P4015","Copied printer evidence recognizes in order $order")
+            pending.offer("Model","Fixture conflicting printer","Current conflicting model")
+            repeat(20){pending.offer("Model","LaserJet P4015","Later corroboration $it")}
+            check(pending.match()==null && pending.copy().match()==null,"A real printer conflict survives later reports and copying in order $order")
+        }
+        DeviceCatalog.install(ProductModelIndex.EMPTY)
+        val loading=DeviceCatalog.Evidence().apply {
+            printerReports.forEach { (field,value,source)->offer(field,value,source) }
+        }
+        val loadingCopy=loading.copy()
+        check(loading.match()==null,"Pending models cannot identify a product before its catalogue loads")
+        DeviceCatalog.install(index)
+        check(loading.match()?.product?.title=="HP LaserJet P4015" && loadingCopy.match()?.product?.title=="HP LaserJet P4015",
+            "Live and copied unresolved aliases recognize after the catalogue loads without new reports")
+        loading.offer("Model","Fixture conflicting printer","Current conflicting model")
+        check(loading.match()==null && loadingCopy.match()!=null,"Resolving pending evidence does not share mutable models between copies")
+        val pendingCopy=DeviceCatalog.Evidence().apply {
+            offer("Model","LaserJet P4015","Current model-only response")
+            offer("Model","HP LaserJet P4015","Current IPP model")
+        }
+        val beforeMaker=pendingCopy.copy()
+        pendingCopy.offer("Manufacturer","HP","Current manufacturer")
+        check(pendingCopy.match()!=null && beforeMaker.match()==null,"A later manufacturer does not change earlier progress snapshots")
+        beforeMaker.offer("Manufacturer","HP","Current manufacturer")
+        check(beforeMaker.match()!=null,"Copied pending aliases can resolve independently")
+        val rejectedReports=DeviceCatalog.Evidence().apply {
+            offer("Model","Fixture incompatible printer","")
+            offer("Model","Unknown","Current generic response")
+            printerReports.forEach { (field,value,source)->offer(field,value,source) }
+            repeat(20){offer("Model","LASERJET P4015","Repeated current response $it")}
+        }
+        check(rejectedReports.match()?.product?.title=="HP LaserJet P4015","Generic, sourceless and repeated case variants do not poison pending evidence")
+        check(DeviceCatalog.Evidence().match()==null,"A fresh scan inherits no resolved printer evidence")
         val wrong=DeviceCatalog.Evidence().apply {offer("Manufacturer","Fixture rival","Current fixture");offer("Model","SM-S918B","Current fixture")}
         check(wrong.match()==null,"A foreign manufacturer cannot match a globally distinctive model code")
         val ps5=DeviceCatalog.Evidence().apply {offer("Model","PS5","Unrelated current model")}
@@ -63,6 +102,12 @@ object ProductModelIndexTest {
         check(disputed.match()?.product?.title=="HP Foo","An explicit table entry supplies its own title")
         disputed.offer("Model","HP foo","A different explicit catalogue model")
         check(disputed.match()==null,"Brand-prefix normalization cannot override a different explicit model mapping")
+        val pendingDispute=DeviceCatalog.Evidence().apply {
+            offer("Model","foo","Current model")
+            offer("Model","HP foo","A different explicit catalogue model")
+            offer("Manufacturer","HP","Current maker")
+        }
+        check(pendingDispute.match()==null && pendingDispute.copy().match()==null,"A late maker cannot reconcile genuinely different explicit table entries")
         DeviceCatalog.install(index)
         val start=System.nanoTime()
         var exact=true

@@ -77,10 +77,12 @@ internal object DeviceCatalog {
             familyOnly = model.familyOnly), model.source, model.input, model)
     }
 
-    /** One bounded model/source and normalized brand; conflicts survive observation eviction. */
+    /** Retain at most eight distinct models until the maker/catalogue can qualify their aliases.
+     * No model is evicted: conflicts (including overflow) survive display-observation eviction. */
     class Evidence {
         private var firstModel = ""
         private var modelSource = ""
+        private val models = HashSet<String>()
         private var manufacturer = ""
         private var manufacturerSource = ""
         private var conflicted = false
@@ -92,17 +94,19 @@ internal object DeviceCatalog {
                     if (manufacturer.isEmpty()) { manufacturer = next; manufacturerSource = source }
                     else if (manufacturer != next) conflicted = true
                 }
-                "Model" -> when {
-                    firstModel.isEmpty() -> { firstModel = value; modelSource = source }
-                    lookup(firstModel, manufacturer)?.acceptsModel(value) == true || key(value) == key(firstModel) -> Unit
-                    else -> conflicted = true
+                "Model" -> {
+                    if (value.length > 160) return
+                    val next = key(value)
+                    if (next !in models) {
+                        if (models.size == 8) conflicted = true
+                        else models.add(next)
+                    }
+                    if (firstModel.isEmpty()) { firstModel = value; modelSource = source }
                 }
             }
-            val candidate = lookup(firstModel, manufacturer)
-            if (candidate != null && !compatible(candidate)) conflicted = true
         }
         fun compatible(product: Product): Boolean = !conflicted &&
-            (firstModel.isEmpty() || product.acceptsModel(firstModel)) &&
+            models.all(product::acceptsModel) &&
             (manufacturer.isEmpty() || manufacturer == brand(product.brand))
         fun match(): Match? {
             val product = lookup(firstModel, manufacturer) ?: return null
@@ -115,6 +119,7 @@ internal object DeviceCatalog {
         }
         fun copy(): Evidence = Evidence().also {
             it.firstModel = firstModel; it.modelSource = modelSource
+            it.models.addAll(models)
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
         }
