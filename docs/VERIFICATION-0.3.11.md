@@ -1,5 +1,9 @@
 # Network Lens 0.3.11 verification
 
+Historical verification record for the artifact named below. For the current
+download and functionality, see [release verification](VERIFICATION-0.3.13.md)
+and [development status](STATUS.md).
+
 Verified locally on 2026-10-30 for the 0.3.11 development pre-release. This update improves typography and IPv6 presentation. Discovery behavior and its known limitations are unchanged.
 
 ## Identity and artifacts
@@ -10,7 +14,7 @@ Verified locally on 2026-10-30 for the 0.3.11 development pre-release. This upda
 - Public app-signing APK SHA-256: `e71d726f6e5180177619eef33934c715b4b4c62728a8156f13fad40d05964810`.
 - Retained public signing certificate SHA-256: `5b818d9d22d7e9fc93eaee23bfe4adb94c42c5e9f8dce2e98f0d78960c035ae3`.
 
-The signed APK updates the production-signed 0.3.10 preview in place. Both direct builds passed signature verification, permission allowlisting and packaged security checks. Their 30 application ZIP entries match after excluding signature metadata. No signing key was replaced or regenerated.
+The signed APK updates the previous production-signed preview in place. Both direct builds passed signature verification, permission allowlisting and packaged security checks. Their 30 application ZIP entries match after excluding signature metadata. No signing key was replaced or regenerated.
 
 ## Typography and IPv6 changes
 
@@ -34,11 +38,11 @@ The typography implementation was tested before the final version bump using the
 
 Each platform passed 613 dedicated typography checks. Synthetic cases cover long global IPv6, scoped link-local IPv6, compressed IPv6, mixed IPv6/IPv4, dual-stack grouping, exact copy, search and IPv4/IPv6 order. Native layouts are measured at 320dp and 411dp widths, normal and 200% font settings, and both appearances. Checks inspect every line for truncation, overflow and splits inside hexadecimal groups. Related modes cover details, Settings, dialogs, navigation, branding or existing address-layout regressions.
 
-The final 0.3.11 APK's application payload is byte-identical to that tested typography build except for `AndroidManifest.xml`, which contains the new version. Application DEX and resources are unchanged. The versioned 0.3.11 development APK additionally passed 728 typography and Settings checks on API 36. The exact public-signed APK passed 10 Android 17 emulator checks covering installation over the published 0.3.10 APK, installed-byte verification, version, nonempty runtime-grant retention, branding and no automatic launch scan.
+The final 0.3.11 APK's application payload is byte-identical to that tested typography build except for `AndroidManifest.xml`, which contains the new version. Application DEX and resources are unchanged. The versioned 0.3.11 development APK additionally passed 728 typography and Settings checks on API 36. The exact public-signed APK passed 10 Android 17 emulator checks covering installation over the previous published APK, installed-byte verification, version, nonempty runtime-grant retention, branding and no automatic launch scan.
 
 ## Physical Pixel 8
 
-The explicitly authorized Pixel 8 runs Android 17. Its installed 0.3.10 APK matched the published public artifact. Version 0.3.11 installed as an update without uninstalling; installed bytes match the public-signed candidate, and existing local-network and optional location grants were retained.
+The explicitly authorized Pixel 8 runs Android 17. Its previous installed APK matched the published public artifact. Version 0.3.11 installed as an update without uninstalling; installed bytes match the public-signed candidate, and existing local-network and optional location grants were retained.
 
 At the phone's unchanged default text setting, synthetic sample screens were inspected in light and dark appearance. The list, search, sentence-case address labels, unknown values, Settings and toolbar Back were checked. The original in-app appearance was restored. Captured phone images contain synthetic sample devices only.
 

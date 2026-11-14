@@ -6,17 +6,17 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.12 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.12/Network-Lens-0.3.12.apk)
+[![Download Android APK — Network Lens 0.3.13 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.13/Network-Lens-0.3.13.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.12) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.13) · No GitHub account required to download.
 
-**Development preview: 0.3.12.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.13.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This release retains the Android application ID `io.github.kazands.networklens` and public app-signing identity introduced in 0.3.10, so it updates that production-signed preview in place. Previews before 0.3.10 have a different application ID; see [the identity change](docs/IDENTITY-MIGRATION.md) before switching.
+The public APK updates existing public-signed Network Lens installations in place. It retains the application ID `io.github.kazands.networklens` and the pinned app-signing identity. See [application identity and updates](docs/APPLICATION-IDENTITY.md) for build and installation details.
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.12 verification notes](docs/VERIFICATION-0.3.12.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.13 verification notes](docs/VERIFICATION-0.3.13.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 ## What it does
 
@@ -28,9 +28,11 @@ Read the [0.3.12 verification notes](docs/VERIFICATION-0.3.12.md) for completed 
 - Complete/Partial scan status with per-method results and reasons. IPv6 discovery uses advertised addresses and eligible local routes; it does not enumerate the IPv6 address space.
 - Offline IEEE prefix lookup for explicitly reported MAC addresses. An interface supplier is kept separate from a device-reported manufacturer.
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
-- Offline Recog descriptions and category icons for a limited set of current mDNS model codes. Interpretations remain separate from reported fields; see [coverage and provenance](docs/RECOG.md).
+- Canonical product names from a free offline catalogue covering 86,540 product/family titles across 5,263 worldwide brands, indexed by 256,338 exact manufacturer-qualified aliases. Useful custom names remain below the product title; raw fields and recognition sources remain in Details. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md).
+- Offline Recog interpretations for 156 exact current Apple model codes, plus reviewed recorder, streaming and console profiles. Supported identities select more specific Lucide icons; unknown categories remain based on observed services. See [Recog coverage](docs/RECOG.md).
+- Bounded read-only PS5 discovery, with supported evidence displayed as **Sony PlayStation 5**. Conflicting reports suppress recognition; names or IEEE vendors alone cannot establish a product.
 
-The unreleased working source adds canonical device names and a free offline product catalogue across thousands of brands. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md) and [development status](docs/STATUS.md).
+Read [development status](docs/STATUS.md) for current functionality, verification and known limits.
 
 Results, filters, appearance and range choices stay in memory. Every scan starts fresh. A process restart requires a new scan. There is no saved inventory, history, cloud recognition, account, advertising, analytics, monitoring or background scanning. Explicit copy actions use Android's clipboard.
 
@@ -38,7 +40,7 @@ Results, filters, appearance and range choices stay in memory. Every scan starts
 
 A scan cannot guarantee a complete physical inventory. Sleeping devices, filtering, multicast delivery, network isolation and Android restrictions affect coverage. MAC addresses remain unknown unless available from a supported source. Device names and metadata are self-reported.
 
-Intermittent HomeKit (`_hap._tcp`) and web-service (`_http._tcp`) address resolution remains an open issue. Version 0.3.7 improves error reporting; it does not claim to fix that discovery limitation. See [development status](docs/STATUS.md).
+Intermittent HomeKit (`_hap._tcp`) and web-service (`_http._tcp`) address resolution remains an open issue. Those failures keep scans Partial; the catalogue and display improvements do not establish a discovery fix. See [development status](docs/STATUS.md).
 
 ## Build and test
 

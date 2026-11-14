@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.kazands.networklens"
         minSdk = 26
         targetSdk = 37
-        versionCode = 40
-        versionName = "0.3.12"
+        versionCode = 41
+        versionName = "0.3.13"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
