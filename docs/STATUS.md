@@ -1,10 +1,10 @@
 # Development status
 
-Network Lens 0.3.11 is a development preview. It uses the application ID `io.github.kazands.networklens` and retains the approved hyper-realistic glass-and-metal artwork. It updates the production-signed 0.3.10 preview in place. Previews before 0.3.10 install separately; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
+Network Lens 0.3.12 is a development preview. It uses the application ID `io.github.kazands.networklens` and retains the approved hyper-realistic glass-and-metal artwork. Its public-signed update from 0.3.11 passed on an isolated API 37 emulator. Previews before 0.3.10 install separately; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
 
-The earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md). The 0.3.10 package-identity checks are recorded in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md). Current typography and IPv6 layout verification is recorded in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
+The latest release checks are recorded in [VERIFICATION-0.3.12.md](VERIFICATION-0.3.12.md). Earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md), package-identity checks in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md), and typography/IPv6 layout verification in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
 
-## Offline model recognition (unreleased)
+## Offline model recognition (0.3.12)
 
 The source now interprets 156 exact current mDNS device-info model codes using
 a pinned offline Rapid7 Recog subset. The list and details label interpretations
@@ -38,7 +38,7 @@ Native text styles now share scalable sizes and leading, with larger supporting 
 
 Version 0.3.8 avoids redundant presence probes after a validated response in the same scan and defers device-list snapshots until the existing presentation queue needs them. Independent detail lookups, fresh-scan isolation, confirmation rules, retry budgets and discovery deadlines remain. These changes do not resolve the intermittent DNS-SD limitation below. Controlled benchmarks and physical-device timing comparisons must distinguish CPU/allocation reductions from total scan duration and device coverage.
 
-## Local device metadata (unreleased)
+## Local device metadata (0.3.12)
 
 The source now adds Thread model/vendor TXT fields, targeted ESPHome/Shelly/WLED
 discovery and bounded local Shelly/WLED/Spotify Connect/IPP metadata queries.
@@ -79,7 +79,7 @@ and the known intermittent native HTTP resolution limitation remain open. The
 metadata notes record exact artifacts, interrupted helper attempts and coverage
 limits; reporting changes do not resolve discovery failures.
 
-## mDNS reliability pass (unreleased)
+## mDNS reliability pass (0.3.12)
 
 The current branch separates raw receive traffic from full response decoding,
 adds current-scan question/known-answer suppression and retains finite byte,

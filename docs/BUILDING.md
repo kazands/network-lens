@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.11.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and updates the production-signed 0.3.10 preview in place. Previews before 0.3.10 use a different application ID; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.12.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the public signing identity used by the 0.3.10/0.3.11 previews. Previews before 0.3.10 use a different application ID; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
