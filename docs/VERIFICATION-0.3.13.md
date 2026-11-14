@@ -64,7 +64,7 @@ expected an older Android output field. The reader now uses the exact package's
 test setup/reader corrections; the application APK bytes did not change.
 
 Earlier feature matrices on API 26/36/37 and their exact candidate hashes are
-recorded in [STATUS.md](STATUS.md). Their counts are not added to this version's
+recorded in the [implementation verification history](archive/IMPLEMENTATION-VERIFICATION.md). Their counts are not added to this version's
 release checks. API 26/36 were not rerun for the version increment. No physical
 device was operated for this release.
 

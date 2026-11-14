@@ -1,4 +1,4 @@
-# Canonical device identities (unreleased)
+# Canonical device identities
 
 The list uses a recognized product as its primary title, followed by its category
 and a useful custom network name. Raw network names, reported models,
@@ -11,6 +11,22 @@ Unidentified endpoints use “Unidentified device”; useful reported names rema
 visible. Cosmetic hostname formatting removes a matching `.local` suffix and
 separates hyphens, without asserting a manufacturer or model. Service categories
 such as casting and file sharing describe the observed service only.
+
+## Display examples
+
+These examples require the current evidence shown in the first column. They do
+not infer a product from a friendly name or MAC vendor.
+
+| Current evidence | Primary title | Presentation detail |
+| --- | --- | --- |
+| Sony manufacturer + `PS5`, or an accepted current console reply | Sony PlayStation 5 | Game console; useful custom name beneath it |
+| Reported `SHIELD Android TV` model | NVIDIA SHIELD TV | Streaming device; no guessed year or Pro edition |
+| Reported `DS-7608NI-I2/8P` model | Hikvision DS-7608NI-I2/8P | Network video recorder |
+| HP manufacturer + `LaserJet P4015` | HP LaserJet P4015 | Product family; printer category only if current services support it |
+| Samsung manufacturer + `SM-S918B` | Samsung Galaxy S23 Ultra | Supported product title; the broad catalogue alone does not select a phone icon |
+| QNAP manufacturer + `TS-469U` | QNAP TS-469U | Supported product family; service-based category remains separate |
+| Matching name/hostname `thinkstation-X900.local` without a known product model | ThinkStation X900 | Reported device name; no inferred manufacturer or hardware model |
+| No useful reported name or model | Unidentified device | Any supported service category remains visible |
 
 ## Broad, free catalogue coverage
 
@@ -171,4 +187,4 @@ and complete IPv4/IPv6 wrapping.
 Physical PS5 discovery, actual household devices, TalkBack operation and scan
 performance on a phone remain unverified. Recognition coverage is deliberately
 limited; these changes do not resolve the existing discovery limitations in
-[STATUS.md](STATUS.md). Verification results for this change are recorded there.
+[STATUS.md](STATUS.md). Current release checks are in [release verification](VERIFICATION-0.3.13.md); earlier candidate results remain in the linked verification history.

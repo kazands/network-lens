@@ -62,7 +62,7 @@ Build the development APK first, since the harness uses its application payload 
 
 ## Installation and Google Play
 
-Version 0.3.10 uses `io.github.kazands.networklens` for both its application ID and Kotlin namespace. It installs as a separate application from the previous previews even though the app-signing certificate is unchanged. Do not change or replace any signing key to address this intentional package-ID break. See [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md).
+Public APK updates preserve `io.github.kazands.networklens` and the pinned app-signing identity. The current release passed an in-place update check with its UID and existing permission grants retained. See [application identity](APPLICATION-IDENTITY.md) and [release verification](VERIFICATION-0.3.13.md).
 
 The public app key differs from the existing test key. Changing from the current test installation to a public build requires a one-time uninstall/reinstall; a normal update is expected to be rejected. This setup does not uninstall the user's test app. Future public builds must retain the pinned app identity and suitable version codes.
 

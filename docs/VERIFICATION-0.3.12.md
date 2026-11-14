@@ -1,5 +1,9 @@
 # Network Lens 0.3.12 verification
 
+Historical verification record for the artifact named below. For the current
+download and functionality, see [release verification](VERIFICATION-0.3.13.md)
+and [development status](STATUS.md).
+
 Verified locally on 2026-11-14 for the 0.3.12 development preview. This release
 includes the merged local metadata, mDNS diagnostics and offline Recog changes.
 It remains a foreground, user-started Wi-Fi scanner with in-memory results only.

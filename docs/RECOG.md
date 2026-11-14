@@ -1,6 +1,6 @@
 # Offline model recognition
 
-This unreleased increment interprets the `model` TXT field of admitted current-wire
+Network Lens interprets the `model` TXT field of admitted current-wire
 `_device-info._tcp` services using a small, pinned Rapid7 Recog subset. It adds no
 network request, permission, cloud lookup, account, persistent history or runtime
 dependency. Existing discovery work limits, network scope and the 55-second work
@@ -12,12 +12,15 @@ devices together or supply a hardware MAC address.
 The generated table contains 156 exact canonical Apple model-code examples from
 the retained upstream data: Mac notebooks/desktops, iPad, iPhone, HomePod, Apple TV
 and iPod Touch. A code must be listed exactly; newer products and unsupported
-families remain unrecognized. This is not general Android/IoT recognition and
-does not establish retail-model accuracy on hardware.
+families are not recognized by this Recog subset. The separate
+[global product catalogue](DEVICE-IDENTITIES.md) covers exact manufacturer/model
+reports from worldwide hardware, including Android and IoT products. Neither
+path establishes retail-model accuracy on physical hardware by itself.
 
-The list labels interpreted descriptions **Locally recognized** and allows
-searching those descriptions and device categories. Details preserve the reported
-code and show the interpretation in a separate panel. Expanded discovery evidence
+The list puts the canonical product title first, adding the Apple brand where
+needed, with a useful custom network name beneath it. Search includes interpreted
+titles and device categories. Details label the interpretation **Locally recognized**,
+preserve the reported code and keep the interpretation in a separate panel. Expanded discovery evidence
 and explicit clipboard copies include the input protocol/field, rule number and
 pinned upstream revision. Reported model, manufacturer, device type, firmware,
 MAC and IEEE interface vendor are not rewritten. JSON has a separate
@@ -101,130 +104,16 @@ python3 scripts/generate-recog-models.py --check
 
 The host-test and direct app-build scripts run this check automatically.
 
-## Shared identifier correction verification (2026-11-14)
+## Verification
 
-The follow-up review identified three further shared identifiers whose generated
-descriptions selected an unsupported variant. The generator now retains these
-common details and marks each entry `familyOnly=true`:
+The current release's exact artifact hashes, checks and limits are recorded in
+[release verification](VERIFICATION-0.3.13.md). The merged recognition and
+catalogue feature passed all 26 host suites / 29,914 checks, including independent
+review execution. The versioned download passed the 300-check API 37 identity
+mode; earlier corrected-feature API 37 coverage also passed the 298-check Recog
+mode. These counts describe their own candidates, not additional release checks.
 
-| Reported code | Conservative description |
-| --- | --- |
-| `MacBookPro15,1` | MacBook Pro (15-inch) |
-| `MacBookPro15,2` | MacBook Pro (13-inch, Four Thunderbolt 3 ports) |
-| `Macmini3,1` | Mac mini (2009) |
-
-The new host regression failed against the prior table. After regeneration, all
-23 host suites / 19,574 checks passed, including 3,365 Recog checks. The supported
-direct app and instrumentation builds passed, along with packaged permission and
-security audits. The retained upstream XML/license blob identities and packaged
-license bytes remain unchanged. Coverage remains 156 codes, with 19 conservative
-Mac descriptions and six family-only Apple TV descriptions.
-
-The development APK SHA-256 is
-`de9dbf1937bf65082bd0ae007f69aaed50e82bf26436062383fba9318d0d5641`;
-the final instrumentation APK SHA-256 is
-`97da4f1fb0c2900dac3aa46bbc06c037ec02bd1d2498792f5422ecf6663aec0f`.
-The runner verified both installed APK hashes on each isolated emulator.
-
-The focused `recog` mode passed 276 checks on each of API 36 and 37. Thirty-three
-new assertions cover the three corrected codes through current-service admission,
-JSON, list/accessibility text, the Device family label, reported-code preservation,
-clipboard output, Back and narrow 200% text layouts. After inspecting the initial
-273-check captures, the fixture was updated to let scrolling settle before capture
-and check that each recognition heading remains fully visible. The final 276-check
-runs passed. Synthetic MacBook Pro and Mac mini captures were visually inspected.
-
-Both emulators booted with confirmed System UI ANR dialogs, which were closed
-before app testing. The other five modes in the earlier six-mode matrices below
-were not rerun for this table-only production correction. Real-device accuracy,
-API 26 runtime behavior, physical TalkBack and whole-scan performance remain
-unverified. No physical device was operated or release published; the existing
-discovery limitations remain open.
-
-## Review corrections verification (2026-11-13)
-
-Three review corrections are committed separately: conservative descriptions for
-16 shared identifiers (`64a462f`), scan-lifetime conflict tracking independent of
-the display list (`d5903c0`), and raw DNS duplicate-key fixtures with corrected
-documentation (`a1270c8`). The original upstream XML and license blobs remain
-unchanged, and the packaged license matches the retained terms byte-for-byte.
-
-All 23 host suites / 19,571 checks passed, including 3,362 Recog checks. The
-supported direct app and instrumentation builds passed, as did the packaged
-permission and security audits. That development APK SHA-256 is
-`adf88ad73085472dffccadcef04df67411b1d978bff3351c5681001a0ba06a48`;
-the instrumentation APK SHA-256 is
-`bb46eb83a892990d1aada4f57c99ce976b09f69b9afc789c4e9b9d72c1bdc44c`.
-Both installed binaries were hash-verified on each selected emulator.
-
-| Earlier emulator matrix | Result |
-| --- | --- |
-| API 36: recog, local-metadata, typography, session-only, fresh-presence, navigation | All six passed; 1,222 checks |
-| API 37: same six modes | All six passed; 1,222 checks |
-
-Recognition contributes 243 checks per platform, including 31 new checks using
-actual Device/IdentityHints state. They exercise model/manufacturer conflict
-eviction, reports before and after recognition, snapshot independence, fresh
-devices at the same address, equivalent reports and rejected/generic inputs.
-Host packet fixtures cover duplicate key casing/order and malformed/unsupported
-first values through both direct-service parsing and same-sender assembly.
-Synthetic API 37 light list and API 36 dark 320dp/200% details screenshots were
-visually inspected. The latter retained complete recognition-panel wrapping.
-
-Before testing, API 36 again booted with a confirmed System UI ANR dialog.
-It was closed on the isolated emulator and the full matrix then passed without
-an application change. That APK is 1,932,192 bytes. No physical device
-was operated or release published. Real-device coverage/accuracy, API 26 runtime
-behavior, physical TalkBack use and whole-scan performance remain unverified.
-The existing discovery limitations remain open.
-
-## Initial implementation verification (2026-11-13)
-
-The following artifact identities and counts describe the initial reviewed
-implementation, before the subsequent review corrections.
-
-The supported direct build and instrumentation companion build passed. Packaged
-permission and security audits passed; the packaged Recog license was also
-compared byte-for-byte with the retained upstream terms. All 23 host suites /
-19,428 checks passed, including 3,219 Recog checks. The initial sandboxed host
-run stopped at a prohibited loopback socket; the complete suite passed with
-local fixture-socket access.
-
-The final development APK SHA-256 is
-`fc00c175c65845c7712c68c77385492426cb442a89b1299f83842849484b01e1`.
-The instrumentation APK SHA-256 is
-`80e7970a21cd74214153af4bab04ad74d0f392d3783017ca76b885c499f5eb81`.
-Both installed APK hashes were verified on each selected emulator.
-
-| Final emulator matrix | Result |
-| --- | --- |
-| API 36: recog, local-metadata, typography, session-only, fresh-presence, navigation | All six passed; 1,191 checks |
-| API 37: same six modes | All six passed; 1,191 checks |
-
-The recognition mode checks 212 assertions per platform, including a conflict
-that remains suppressed even if an Apple manufacturer observation outranks a
-contradictory report. It exercises light/dark, normal/200% text and 320dp/411dp
-native layouts. Synthetic API 37 screenshots were visually inspected for list
-icons, readable descriptions and narrow/large-text detail wrapping. Clipboard
-copies preserve raw codes and separate rule provenance. Existing typography,
-session, fresh-presence and navigation regressions also passed.
-
-The first API 36 matrix failed several UI checks while an Android System UI ANR
-dialog owned focus. The emulator window state and screenshot confirmed that
-system dialog. After closing the crashed system component and verifying launcher
-focus, the same app/test binaries passed the full matrix. This is recorded as an
-environment failure, not a passing initial run or an application fix.
-
-Compared with the pre-change development APK present in the workspace, the final
-APK grew from 1,915,417 to 1,932,192 bytes: 16,775 bytes, about 16.4 KiB. The
-uncompressed DEX increase was 32,920 bytes. A warmed host-only measurement ran
-50,000 exact lookups in 15 ms; this is not a phone latency, heap-use or whole-scan
-benchmark. Per-endpoint recognition state is bounded independently of packet
-count, but retained heap overhead has not been measured on hardware.
-
-No physical device was operated, no household scan was collected and no release
-was published. Real-device model accuracy/coverage, Android API 26 runtime
-behavior, physical TalkBack use and whole-scan performance remain unverified for
-this increment. Existing Spotify availability and intermittent native service
-resolution failures remain open. Offline interpretation does not resolve them
-or convert a Partial scan into a Complete scan.
+Earlier parser, admission, family-description and native layout checks remain in
+the [Recog verification history](archive/RECOG-VERIFICATION.md). Physical-device
+model accuracy, unlisted hardware, physical TalkBack and phone performance remain
+unverified for this release.

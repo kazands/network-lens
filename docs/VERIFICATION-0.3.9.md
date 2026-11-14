@@ -1,6 +1,10 @@
 # Network Lens 0.3.9 verification
 
-This is an unreleased branding update, verified locally on 2026-10-30. The published download remains the 0.3.8 development preview.
+Historical verification record for the artifact named below. For the current
+download and functionality, see [release verification](VERIFICATION-0.3.13.md)
+and [development status](STATUS.md).
+
+This records a branding candidate verified locally on 2026-10-30, before publication. The public download at that time was the preceding development preview.
 
 ## Current artwork
 
