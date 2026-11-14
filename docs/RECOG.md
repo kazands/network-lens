@@ -68,6 +68,18 @@ Board IDs, OS rules, broad family/prefix rules and the ambiguous `iMac10,1` /
 `hw.certainty=0.10`; the selected entries expose only **Apple TV** and a TV media
 player category, without a generation or a fabricated confidence percentage.
 
+Sixteen further Mac identifiers are shared across years or screen sizes. Local
+generation overrides retain only the common product family/details and mark
+these entries `familyOnly`; exact code matching does not choose a retail variant.
+For example, `MacBookAir7,2` no longer selects 2017 over 2015, `MacPro5,1` no longer
+selects 2012 over 2010, and `iMac9,1` no longer selects a 24-inch screen over 20-inch.
+The generated provenance records every override and the Apple reference pages
+used to check [MacBook Air](https://support.apple.com/en-us/102869),
+[MacBook Pro](https://support.apple.com/en-us/108052),
+[Mac Pro](https://support.apple.com/en-us/102887) and
+[iMac](https://support.apple.com/en-us/108054). Upstream files remain byte-for-byte
+intact. Regression tests cover all 16 conservative descriptions.
+
 Data refreshes are intentional maintenance changes: inspect the new upstream
 content and license, update the pinned hashes and selection policy, regenerate,
 and review the diff and tests. App builds never download updated rules.
@@ -78,7 +90,10 @@ python3 scripts/generate-recog-models.py --check
 
 The host-test and direct app-build scripts run this check automatically.
 
-## Verification (2026-11-13)
+## Initial implementation verification (2026-11-13)
+
+The following artifact identities and counts describe the initial reviewed
+implementation, before the subsequent review corrections.
 
 The supported direct build and instrumentation companion build passed. Packaged
 permission and security audits passed; the packaged Recog license was also

@@ -17,8 +17,48 @@
     "AppleTV3,1",
     "AppleTV3,2",
     "AppleTV5,3",
-    "AppleTV6,2"
+    "AppleTV6,2",
+    "MacBookAir6,1",
+    "MacBookAir6,2",
+    "MacBookAir7,2",
+    "MacBookPro10,1",
+    "MacBookPro10,2",
+    "MacBookPro11,1",
+    "MacBookPro11,2",
+    "MacBookPro11,3",
+    "MacBookPro4,1",
+    "MacBookPro5,2",
+    "MacBookPro8,1",
+    "MacBookPro8,2",
+    "MacBookPro8,3",
+    "MacPro5,1",
+    "iMac15,1",
+    "iMac9,1"
+  ],
+  "conservative_descriptions": {
+    "MacBookAir6,1": "MacBook Air (11-inch)",
+    "MacBookAir6,2": "MacBook Air (13-inch)",
+    "MacBookAir7,2": "MacBook Air (13-inch)",
+    "MacBookPro4,1": "MacBook Pro",
+    "MacBookPro5,2": "MacBook Pro (17-inch)",
+    "MacBookPro8,1": "MacBook Pro (13-inch, 2011)",
+    "MacBookPro8,2": "MacBook Pro (15-inch, 2011)",
+    "MacBookPro8,3": "MacBook Pro (17-inch, 2011)",
+    "MacBookPro10,1": "MacBook Pro (Retina, 15-inch)",
+    "MacBookPro10,2": "MacBook Pro (Retina, 13-inch)",
+    "MacBookPro11,1": "MacBook Pro (Retina, 13-inch)",
+    "MacBookPro11,2": "MacBook Pro (Retina, 15-inch)",
+    "MacBookPro11,3": "MacBook Pro (Retina, 15-inch)",
+    "MacPro5,1": "Mac Pro",
+    "iMac9,1": "iMac (Early 2009)",
+    "iMac15,1": "iMac (Retina 5K, 27-inch)"
+  },
+  "description_references": [
+    "https://support.apple.com/en-us/102869",
+    "https://support.apple.com/en-us/108052",
+    "https://support.apple.com/en-us/102887",
+    "https://support.apple.com/en-us/108054"
   ],
   "models": 156,
-  "generated_sha256": "47af29b2bf577595b0fc9c5aaae4f2f0316f21ac8a15d527759b756bb52179f7"
+  "generated_sha256": "00bc220aa81874831a434a5a627c0317ffdf6976221a444faa7b2fc8dcc99453"
 }

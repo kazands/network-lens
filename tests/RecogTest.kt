@@ -46,6 +46,29 @@ object RecogTest {
             check(evidence.match() == null, "Later callbacks cannot erase an observed same-scan conflict")
             check(Recog.Evidence().match() == null, "A fresh scan starts without previous recognition")
         }
+        val sharedModels = mapOf(
+            "MacBookAir6,1" to "MacBook Air (11-inch)",
+            "MacBookAir6,2" to "MacBook Air (13-inch)",
+            "MacBookAir7,2" to "MacBook Air (13-inch)",
+            "MacBookPro4,1" to "MacBook Pro",
+            "MacBookPro5,2" to "MacBook Pro (17-inch)",
+            "MacBookPro8,1" to "MacBook Pro (13-inch, 2011)",
+            "MacBookPro8,2" to "MacBook Pro (15-inch, 2011)",
+            "MacBookPro8,3" to "MacBook Pro (17-inch, 2011)",
+            "MacBookPro10,1" to "MacBook Pro (Retina, 15-inch)",
+            "MacBookPro10,2" to "MacBook Pro (Retina, 13-inch)",
+            "MacBookPro11,1" to "MacBook Pro (Retina, 13-inch)",
+            "MacBookPro11,2" to "MacBook Pro (Retina, 15-inch)",
+            "MacBookPro11,3" to "MacBook Pro (Retina, 15-inch)",
+            "MacPro5,1" to "Mac Pro",
+            "iMac9,1" to "iMac (Early 2009)",
+            "iMac15,1" to "iMac (Retina 5K, 27-inch)"
+        )
+        for ((code, description) in sharedModels) {
+            val match = Recog.lookup(code)!!
+            check(match.description == description && match.familyOnly,
+                "Shared $code does not select one of several model years or screen sizes")
+        }
         for (code in listOf("", "Unknown", "MacBookPro999,1", "MacBookPro18,30", "iMac10,1", "iMac11,1", "J305AP", "AirPort4,104", "MacPro", "Phone13,1", "iPhone13,1", "OpenSSH_9.0", "x".repeat(100000)))
             check(Recog.lookup(code) == null, "Unreviewed, ambiguous, board, software or oversized inputs remain unrecognized")
         val valid = "MacBookPro18,3"
