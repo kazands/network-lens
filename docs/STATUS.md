@@ -1,10 +1,10 @@
 # Development status
 
-Network Lens 0.3.12 is a development preview. It uses the application ID `io.github.kazands.networklens` and retains the approved hyper-realistic glass-and-metal artwork. Its public-signed update from 0.3.11 passed on an isolated API 37 emulator. Previews before 0.3.10 install separately; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
+Network Lens 0.3.13 is a development preview. It uses the application ID `io.github.kazands.networklens` and retains the approved hyper-realistic glass-and-metal artwork. Its public-signed update from 0.3.12 passed on an isolated API 37 emulator. Previews before 0.3.10 install separately; see [IDENTITY-MIGRATION.md](IDENTITY-MIGRATION.md). The source was organized into a standalone repository on 2026-10-29. Repository setup, artwork and performance changes do not establish production readiness.
 
-The latest release checks are recorded in [VERIFICATION-0.3.12.md](VERIFICATION-0.3.12.md). Earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md), package-identity checks in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md), and typography/IPv6 layout verification in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
+The latest release checks are recorded in [VERIFICATION-0.3.13.md](VERIFICATION-0.3.13.md); [0.3.12 checks](VERIFICATION-0.3.12.md) remain available. Earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md), package-identity checks in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md), and typography/IPv6 layout verification in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
 
-## Clear device identities and global catalogue (unreleased)
+## Clear device identities and global catalogue (0.3.13)
 
 The source now puts canonical product names first and keeps useful custom network
 names below them. It bundles **86,540 product/family titles across 5,263 brands**,
@@ -88,9 +88,12 @@ Corrected instrumentation APK SHA-256:
 `3212fc23f8af6b6287b0f7422b909a99923bcb687d55640de9714bad7245696e`.
 
 Physical PS5 discovery, household model accuracy, TalkBack operation and phone
-scan performance remain unverified. No phone was operated or release published.
-The public 0.3.12 download remains the previously verified release. These changes
-do not resolve the discovery limitations below.
+scan performance remain unverified. No phone was operated for this release.
+The versioned 0.3.13 development APK passed 300 API 37 identity checks, and the
+exact public-signed APK passed 21 in-place update/launch checks from 0.3.12.
+All 116 isolated signing assertions and both package audits passed. See the
+release verification notes above for hashes and scope. These changes do not
+resolve the discovery limitations below.
 
 ## Offline model recognition (0.3.12)
 
