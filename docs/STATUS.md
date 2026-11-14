@@ -36,10 +36,10 @@ identifiers need to leave the phone to fetch public catalogue updates.
 See [DEVICE-IDENTITIES.md](DEVICE-IDENTITIES.md) for data, notices, source access,
 selection, evidence conflicts, grouping and PlayStation wire limits.
 
-All 26 host suites / 29,839 checks, direct app/instrumentation builds and packaged
-permission/security audits passed. The catalogue suite also passed in a host JVM
+Initial feature verification passed all 26 host suites / 29,839 checks, direct
+app/instrumentation builds and packaged permission/security audits. The catalogue suite also passed in a host JVM
 limited to 128 MiB heap; this is not a phone memory/performance measurement.
-The final APK passed nine modes / 1,654 checks on each of API 36 and 37:
+That APK passed nine modes / 1,654 checks on each of API 36 and 37:
 device identities (269), Recog (298), typography (829), local metadata (49),
 session-only (39), fresh presence (31), navigation (31), HomeKit (69) and failure
 reporting (39). Installed app and test APK bytes were verified. Native canonical
@@ -51,7 +51,7 @@ System UI ANR dialogs on both test emulators; those were dismissed before the
 successful reruns. The supplementary Impeccable source detector reported no
 findings; native layout verification came from the emulator checks and images.
 
-Final development APK SHA-256:
+Initial implementation APK SHA-256:
 `0e239ec12374ec7e27f73b9b53ba73c6eb7181fd41df720876bb9be856f6304d`.
 API 36/37 instrumentation APK SHA-256:
 `fc151daa79349e528bb23c8741f5903c8a786ea05694309fa60b592d4fa0ce06`.
@@ -67,6 +67,25 @@ modes were not run on API 26 for this change.
 
 Ignored verification artifacts use `artifacts/global-catalog-final-*`;
 `global-catalog-heap-check.log` records the host heap check.
+
+Review corrections on 2026-11-14 remove two response-order dependencies. Up to
+eight distinct model spellings remain available for qualification after the
+manufacturer or catalogue loads; conflicting reports and overflow still suppress
+recognition. A trusted PS5 console response can corroborate an earlier ordinary
+model report, retaining its source even after display-observation eviction.
+Both regressions failed against the preceding code before their fixes.
+
+After those corrections, all 26 host suites / 29,914 checks, direct application
+and instrumentation builds, and packaged permission/security audits passed.
+API 26 passed device-identities / 300 checks. API 37 passed device-identities
+(300), Recog (298), local metadata (49) and fresh presence (31): 678 checks total.
+The app and test APK bytes installed on both isolated emulators were verified.
+The other modes and API 36 were not rerun for these logic corrections.
+Artifacts are under `artifacts/catalogue-review-fixes-*`.
+Corrected development APK SHA-256:
+`6d4269f39eb6e6f65ac223316b5d7a461b6bd1d1016fd0e8ac215a9959b604d7`.
+Corrected instrumentation APK SHA-256:
+`3212fc23f8af6b6287b0f7422b909a99923bcb687d55640de9714bad7245696e`.
 
 Physical PS5 discovery, household model accuracy, TalkBack operation and phone
 scan performance remain unverified. No phone was operated or release published.

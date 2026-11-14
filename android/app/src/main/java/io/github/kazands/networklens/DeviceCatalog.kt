@@ -19,6 +19,7 @@ internal object DeviceCatalog {
     }
     data class Match(val product: Product, val source: String, val input: String, val recog: Recog.Model? = null)
 
+    private const val PLAYSTATION_SOURCE = "PlayStation discovery host-type"
     private fun keys(vararg values: String) = values.mapTo(HashSet(), ::key)
     // Exact reported-model aliases and primary references: docs/DEVICE-IDENTITIES.md.
     private val products = listOf(
@@ -85,6 +86,7 @@ internal object DeviceCatalog {
         private val models = HashSet<String>()
         private var manufacturer = ""
         private var manufacturerSource = ""
+        private var playStationResponse = false
         private var conflicted = false
         fun offer(field: String, value: String, source: String) {
             if (conflicted || source.isEmpty() || !IdentityHints.specific(value)) return
@@ -96,6 +98,7 @@ internal object DeviceCatalog {
                 }
                 "Model" -> {
                     if (value.length > 160) return
+                    if (value == "PS5" && source == PLAYSTATION_SOURCE) playStationResponse = true
                     val next = key(value)
                     if (next !in models) {
                         if (models.size == 8) conflicted = true
@@ -112,8 +115,10 @@ internal object DeviceCatalog {
             val product = lookup(firstModel, manufacturer) ?: return null
             if (!compatible(product)) return null
             // PS5 is a short, reusable code. A console response or reported Sony brand is required.
-            if (product.id == "sony:playstation-5" && manufacturer.isEmpty() && modelSource != "PlayStation discovery host-type") return null
-            return if (product.reference.isEmpty()) Match(product, "Local product catalogue · ${product.id} · $modelSource", "Model=$firstModel")
+            if (product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) return null
+            val corroboration = if (product.id == "sony:playstation-5" && playStationResponse && modelSource != PLAYSTATION_SOURCE)
+                " · Model=PS5: $PLAYSTATION_SOURCE" else ""
+            return if (product.reference.isEmpty()) Match(product, "Local product catalogue · ${product.id} · $modelSource$corroboration", "Model=$firstModel")
                 else Match(product, "Product model catalogue · ${product.reference} · Model: $modelSource · Manufacturer: $manufacturerSource",
                     "Normalized manufacturer=$manufacturer; Model=$firstModel")
         }
@@ -122,6 +127,7 @@ internal object DeviceCatalog {
             it.models.addAll(models)
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
+            it.playStationResponse = playStationResponse
         }
     }
 }

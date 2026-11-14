@@ -62,6 +62,31 @@ object DeviceCatalogTest {
         repeat(20) { bounded.offer("Model", "Fixture alias 1", "Later corroborating fixture") }
         check(!bounded.compatible(manyAliases) && !bounded.copy().compatible(manyAliases) && withinBound.compatible(manyAliases),
             "Evidence overflow fails closed for the scan without changing earlier copies")
+        val consoleSource = "PlayStation discovery host-type"
+        for (first in listOf("PS5", "PlayStation 5", "Sony PlayStation 5")) for (consoleFirst in listOf(false, true)) {
+            val console = DeviceCatalog.Evidence()
+            val reports = listOf(Triple("Model", first, "Current ordinary model"), Triple("Model", "PS5", consoleSource))
+            val ordered = if (consoleFirst) reports.reversed() else reports
+            ordered.first().let { (field, value, source) -> console.offer(field, value, source) }
+            val earlier = console.copy()
+            ordered.last().let { (field, value, source) -> console.offer(field, value, source) }
+            check(console.match()?.product?.title == "Sony PlayStation 5", "Console corroboration works with $first, console first=$consoleFirst")
+            check(console.match()!!.source.contains(consoleSource) && console.copy().match() == console.match(), "Console provenance and copied evidence retain the trusted response")
+            check((earlier.match() != null) == consoleFirst, "Later console corroboration cannot alter earlier snapshots")
+            for (field in listOf("Model", "Manufacturer")) for (before in listOf(false, true)) {
+                val conflict = if (before) DeviceCatalog.Evidence() else console.copy()
+                conflict.offer(field, "Fixture incompatible value", "Current conflicting response")
+                ordered.forEach { (f, value, source) -> conflict.offer(f, value, source) }
+                check(conflict.match() == null && conflict.copy().match() == null, "Console evidence cannot override a $field conflict, before=$before")
+            }
+        }
+        for (source in listOf("", "Current ordinary model", "$consoleSource (cached)")) {
+            val untrusted = DeviceCatalog.Evidence().apply { offer("Model", "PS5", source) }
+            check(untrusted.match() == null, "A missing or unrelated console source cannot authorize PS5 recognition")
+        }
+        check(DeviceCatalog.Evidence().apply { offer("Model", "PlayStation 5", consoleSource) }.match() == null,
+            "The trusted console source must report the protocol's exact PS5 host type")
+        check(DeviceCatalog.Evidence().match() == null, "Console corroboration is not retained by a fresh scan")
         val apple = DeviceCatalog.fromRecog(Recog.lookup("MacBookAir10,1")!!)
         check(apple.product.title == "Apple MacBook Air (M1, 2020)" && apple.source.contains(RecogModels.REVISION), "Existing Recog product gains a canonical brand while preserving rule provenance")
         check(DeviceCatalog.fromRecog(Recog.lookup("AppleTV11,1")!!).product.title == "Apple TV", "A product already containing its brand does not repeat it")

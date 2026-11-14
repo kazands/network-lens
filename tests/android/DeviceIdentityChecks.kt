@@ -84,6 +84,25 @@ internal object DeviceIdentityChecks {
         check(shield.manufacturer.isEmpty() && shield.model == "SHIELD Android TV" && shield.json().getJSONObject("localRecognition").getString("recognizedBrand") == "NVIDIA", "Interpreted brand stays separate from unknown reported manufacturer")
         val nameOnly = Device().apply { ip = "192.0.2.12"; hint("Name", "PS5", "Synthetic name only", 80) }
         check(nameOnly.identifiedProduct() == null && DeviceIcon.forGroup(nameOnly).label == "Device type unknown", "A product-like name cannot establish console hardware")
+        for (consoleFirst in listOf(false, true)) {
+            val console = Device().apply { ip = "192.0.2.82" }
+            val sources = listOf("Synthetic current ordinary model", "PlayStation discovery host-type").let { if (consoleFirst) it.reversed() else it }
+            console.hint("Model", "PS5", sources.first(), 80)
+            val earlier = console.copy()
+            console.hint("Model", "PS5", sources.last(), 80)
+            check(console.presentation().title == "Sony PlayStation 5" && DeviceIcon.forGroup(console).label == "Game console" && console.manufacturer.isEmpty() && !console.seen,
+                "PS5 model sources recognize in either order without inventing manufacturer or presence, console first=$consoleFirst")
+            check(console.identifiedProduct()!!.source.contains("PlayStation discovery host-type") && console.copy().identifiedProduct() == console.identifiedProduct(), "PS5 progress copies retain console corroboration and provenance")
+            check((earlier.identifiedProduct() != null) == consoleFirst, "PS5 source corroboration does not change earlier snapshots")
+            repeat(12) { console.hint("Model", "PS5", "A higher priority ordinary response $it", 90) }
+            check(console.observations().none { it.source == "PlayStation discovery host-type" } && console.presentation().title == "Sony PlayStation 5",
+                "Trusted console corroboration survives display-observation eviction")
+            for (field in listOf("Model", "Manufacturer")) {
+                val conflict = console.copy().apply { hint(field, "Fixture incompatible value", "Synthetic current conflict", 80) }
+                check(conflict.identifiedProduct() == null && conflict.copy().identifiedProduct() == null && console.identifiedProduct() != null,
+                    "PS5 $field conflicts still suppress recognition independently")
+            }
+        }
         for (field in listOf("Model", "Manufacturer")) for (before in listOf(false, true)) {
             val d = if (before) Device() else shield.copy()
             val bad = if (field == "Model") "Fixture other model" else "Fixture Devices"
@@ -108,11 +127,18 @@ internal object DeviceIdentityChecks {
         // Parse the exact synthetic packet length rather than treating identifiers as MACs.
         val bytes = "HTTP/1.1 200 Ok\nhost-type:PS5\ndevice-discovery-protocol-version:00030010\nhost-name:Fixture console\nhost-id:001122334455\n".toByteArray()
         val parsed = PlayStationDiscovery.parse(bytes, bytes.size)!!
+        val ordinaryConsole = Device().apply {
+            ip = "198.18.0.20"; hint("Model", "PS5", "Synthetic current ordinary model", 80)
+        }
+        (get(fake, "found") as MutableMap<String, Device>)[ordinaryConsole.ip] = ordinaryConsole
+        val beforeReply = ordinaryConsole.copy()
         try {
             receive.invoke(fake, InetAddress.getByName("198.18.0.20"), parsed)
             val console = fake.snapshot().single()
             check(console.seen && console.presentation().title == "Sony PlayStation 5" && DeviceIcon.forGroup(console).label == "Game console", "A current in-scope console response supplies presence, product and icon")
             check(console.model == "PS5" && console.manufacturer.isEmpty() && console.mac.isEmpty() && console.links().isEmpty() && console.details.values.none { it.contains("001122334455") }, "Console host ID never becomes a MAC, grouping key or saved detail")
+            check(beforeReply.identifiedProduct() == null && !beforeReply.seen && console.identifiedProduct()!!.source.contains("PlayStation discovery host-type"),
+                "A real console callback corroborates an earlier ordinary PS5 model without altering its snapshot")
             receive.invoke(fake, InetAddress.getByName("198.19.0.20"), parsed)
             check(fake.snapshot().size == 1, "Out-of-scope console replies are rejected")
             fake.cancel()

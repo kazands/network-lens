@@ -112,6 +112,9 @@ manufacturer and manufacturer source are retained per endpoint. Alias validation
 waits for the required manufacturer and catalogue to be available, so equivalent
 make-and-model and model-only reports work in either arrival order. Every retained
 model must agree with the selected product; exceeding the bound suppresses recognition.
+PS5 console corroboration is retained separately from the first model's source,
+so a later console reply can authorize an earlier ordinary PS5 report. Recognition
+provenance includes the console source even if its display observation is evicted.
 Conflicting specific model or manufacturer reports suppress recognition for the
 rest of the scan, including when their display observations are evicted. Known
 aliases of the same product may corroborate one another. Sources and values are
@@ -153,7 +156,8 @@ with the existing script and recorded in `android/lucide-provenance.json`.
 
 ## Validation
 
-Host suites exercise exact aliases, hostile/ambiguous inputs, model/brand
+Host suites exercise exact aliases, all printer report-order permutations,
+delayed catalogue loading, both PS5 source orders, hostile/ambiguous inputs, model/brand
 conflicts, family precision, bounded receive traffic, wrong ports and scope,
 deadlines, cancellation, duplicate responses and 10,000 malformed packets.
 The `device-identities` Android mode uses synthetic fixtures without an Android
