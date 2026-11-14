@@ -3,6 +3,7 @@ set -euo pipefail
 umask 077
 cd "$(dirname "$0")/.."
 BUILD_MODE=development
+python3 scripts/generate-recog-models.py --check
 if [[ $# -eq 1 && "$1" == --release ]]; then
     BUILD_MODE=release
 elif [[ $# -ne 0 ]]; then

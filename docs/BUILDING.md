@@ -25,7 +25,7 @@ A new key cannot update an installation signed by another key. Do not replace or
 
 Maintainer release APKs use a separate pinned app-signing identity and verified recovery receipt. Run `bash scripts/build.sh --release`; output goes under `artifacts/release/`, preserving development outputs. Release builds never create keys. A separate upload identity is prepared for future Play enrollment. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md) for private files, backup verification, migration and remaining Play work.
 
-`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 22 application host suites below.
+`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 23 application host suites below.
 
 ## Host suites
 
@@ -33,7 +33,7 @@ Maintainer release APKs use a separate pinned app-signing identity and verified 
 bash scripts/test.sh
 ```
 
-The script compiles the shared Kotlin logic and Kotlin behavior tests, then runs 22 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
+The script checks the reproducible Recog table, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 23 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -42,7 +42,7 @@ Install Android platform-tools and an appropriate emulator/system image through 
 ```sh
 bash scripts/build-android-tests.sh
 python3 scripts/test-android-e2e.py --serial emulator-5554 \
-  --modes local-metadata,scan-efficiency,typography,failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
+  --modes recog,local-metadata,scan-efficiency,typography,failure-reporting,scan-details,options,navigation,session-only,session-cold,fresh-presence,routed-ipv6,homekit,resolver-upgrade \
   --output artifacts/local-emulator-check
 ```
 
@@ -58,6 +58,13 @@ and TLS-only IPPS behavior. See [LOCAL-METADATA.md](LOCAL-METADATA.md) for suppo
 fields and limits. Real-device compatibility remains a separate check.
 
 The `typography` mode uses synthetic dual-stack and IPv6-only devices. It checks full address wrapping, scoped IPv6, exact copying and IPv4/IPv6 order at 320dp and 411dp widths, normal and 200% font settings, and both appearances. It never starts discovery.
+
+The `recog` mode uses synthetic model advertisements without an Android Network.
+It checks current-wire admission, cached-callback exclusion, conflicts, fresh-scan
+isolation, Stop, grouping and icon precedence. Native list/details, search,
+clipboard, accessibility labels and wrapping are checked in both appearances at
+320dp/411dp and normal/200% text. It captures synthetic screenshots only.
+See [RECOG.md](RECOG.md) for the deliberately limited model coverage.
 
 Physical Wi-Fi checks are separate, explicitly authorized manual journeys. Never automate arbitrary connected devices or publish household results. See `tests/E2E-REQUIREMENTS.md`.
 

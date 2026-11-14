@@ -66,14 +66,16 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "scan-efficiency" || mode == "local-metadata") {
+            if (mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "local-metadata") {
+            if (mode == "recog") {
+                RecogChecks.run(this, ::check)
+            } else if (mode == "local-metadata") {
                 MetadataChecks.run(this, ::check)
             } else if (mode == "typography") {
                 TypographyChecks.run(this, ::check)

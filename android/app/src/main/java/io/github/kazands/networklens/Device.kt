@@ -30,6 +30,7 @@ class Device : Grouping.Endpoint {
     @JvmField val evidence: MutableList<String> = ArrayList()
     @JvmField val details: MutableMap<String, String> = LinkedHashMap()
     private var hints = IdentityHints()
+    private var recognition = Recog.Evidence()
     internal var metadataLookups = MetadataLookups()
         private set
 
@@ -50,7 +51,32 @@ class Device : Grouping.Endpoint {
     }
 
     @Synchronized fun observations(): MutableList<IdentityHints.Hint> = hints.observations()
+    /** Called only by current-wire device-info admission, never native/cached callbacks. */
+    @Synchronized internal fun recognizeModel(attributes: Map<String, ByteArray>) = recognition.offer(attributes)
+
+    @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
+        recognition.compatible(candidate) &&
+            (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || manufacturer.equals("Apple", true)) &&
+            (model.isEmpty() || !IdentityHints.specific(model) || model == candidate.code || model == candidate.description) &&
+            hints.observations().none { hint -> IdentityHints.specific(hint.value) && when (hint.field) {
+                "Model" -> hint.value != candidate.code && hint.value != candidate.description
+                "Manufacturer" -> !hint.value.equals("Apple", true)
+                else -> false
+            } }
+
+    @Synchronized internal fun locallyRecognized(): Recog.Model? =
+        recognition.match()?.takeIf { recognitionCompatible(it) }
+
+    internal fun groupRecognition(): Recog.Model? {
+        val endpoints = endpoints()
+        val matches = endpoints.mapNotNull { it.locallyRecognized() }.distinct()
+        val candidate = matches.singleOrNull() ?: return null
+        return candidate.takeIf { endpoints.all { it.recognitionCompatible(candidate) } }
+    }
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
+        if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
+            recognition.observeReport(field, SafeText.label(value, 160))
+        }
         val hint = hints.offer(field, value, source, priority) ?: return
         when (field) {
             "Name" -> name = hint.value
@@ -136,6 +162,9 @@ class Device : Grouping.Endpoint {
             for (h in hints.observations()) observations.put(JSONObject().put("field", h.field).put("value", h.value)
                 .put("source", h.source).put("priority", h.priority))
             out.put("observations", observations)
+            locallyRecognized()?.let { match -> out.put("localRecognition", JSONObject()
+                .put("description", match.description).put("deviceType", match.category.label)
+                .put("familyOnly", match.familyOnly).put("source", match.source).put("input", match.input)) }
         } catch (_: JSONException) {}
         return out
     }
@@ -149,6 +178,7 @@ class Device : Grouping.Endpoint {
         copy.seen = seen; copy.self = self; copy.gateway = gateway
         copy.groupLinks.addAll(groupLinks); copy.ports.addAll(ports); copy.services.addAll(services)
         copy.evidence.addAll(evidence); copy.details.putAll(details); copy.hints = hints.copy()
+        copy.recognition = recognition.copy()
         copy.metadataLookups = metadataLookups.copy()
         for (member in members) copy.members.add(member.copy())
         return copy

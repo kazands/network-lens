@@ -122,6 +122,38 @@
       "url": "https://github.com/lucide-icons/lucide/blob/main/icons/fan.svg",
       "accessed": "2026-10-25",
       "sha256": "6ed585fa7a183086480baf6aaeb531cbe65e977222c6462dcb1e4662a6744b54"
+    },
+    {
+      "name": "laptop",
+      "path": "icons/laptop.svg",
+      "git_blob_sha": "613afff3caa54ee0be639577fa09add361c777a7",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/laptop.svg",
+      "accessed": "2026-11-13",
+      "sha256": "b8389056d3b7125670b60a4bd03e6d4ecc440e228f4140e7b66c4e97dcb0dc70"
+    },
+    {
+      "name": "tablet",
+      "path": "icons/tablet.svg",
+      "git_blob_sha": "93edd3d71a3cf4ebf0851ff87aa3be342e87aea0",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/tablet.svg",
+      "accessed": "2026-11-13",
+      "sha256": "cf58f791bd83c5340362fc0694d3f766aa82b9abfe291ef72e15a3ac3da54125"
+    },
+    {
+      "name": "monitor",
+      "path": "icons/monitor.svg",
+      "git_blob_sha": "e869f2f27acef115bc121a0bf62e1d01834c6b17",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/monitor.svg",
+      "accessed": "2026-11-13",
+      "sha256": "d1a443233345724859de8e4fb48968ba91e885e12ddbd710701548bd91b39428"
+    },
+    {
+      "name": "tv-minimal-play",
+      "path": "icons/tv-minimal-play.svg",
+      "git_blob_sha": "2174830bbc3f5caa3e405ced68fafa5124745540",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/tv-minimal-play.svg",
+      "accessed": "2026-11-13",
+      "sha256": "fff112133c9932fbf775ae5726cfe9e7e6a1aecf224a2e0ffcd39c9806f198a0"
     }
   ]
 }
