@@ -4,6 +4,27 @@ Network Lens 0.3.11 is a development preview. It uses the application ID `io.git
 
 The earlier branding checks are recorded in [VERIFICATION-0.3.9.md](VERIFICATION-0.3.9.md). The 0.3.10 package-identity checks are recorded in [VERIFICATION-0.3.10.md](VERIFICATION-0.3.10.md). Current typography and IPv6 layout verification is recorded in [VERIFICATION-0.3.11.md](VERIFICATION-0.3.11.md).
 
+## Offline model recognition (unreleased)
+
+The source now interprets 156 exact current mDNS device-info model codes using
+a pinned offline Rapid7 Recog subset. The list and details label interpretations
+as locally recognized, retain the reported values and expose rule/input
+provenance. Matching categories select more specific Lucide icons and can be
+searched. Missing manufacturer/MAC values remain unknown. Conflicting evidence
+suppresses recognition; native cached callbacks cannot supply the input. No
+network request, permission, persistent history or runtime dependency was added.
+
+All 23 host suites / 19,428 checks, direct app/instrumentation builds and packaged
+permission/security audits passed. The final candidate passed six emulator
+modes / 1,191 checks on each of API 36 and 37, including recognition, metadata,
+typography, session-only, fresh-presence and navigation. Light/dark and narrow
+200% text screenshots were inspected. An initial API 36 run was blocked by a
+confirmed System UI ANR dialog; the same binaries passed after emulator recovery.
+Physical model accuracy, coverage and scan performance remain unverified; no
+phone install or release was performed. The existing discovery limitations below
+remain open. See [RECOG.md](RECOG.md) for selection policy, exact artifacts and
+verification limits.
+
 ## Typography and IPv6 layout (0.3.11)
 
 Native text styles now share scalable sizes and leading, with larger supporting text, medium/semibold emphasis and sentence-case detail labels. IPv6 remains below IPv4 and wraps between hexadecimal groups without inserted characters, ellipsis or automatic font shrinking. Full scoped addresses remain selectable and copy unchanged. This is a presentation change; discovery behavior and the known DNS-SD limitation remain unchanged.

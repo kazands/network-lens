@@ -1,5 +1,23 @@
 # Third-party code and assets
 
+## Rapid7 Recog model mappings
+
+The exact offline model-code table derives from Rapid7 Recog at commit
+`f1191e24332c51d6a3d98457f64fba8dec340784`, under BSD-2-Clause, Copyright
+(c) 2014-2015, Rapid7. The complete copyright, conditions and disclaimer are
+retained in `recog-original/COPYING` and packaged in
+`app/src/main/res/raw/recog_license.txt`. The original XML is retained in
+`recog-original/mdns_device-info_txt.xml`.
+
+Source: https://github.com/rapid7/recog/tree/f1191e24332c51d6a3d98457f64fba8dec340784 .
+`recog-provenance.json` records upstream blob identities, SHA-256 digests and the
+selection policy. `scripts/generate-recog-models.py` reproducibly selects exact
+canonical model examples from anchored hardware rules. It excludes broad
+patterns, board identifiers, OS rules and two ambiguous iMac descriptions;
+low-certainty Apple TV rules supply only the family. The app runs generated
+exact lookups, without the upstream Ruby/Java runtime or a runtime regex engine.
+Review any data refresh explicitly and retain all upstream notices.
+
 ## Kotlin JVM standard library
 
 Network Lens 0.3.0 uses the official Kotlin JVM standard library 2.3.21. Its Apache 2.0 license and applicable JVM standard-library third-party notices are packaged together in `app/src/main/res/raw/kotlin_license.txt`: GWT-derived collections (Apache 2.0), Guava-derived unsigned arithmetic (Apache 2.0), ThreeTenBP-derived time code (3-clause BSD), and Boost-derived math functions (Boost 1.0). The notices and attribution are copied from the pinned official Kotlin distribution's `license/README.md` and referenced license files. This does not incorporate the Kotlin compiler into the app.

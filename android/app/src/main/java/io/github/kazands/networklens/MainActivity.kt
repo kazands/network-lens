@@ -418,7 +418,9 @@ class MainActivity : Activity() {
         deviceRows.clear()
         val shown = ArrayList<Device>(); val term = query.lowercase(Locale.ROOT).javaTrim()
         for (group in groupsForDisplay()) for (d in group.endpoints()) {
-            val all = (group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services).lowercase(Locale.ROOT)
+            val recognition = d.locallyRecognized()
+            val all = (group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services + " " +
+                recognition?.description.orEmpty() + " " + recognition?.category?.label.orEmpty()).lowercase(Locale.ROOT)
             if (all.contains(term)) { shown.add(group); break }
         }
         var addresses = 0
@@ -497,10 +499,13 @@ class MainActivity : Activity() {
             value(hardware, if (group.mac.isEmpty()) "MAC not available" else "MAC   " + group.mac)
             hardware.typeface = if (group.mac.isEmpty()) AppTypography.face(AppTypography.METADATA, false) else Typeface.MONOSPACE
             val vendor = MacVendors.lookup(group.mac)
-            value(model, group.model.ifEmpty { if (vendor.isEmpty()) "" else "MAC vendor · " + vendor })
+            val recognition = group.groupRecognition()
+            value(model, recognition?.let { "Locally recognized · " + it.description }
+                ?: group.model.ifEmpty { if (vendor.isEmpty()) "" else "MAC vendor · " + vendor })
             contentDescription = group.title() + ", " + visual.label + ", " + group.endpoints().size + " IP addresses, " +
                 (if (v4.isEmpty()) "" else "IPv4 " + v4 + ", ") + (if (v6.isEmpty()) "" else "IPv6 " + v6 + ", ") +
-                (if (group.mac.isEmpty()) "MAC not available" else "MAC " + group.mac) + (if (vendor.isEmpty()) "" else ", MAC vendor " + vendor) + ", open details"
+                (if (group.mac.isEmpty()) "MAC not available" else "MAC " + group.mac) + (if (vendor.isEmpty()) "" else ", MAC vendor " + vendor) +
+                (recognition?.let { ", locally recognized as " + it.description } ?: "") + ", open details"
             invalidate()
         }
         override fun onDraw(canvas: Canvas) {
@@ -538,6 +543,14 @@ class MainActivity : Activity() {
                 unknown.setPadding(0, dp(10), 0, dp(5)); facts.addView(unknown)
             }
             body.addView(facts); space(body, 8)
+            endpoint.locallyRecognized()?.let { match ->
+                val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
+                recognized.addView(text("Locally recognized", 16, ink, true))
+                detailRow(recognized, if (match.familyOnly) "Device family" else "Device", match.description)
+                detailRow(recognized, "Device type", match.category.label)
+                recognized.addView(text("Inferred from the reported model code using offline Recog rules.", 14, muted, false))
+                body.addView(recognized); space(body, 8)
+            }
             val lookups = endpoint.metadataLookupRows()
             if (lookups.isNotEmpty()) {
                 val lookupPanel = panel(); lookupPanel.setPadding(dp(18), dp(10), dp(18), dp(14))
@@ -560,7 +573,7 @@ class MainActivity : Activity() {
             }
             body.addView(more); space(body, 8); body.addView(evidence); space(body, 18)
         }
-        body.addView(text("Device names and descriptions are self-reported. Missing details stay unknown; an advertised service does not establish ownership or security.", 14, muted, false)); space(body, 19)
+        body.addView(text("Reported details come from device responses. Local recognition is an interpretation of those details. Missing values stay unknown; neither establishes ownership or security.", 14, muted, false)); space(body, 19)
         val copy = button("Copy device details", true)
         copy.setOnClickListener {
             (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(ClipData.newPlainText("Device details", deviceText(d)))
@@ -587,6 +600,10 @@ class MainActivity : Activity() {
         field(panel, "Observed / advertised ports", if (endpoint.ports.isEmpty()) "None reported" else endpoint.ports.toString(), false)
         for ((key, value) in endpoint.details) if (key !in listOf("ONVIF hardware (advertised)", "OS (advertised)", "Firmware (advertised)", "ICMP response time", "ICMPv6 response time")) field(panel, key, value, false)
         for (hint in endpoint.observations()) field(panel, "Reported " + hint.field.lowercase(Locale.ROOT) + " · " + hint.source, hint.value, false)
+        endpoint.locallyRecognized()?.let { match ->
+            field(panel, "Local recognition source", match.source, false)
+            field(panel, "Recognition input", match.input, false)
+        }
     }
     private fun deviceText(group: Device): String {
         val text = StringBuilder(group.title())
@@ -595,6 +612,11 @@ class MainActivity : Activity() {
                 .append("\nHostname: ").append(reported(d.hostname)).append("\nManufacturer: ").append(reported(d.manufacturer)).append("\nModel: ").append(reported(d.model))
             val vendor = MacVendors.lookup(d.mac)
             if (d.kind.isNotEmpty()) text.append("\nDevice type: ").append(d.kind)
+            d.locallyRecognized()?.let { match ->
+                text.append("\nLocally recognized").append(if (match.familyOnly) " family: " else ": ").append(match.description)
+                    .append("\nRecognized device type: ").append(match.category.label)
+                    .append("\nRecognition source: ").append(match.source).append("\nRecognition input: ").append(match.input)
+            }
             for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
             d.details["HomeKit setup (advertised)"]?.let { text.append("\nHomeKit setup (advertised): ").append(it) }
             if (vendor.isNotEmpty()) text.append("\nMAC vendor (IEEE registry): ").append(vendor)

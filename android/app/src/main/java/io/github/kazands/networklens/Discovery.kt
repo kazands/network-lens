@@ -1284,7 +1284,11 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }
     }
     private fun applyCurrentService(d: Device, service: MdnsPacket.Service) {
-        applyService(d, service, "mDNS current")
+        if (!accepting || cancelled.get()) return
+        synchronized(d) {
+            if (service.type == "_device-info._tcp.") d.recognizeModel(service.attributes)
+            applyService(d, service, "mDNS current")
+        }
     }
     private fun applyService(d: Device, service: MdnsPacket.Service, prefix: String) {
         synchronized(d) {

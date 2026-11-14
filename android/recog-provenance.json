@@ -1,0 +1,24 @@
+{
+  "repository": "rapid7/recog",
+  "revision": "f1191e24332c51d6a3d98457f64fba8dec340784",
+  "license": "BSD-2-Clause",
+  "source_path": "xml/mdns_device-info_txt.xml",
+  "source_git_blob_sha": "4499b9c787784baebf70864d373e362f5e1ac295",
+  "source_sha256": "9cc906da727d6d5e2961d6eabcb6712f42a847bfb42a2c3207721de6a87e7b61",
+  "license_git_blob_sha": "ad5b8d9acc33da2a18a9187a8374f6ef501a5443",
+  "policy": "Exact canonical model examples from anchored hardware rules only; no runtime regex, board IDs, prefix inference or OS rules.",
+  "excluded_codes": [
+    "iMac10,1",
+    "iMac11,1"
+  ],
+  "family_only_codes": [
+    "AppleTV11,1",
+    "AppleTV2,1",
+    "AppleTV3,1",
+    "AppleTV3,2",
+    "AppleTV5,3",
+    "AppleTV6,2"
+  ],
+  "models": 156,
+  "generated_sha256": "47af29b2bf577595b0fc9c5aaae4f2f0316f21ac8a15d527759b756bb52179f7"
+}

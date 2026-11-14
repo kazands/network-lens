@@ -8,7 +8,8 @@ ICONS = {'router': 'router', 'smartphone': 'smartphone', 'printer': 'printer',
          'cast': 'cast', 'speaker': 'speaker', 'folder-symlink': 'file_share', 'network': 'network', 'cctv': 'cctv',
          'lightbulb': 'lightbulb', 'lock-keyhole': 'lock', 'plug': 'plug',
          'toggle-left': 'switch', 'thermometer': 'thermostat', 'activity': 'sensor',
-         'bell-ring': 'doorbell', 'fan': 'fan'}
+         'bell-ring': 'doorbell', 'fan': 'fan', 'laptop': 'laptop',
+         'monitor': 'monitor', 'tablet': 'tablet', 'tv-minimal-play': 'tv_player'}
 ANDROID = 'http://schemas.android.com/apk/res/android'
 ET.register_namespace('android', ANDROID)
 

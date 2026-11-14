@@ -23,6 +23,13 @@ class DeviceIcon private constructor() {
         private val SENSOR = Spec(R.drawable.ic_device_sensor, "HomeKit sensor")
         private val DOORBELL = Spec(R.drawable.ic_device_doorbell, "HomeKit video doorbell")
         private val FAN = Spec(R.drawable.ic_device_fan, "HomeKit fan")
+        private val LAPTOP = Spec(R.drawable.ic_device_laptop, "Locally recognized laptop")
+        private val DESKTOP = Spec(R.drawable.ic_device_monitor, "Locally recognized desktop computer")
+        private val TABLET = Spec(R.drawable.ic_device_tablet, "Locally recognized tablet")
+        private val SMARTPHONE = Spec(R.drawable.ic_device_smartphone, "Locally recognized smartphone")
+        private val SMART_SPEAKER = Spec(R.drawable.ic_device_speaker, "Locally recognized smart speaker")
+        private val TV_PLAYER = Spec(R.drawable.ic_device_tv_player, "Locally recognized TV media player")
+        private val HANDHELD = Spec(R.drawable.ic_device_smartphone, "Locally recognized portable media player")
 
         @JvmStatic fun forGroup(group: Device): Spec {
             val endpoints = group.endpoints()
@@ -40,6 +47,17 @@ class DeviceIcon private constructor() {
                 "HomeKit video doorbell" -> return DOORBELL
                 "HomeKit camera" -> return Spec(R.drawable.ic_device_cctv, d.kind)
                 "HomeKit fan" -> return FAN
+            }
+            group.groupRecognition()?.let { match ->
+                return when (match.category) {
+                    Recog.Category.LAPTOP -> LAPTOP
+                    Recog.Category.DESKTOP -> DESKTOP
+                    Recog.Category.TABLET -> TABLET
+                    Recog.Category.PHONE -> SMARTPHONE
+                    Recog.Category.SPEAKER -> SMART_SPEAKER
+                    Recog.Category.TV_PLAYER -> TV_PLAYER
+                    Recog.Category.HANDHELD -> HANDHELD
+                }
             }
             for (d in endpoints) {
                 val kind = d.kind.lowercase(Locale.ROOT)
