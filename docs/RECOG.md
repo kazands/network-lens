@@ -100,6 +100,43 @@ python3 scripts/generate-recog-models.py --check
 
 The host-test and direct app-build scripts run this check automatically.
 
+## Review corrections verification (2026-11-13)
+
+Three review corrections are committed separately: conservative descriptions for
+16 shared identifiers (`64a462f`), scan-lifetime conflict tracking independent of
+the display list (`d5903c0`), and raw DNS duplicate-key fixtures with corrected
+documentation (`a1270c8`). The original upstream XML and license blobs remain
+unchanged, and the packaged license matches the retained terms byte-for-byte.
+
+All 23 host suites / 19,571 checks passed, including 3,362 Recog checks. The
+supported direct app and instrumentation builds passed, as did the packaged
+permission and security audits. The current development APK SHA-256 is
+`adf88ad73085472dffccadcef04df67411b1d978bff3351c5681001a0ba06a48`;
+the instrumentation APK SHA-256 is
+`bb46eb83a892990d1aada4f57c99ce976b09f69b9afc789c4e9b9d72c1bdc44c`.
+Both installed binaries were hash-verified on each selected emulator.
+
+| Current emulator matrix | Result |
+| --- | --- |
+| API 36: recog, local-metadata, typography, session-only, fresh-presence, navigation | All six passed; 1,222 checks |
+| API 37: same six modes | All six passed; 1,222 checks |
+
+Recognition contributes 243 checks per platform, including 31 new checks using
+actual Device/IdentityHints state. They exercise model/manufacturer conflict
+eviction, reports before and after recognition, snapshot independence, fresh
+devices at the same address, equivalent reports and rejected/generic inputs.
+Host packet fixtures cover duplicate key casing/order and malformed/unsupported
+first values through both direct-service parsing and same-sender assembly.
+Synthetic API 37 light list and API 36 dark 320dp/200% details screenshots were
+visually inspected. The latter retained complete recognition-panel wrapping.
+
+Before testing, API 36 again booted with a confirmed System UI ANR dialog.
+It was closed on the isolated emulator and the full matrix then passed without
+an application change. The current APK is 1,932,192 bytes. No physical device
+was operated or release published. Real-device coverage/accuracy, API 26 runtime
+behavior, physical TalkBack use and whole-scan performance remain unverified.
+The existing discovery limitations remain open.
+
 ## Initial implementation verification (2026-11-13)
 
 The following artifact identities and counts describe the initial reviewed
