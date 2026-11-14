@@ -30,11 +30,25 @@ class DeviceIcon private constructor() {
         private val SMART_SPEAKER = Spec(R.drawable.ic_device_speaker, "Locally recognized smart speaker")
         private val TV_PLAYER = Spec(R.drawable.ic_device_tv_player, "Locally recognized TV media player")
         private val HANDHELD = Spec(R.drawable.ic_device_smartphone, "Locally recognized portable media player")
+        private val RECORDER = Spec(R.drawable.ic_device_recorder, "Network video recorder")
+        private val CONSOLE = Spec(R.drawable.ic_device_game_console, "Game console")
+
+        internal fun categoryLabel(group: Device): String = when (val label = forGroup(group).label) {
+            "This phone" -> "This phone"
+            "Router" -> "Wi-Fi gateway"
+            "Device type unknown" -> ""
+            "Audio service" -> "Audio device"
+            "Casting service" -> "Casting device"
+            "File sharing" -> "File-sharing service"
+            else -> label
+        }
 
         @JvmStatic fun forGroup(group: Device): Spec {
             val endpoints = group.endpoints()
             if (endpoints.any { it.self }) return PHONE
             if (endpoints.any { it.gateway }) return ROUTER
+            val product = group.groupProduct()?.product
+            if (product?.category == DeviceCatalog.Category.RECORDER) return RECORDER
             if (endpoints.any { it.kind.lowercase(Locale.ROOT).contains("surveillance") }) return SURVEILLANCE
             for (d in endpoints) when (d.kind) {
                 "HomeKit light" -> return LIGHT
@@ -48,16 +62,20 @@ class DeviceIcon private constructor() {
                 "HomeKit camera" -> return Spec(R.drawable.ic_device_cctv, d.kind)
                 "HomeKit fan" -> return FAN
             }
-            group.groupRecognition()?.let { match ->
-                return when (match.category) {
-                    Recog.Category.LAPTOP -> LAPTOP
-                    Recog.Category.DESKTOP -> DESKTOP
-                    Recog.Category.TABLET -> TABLET
-                    Recog.Category.PHONE -> SMARTPHONE
-                    Recog.Category.SPEAKER -> SMART_SPEAKER
-                    Recog.Category.TV_PLAYER -> TV_PLAYER
-                    Recog.Category.HANDHELD -> HANDHELD
+            product?.let {
+                val specific = when (it.category) {
+                    DeviceCatalog.Category.LAPTOP -> LAPTOP
+                    DeviceCatalog.Category.DESKTOP -> DESKTOP
+                    DeviceCatalog.Category.TABLET -> TABLET
+                    DeviceCatalog.Category.PHONE -> SMARTPHONE
+                    DeviceCatalog.Category.SPEAKER -> SMART_SPEAKER
+                    DeviceCatalog.Category.TV_PLAYER -> TV_PLAYER
+                    DeviceCatalog.Category.HANDHELD -> HANDHELD
+                    DeviceCatalog.Category.RECORDER -> RECORDER
+                    DeviceCatalog.Category.CONSOLE -> CONSOLE
+                    DeviceCatalog.Category.UNSPECIFIED -> null
                 }
+                if (specific != null) return specific
             }
             for (d in endpoints) {
                 val kind = d.kind.lowercase(Locale.ROOT)

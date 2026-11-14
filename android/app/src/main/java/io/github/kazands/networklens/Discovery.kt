@@ -115,6 +115,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private var mdnsThread: Thread? = null
     private var mdnsV6Thread: Thread? = null
     private var wsThread: Thread? = null
+    private var playStationThread: Thread? = null
 
     fun cancel() {
         cancelled.set(true)
@@ -195,7 +196,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(55)
                 scanDeadline = deadline
                 health.skipped(IPV6_SOURCE, "No separate IPv6 echo checks were needed")
-                startNsd(); startMdns(); startSsdp(); startSadp(); startWsDiscovery()
+                startNsd(); startMdns(); startSsdp(); startSadp(); startWsDiscovery(); startPlayStation()
                 val echoTargets = hosts.any { it != net.ip }
                 health.skipped(ICMP_SOURCE, if (echoTargets) "Echo checks are used for unconfirmed addresses" else "No other IPv4 addresses in this range")
                 val count = total
@@ -255,6 +256,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     accepting = false
                     sadpThread?.let { it.join(500); if (it.isAlive) health.truncated("SADP device discovery", "Discovery window did not finish") }
                     wsThread?.let { it.join(500); if (it.isAlive) health.truncated(WSD_SOURCE, "Discovery window did not finish") }
+                    playStationThread?.let { it.join(500); if (it.isAlive) health.truncated(PlayStationDiscovery.SOURCE, "Discovery window did not finish") }
                     health.closeBrowseWindow(); cleanupNsd(); enrichment.shutdown()
                     while (!cancelled.get() && !enrichment.isTerminated() && System.nanoTime() < deadline) {
                         listener.progressSnapshot(done.get(), total, ::snapshot); enrichment.awaitTermination(250, TimeUnit.MILLISECONDS)
@@ -281,7 +283,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (started && done.get() != total) health.truncated("IPv4 checks", "Address checks did not finish")
                 try {
                     workers.awaitTermination(2, TimeUnit.SECONDS); enrichment.awaitTermination(2, TimeUnit.SECONDS)
-                    for (thread in listOf(multicastThread, sadpThread, mdnsThread, mdnsV6Thread, wsThread)) thread?.join(1000)
+                    for (thread in listOf(multicastThread, sadpThread, mdnsThread, mdnsV6Thread, wsThread, playStationThread)) thread?.join(1000)
                 } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
             }
             var result: List<Device>
@@ -489,6 +491,67 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         finally { socket?.let { datagrams.remove(it); it.close() } }
     }
 
+    private fun startPlayStation() {
+        val source = PlayStationDiscovery.SOURCE
+        if (net.ip.isEmpty() || net.prefix >= 31) { health.skipped(source, "IPv4 Wi-Fi broadcast is unavailable"); return }
+        playStationThread = Thread({
+            health.begin(source)
+            var socket: DatagramSocket? = null
+            try {
+                if (!accepting || cancelled.get()) return@Thread
+                net.check(context)
+                // Use a private client-port range; never reuse another app's bound socket.
+                for (port in 9303..9319) {
+                    val candidate = DatagramSocket(null)
+                    try { candidate.bind(InetSocketAddress(InetAddress.getByName(net.ip), port)); socket = candidate; break }
+                    catch (_: BindException) { candidate.close() }
+                    catch (e: Exception) { candidate.close(); throw e }
+                }
+                val selected = socket ?: throw BindException("Discovery client ports unavailable")
+                datagrams.add(selected); net.network!!.bindSocket(selected); selected.broadcast = true
+                val broadcast = InetAddress.getByName(IpRange.address(IpRange(net.ip, net.prefix).last + 1))
+                val result = PlayStationDiscovery.discover(object : PlayStationDiscovery.Channel {
+                    override fun send(bytes: ByteArray) {
+                        if (!accepting || cancelled.get()) return
+                        net.check(context)
+                        selected.send(DatagramPacket(bytes, bytes.size, broadcast, PlayStationDiscovery.PORT))
+                        health.count(source, "requests")
+                    }
+                    override fun receive(timeoutMillis: Int): PlayStationDiscovery.Packet? {
+                        selected.soTimeout = timeoutMillis
+                        val bytes = ByteArray(PlayStationDiscovery.MAX_PACKET + 1)
+                        val packet = DatagramPacket(bytes, bytes.size)
+                        try { selected.receive(packet) } catch (_: SocketTimeoutException) { return null }
+                        return PlayStationDiscovery.Packet(packet.address, packet.port, bytes, packet.length)
+                    }
+                }, scanDeadline, { accepting && !cancelled.get() }, ::inScope) { peer, response ->
+                    net.check(context)
+                    playStationResolved(peer, response)
+                }
+                repeat(result.packets) { health.count(source, "packets") }
+                repeat(result.devices) { health.count(source, "devices") }
+                if (!cancelled.get()) {
+                    if (result.limited) health.truncated(source, "64-packet / 32-device safety limit reached")
+                    else if (result.interrupted) health.truncated(source, "Discovery window stopped early")
+                    else health.ok(source)
+                }
+            } catch (e: Exception) {
+                if (accepting && !cancelled.get()) { blocked(e); health.fail(source, "Could not receive console discovery replies") }
+            } finally { socket?.let { datagrams.remove(it); it.close() } }
+        }, "playstation-discovery").also { it.start() }
+    }
+    /** Only the current selected-Wi-Fi discovery socket supplies these parsed responses. */
+    private fun playStationResolved(peer: InetAddress, response: PlayStationDiscovery.Response) {
+        if (!accepting || cancelled.get() || !inScope(peer)) return
+        val d = observe(net.scoped(peer), "Current PlayStation discovery reply") ?: return
+        synchronized(d) {
+            if (!accepting || cancelled.get()) return
+            d.hint("Model", "PS5", "PlayStation discovery host-type", 80)
+            if (!d.self) d.hint("Name", response.name, "PlayStation discovery host-name", 75)
+            d.service("PlayStation discovery")
+            d.detail("PlayStation state (reported)", if (response.standby) "Standby" else "Ready")
+        }
+    }
     private fun startSsdp() {
         multicastThread = Thread({
             health.begin("SSDP / UPnP")

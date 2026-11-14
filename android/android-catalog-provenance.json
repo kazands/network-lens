@@ -1,0 +1,26 @@
+{
+  "repository": "androidtrackers/certified-android-devices",
+  "revision": "dc47abd4e6d16ebc7e4428b933b0a388a2ddf9f0",
+  "source_url": "https://github.com/androidtrackers/certified-android-devices/blob/dc47abd4e6d16ebc7e4428b933b0a388a2ddf9f0/by_model.json",
+  "source_sha256": "66847b2827b84b5a8d92c4ee8900157d925b65cc6a70e15845bc9a0b6be6a450",
+  "source_git_blob": "7229144633fbc9266cee8869530faf37bc38faa0",
+  "license": "MIT",
+  "license_git_blob": "ce80712fceaa7a01d6a36a1943f206c36d555a74",
+  "primary_url": "https://storage.googleapis.com/play_public/supported_devices.csv",
+  "primary_documentation": "https://support.google.com/googleplay/answer/1727131",
+  "accessed": "2026-11-14",
+  "primary_original_sha256": "50ce70017856456ec890b5e9f02e080d19754fcacf9168a346d0c0fe640bc0de",
+  "primary_utf8_sha256": "779c6f66185cedceb4c9aa9e61e1730a5aefa423fb43028f122a8dc0a8ba47cc",
+  "selection": "Exact reported manufacturer + Model only; no Device codenames, names, MAC vendors or substring matching. Cross-check all source tuples against primary CSV; reject generic/oversized fields and multiple retail names for a brand/model pair. No form factor is inferred from this list.",
+  "counts": {
+    "source_rows": 54522,
+    "unusable_rows": 1659,
+    "primary_mismatch_rows": 156,
+    "ambiguous_pairs": 2792,
+    "qualified_model_pairs": 43887,
+    "brands": 3737,
+    "retail_titles": 35350
+  },
+  "generated_sha256": "8df338dbebe27e28b403480a1163016ac1f6dabc7929d2065a8284ce93c29d99",
+  "generated_bytes": 1841556
+}

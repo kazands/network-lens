@@ -1,0 +1,17 @@
+NIST National Vulnerability Database - Official CPE Dictionary
+https://nvd.nist.gov/products/cpe
+
+This application uses a filtered snapshot of public hardware product identifiers
+and English product titles from the NIST Official CPE Dictionary, retrieved via
+the official CPE API on 2026-11-14. The CPE Dictionary is a structured product
+naming scheme, not a complete consumer inventory or a discovery fingerprint set.
+
+NIST states that nongovernmental organizations may use the dictionary voluntarily
+and that it is not subject to copyright in the United States. NIST attribution
+is retained. This application is independent and is not endorsed by NIST.
+
+Software, deprecated, ambiguous and many component-only records are excluded.
+A catalogue match does not establish the presence of a device or a vulnerability.
+Only current scan responses establish presence. No vulnerability data is bundled.
+See android/nist-hardware-provenance.json and android/product-catalog-provenance.json
+in the corresponding source distribution for snapshot hashes and selection rules.
