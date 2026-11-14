@@ -44,6 +44,8 @@ internal object Recog {
 
         fun offer(attributes: Map<String, ByteArray>) {
             if (conflicted) return
+            // Wire parsing already folds keys and retains the first occurrence (RFC 6763 6.4).
+            // Reject a noncanonical map defensively; it is not the network duplicate-key policy.
             val fields = attributes.filterKeys { it.equals("model", true) }.values
             if (fields.isEmpty()) return
             if (fields.size != 1) { conflicted = true; return }

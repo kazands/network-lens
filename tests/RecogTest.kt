@@ -1,5 +1,10 @@
 import io.github.kazands.networklens.Recog
 import io.github.kazands.networklens.RecogModels
+import io.github.kazands.networklens.MdnsPacket
+import io.github.kazands.networklens.MdnsAssembly
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.net.InetAddress
 import java.util.Random
 
 /** Public model codes and synthetic metadata only; no sockets or Android dependencies. */
@@ -10,6 +15,42 @@ object RecogTest {
         if (!value) throw AssertionError(message)
     }
     private fun attributes(code: String) = mapOf("model" to code.toByteArray(Charsets.UTF_8))
+
+    /** Complete synthetic DNS response, exercising both TXT parsers and assembly. */
+    private fun wireServices(first: String, second: String): List<MdnsPacket.Service> {
+        fun name(vararg labels: String) = ByteArrayOutputStream().apply {
+            for (label in labels) { val bytes = label.toByteArray(Charsets.UTF_8); write(bytes.size); write(bytes) }
+            write(0)
+        }.toByteArray()
+        fun record(owner: ByteArray, kind: Int, payload: ByteArray) = ByteArrayOutputStream().also { bytes ->
+            DataOutputStream(bytes).apply {
+                write(owner); writeShort(kind); writeShort(1); writeInt(120); writeShort(payload.size); write(payload)
+            }
+        }.toByteArray()
+        val type = name("_device-info", "_tcp", "local")
+        val instance = name("Synthetic", "_device-info", "_tcp", "local")
+        val host = name("synthetic", "local")
+        val peer = InetAddress.getByName("192.0.2.20")
+        val srv = ByteArrayOutputStream().also { bytes ->
+            DataOutputStream(bytes).apply { writeInt(0); writeShort(8080); write(host) }
+        }.toByteArray()
+        val txt = ByteArrayOutputStream().apply {
+            for (value in listOf(first, second)) {
+                val bytes = value.toByteArray(Charsets.UTF_8); require(bytes.size <= 255)
+                write(bytes.size); write(bytes)
+            }
+        }.toByteArray()
+        val records = listOf(record(type, 12, instance), record(instance, 33, srv),
+            record(instance, 16, txt), record(host, 1, peer.address))
+        val packet = ByteArrayOutputStream().also { bytes ->
+            DataOutputStream(bytes).apply {
+                writeShort(0); writeShort(0x8400); writeShort(0); writeShort(records.size); writeInt(0)
+                records.forEach { write(it) }
+            }
+        }.toByteArray()
+        val parsed = MdnsPacket.parse(packet, packet.size)
+        return listOf(parsed.directServices(peer).single(), MdnsAssembly().accept(peer, parsed, 1_000_000_000).single())
+    }
 
     @JvmStatic fun main(args: Array<String>) {
         val cases = listOf(
@@ -77,9 +118,18 @@ object RecogTest {
             evidence.offer(mapOf("model" to bytes)); evidence.offer(attributes(valid))
             check(evidence.match() == null, "Malformed input is never cleaned into a matching identifier")
         }
-        val duplicate = Recog.Evidence()
-        duplicate.offer(mapOf("model" to valid.toByteArray(), "MODEL" to valid.toByteArray()))
-        check(duplicate.match() == null, "Case-duplicate model fields are ambiguous even when values agree")
+        for ((firstKey, secondKey) in listOf("model" to "model", "model" to "MODEL", "MODEL" to "model", "MoDeL" to "MODEL")) {
+            for ((first, second) in listOf(valid to "iPad14,1", "iPad14,1" to valid, valid to valid,
+                "FixtureUnknown99,1" to valid, "$valid\u0000" to valid, "" to valid,
+                valid.lowercase() to valid, " $valid" to valid)) {
+                for (service in wireServices("$firstKey=$first", "$secondKey=$second")) {
+                    check(service.attributes.keys == setOf("model") && service.attributes.getValue("model").contentEquals(first.toByteArray(Charsets.UTF_8)),
+                        "Wire parsing and assembly normalize key case and retain only the first TXT value")
+                    val evidence = Recog.Evidence().apply { offer(service.attributes) }
+                    check(evidence.match() == Recog.lookup(first), "Later duplicate TXT keys cannot replace the first value during recognition")
+                }
+            }
+        }
         val caseKey = Recog.Evidence()
         caseKey.offer(mapOf("MODEL" to valid.toByteArray()))
         check(caseKey.match()?.code == valid, "DNS-SD key case does not change model-value semantics")

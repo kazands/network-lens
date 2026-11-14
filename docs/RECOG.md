@@ -36,9 +36,14 @@ authenticity or security.
   Native Android callbacks, cached records, other service types and routed proxy
   advertisements cannot seed this fingerprint input.
 - Each endpoint keeps at most one input code, two distinct reported model values
-  and a conflict flag. Input codes are bounded to 64 printable ASCII bytes and compared without trimming, case
-  folding, prefix matching or sanitization into a known identifier. Duplicate
-  case-insensitive `model` keys are ambiguous.
+  and a conflict flag. Input codes are bounded to 64 printable ASCII bytes and
+  compared without trimming, case folding, prefix matching or sanitization into
+  a known identifier. The DNS-SD parser folds key case and retains only the first
+  occurrence of a duplicate key, as required by
+  [RFC 6763 section 6.4](https://www.rfc-editor.org/rfc/rfc6763.html#section-6.4).
+  Recognition evaluates that first value; later duplicate strings cannot replace
+  an unsupported or malformed value with a known identifier. Raw packet tests
+  exercise parsing, direct-service admission, assembly and recognition together.
 - Different codes, including unsupported ones, suppress interpretation for the
   rest of that endpoint's scan. Conflicting specific reported model or
   manufacturer observations also suppress it, even if the report arrives before
