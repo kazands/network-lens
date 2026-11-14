@@ -74,6 +74,9 @@ class Device : Grouping.Endpoint {
         return candidate.takeIf { endpoints.all { it.recognitionCompatible(candidate) } }
     }
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
+        if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
+            recognition.observeReport(field, SafeText.label(value, 160))
+        }
         val hint = hints.offer(field, value, source, priority) ?: return
         when (field) {
             "Name" -> name = hint.value

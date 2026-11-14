@@ -35,14 +35,19 @@ authenticity or security.
 - Recognition enters only through the current-wire device-info admission path.
   Native Android callbacks, cached records, other service types and routed proxy
   advertisements cannot seed this fingerprint input.
-- Each endpoint keeps at most one input code and a conflict flag. Values are
-  bounded to 64 printable ASCII bytes and compared without trimming, case
+- Each endpoint keeps at most one input code, two distinct reported model values
+  and a conflict flag. Input codes are bounded to 64 printable ASCII bytes and compared without trimming, case
   folding, prefix matching or sanitization into a known identifier. Duplicate
   case-insensitive `model` keys are ambiguous.
 - Different codes, including unsupported ones, suppress interpretation for the
   rest of that endpoint's scan. Conflicting specific reported model or
-  manufacturer observations also suppress it. Recognition never guesses a
-  missing manufacturer from an interface vendor or software name.
+  manufacturer observations also suppress it, even if the report arrives before
+  recognition or is later evicted from the eight-entry display-observation list.
+  The flag stays set for the scan and is copied independently with snapshots.
+  Two reported model values suffice because a match can agree only with its code
+  and description; a third distinct specific value is conflicting. Reported values
+  retain the existing 160-character observation limit. Recognition never guesses
+  a missing manufacturer from an interface vendor or software name.
 - Snapshot copies keep independent evidence. Group descriptions/icons require
   compatible endpoint evidence; endpoint details never borrow recognition from
   another address. New scans start with no recognition evidence, and cancelled

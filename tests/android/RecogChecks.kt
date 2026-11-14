@@ -47,6 +47,7 @@ internal object RecogChecks {
     fun run(test: Instrumentation, check: (Boolean, String) -> Unit) {
         val property = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
         check(property.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Recog fixtures reject physical devices")
+        RecognitionConflicts.run(check)
         fun operation() = Discovery(test.targetContext, NetworkState().apply {
             ip = "198.18.0.1"; prefix = 24; key = "synthetic-recog"
             prefixes[ip] = prefix; addresses.add(ip)
