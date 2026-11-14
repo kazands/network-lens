@@ -12,7 +12,8 @@ class LocalServices private constructor() {
             "_smb._tcp.", "_workstation._tcp.", "_ssh._tcp.", "_device-info._tcp.",
             "_hap._tcp.", "_spotify-connect._tcp.", "_pdl-datastream._tcp.",
             "_companion-link._tcp.", "_hap._udp.", "_matter._tcp.",
-            "_matterc._udp.", "_meshcop._udp."
+            "_matterc._udp.", "_meshcop._udp.", "_esphomelib._tcp.",
+            "_shelly._tcp.", "_wled._tcp."
         ))
 
         /** Android's legacy resolver can return ._http._tcp instead of _http._tcp. */

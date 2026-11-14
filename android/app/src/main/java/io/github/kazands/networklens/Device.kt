@@ -30,6 +30,24 @@ class Device : Grouping.Endpoint {
     @JvmField val evidence: MutableList<String> = ArrayList()
     @JvmField val details: MutableMap<String, String> = LinkedHashMap()
     private var hints = IdentityHints()
+    internal var metadataLookups = MetadataLookups()
+        private set
+
+    /** Evaluated from this endpoint's current observations, never a grouped neighbour's identity. */
+    @Synchronized internal fun metadataLookupRows(): List<Pair<String, String>> = metadataLookups.snapshot().map { lookup ->
+        val label = lookup.kind.source + " · " + (if (ip.contains(':')) "IPv6" else "IPv4") +
+            " · port " + lookup.port + if (lookup.secure) " · TLS" else ""
+        val notes = ArrayList<String>()
+        for ((field, value) in listOf("Model" to model, "Manufacturer" to manufacturer)) {
+            if (!IdentityHints.specific(value)) continue
+            val sources = hints.observations().filter {
+                it.field == field && it.value == value && it.source != lookup.kind.source + " (reported)" &&
+                    !it.source.startsWith("Observed ")
+            }.map { it.source }.distinct().take(3)
+            if (sources.isNotEmpty()) notes.add(field + " available from " + sources.joinToString(", "))
+        }
+        label to (listOf(lookup.description()) + notes).joinToString("\n")
+    }
 
     @Synchronized fun observations(): MutableList<IdentityHints.Hint> = hints.observations()
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
@@ -131,6 +149,7 @@ class Device : Grouping.Endpoint {
         copy.seen = seen; copy.self = self; copy.gateway = gateway
         copy.groupLinks.addAll(groupLinks); copy.ports.addAll(ports); copy.services.addAll(services)
         copy.evidence.addAll(evidence); copy.details.putAll(details); copy.hints = hints.copy()
+        copy.metadataLookups = metadataLookups.copy()
         for (member in members) copy.members.add(member.copy())
         return copy
     }

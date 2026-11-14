@@ -538,6 +538,14 @@ class MainActivity : Activity() {
                 unknown.setPadding(0, dp(10), 0, dp(5)); facts.addView(unknown)
             }
             body.addView(facts); space(body, 8)
+            val lookups = endpoint.metadataLookupRows()
+            if (lookups.isNotEmpty()) {
+                val lookupPanel = panel(); lookupPanel.setPadding(dp(18), dp(10), dp(18), dp(14))
+                lookupPanel.addView(text("Device information lookups", 16, ink, true))
+                for ((source, result) in lookups) detailRow(lookupPanel, source, result)
+                lookupPanel.addView(text("A failed lookup does not mean this device is offline. Missing details stay unknown.", 14, muted, false))
+                body.addView(lookupPanel); space(body, 8)
+            }
             val evidence = panel(); evidence.setPadding(dp(18), dp(18), dp(18), 0); val open = expandedDetails.contains(endpoint.ip)
             if (open) populateEvidence(evidence, endpoint)
             evidence.visibility = if (open) View.VISIBLE else View.GONE
@@ -587,6 +595,7 @@ class MainActivity : Activity() {
                 .append("\nHostname: ").append(reported(d.hostname)).append("\nManufacturer: ").append(reported(d.manufacturer)).append("\nModel: ").append(reported(d.model))
             val vendor = MacVendors.lookup(d.mac)
             if (d.kind.isNotEmpty()) text.append("\nDevice type: ").append(d.kind)
+            for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
             d.details["HomeKit setup (advertised)"]?.let { text.append("\nHomeKit setup (advertised): ").append(it) }
             if (vendor.isNotEmpty()) text.append("\nMAC vendor (IEEE registry): ").append(vendor)
             d.details["Network identifier (DNS)"]?.let { text.append("\nNetwork identifier (DNS): ").append(it) }

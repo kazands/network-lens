@@ -53,6 +53,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val excludedIpv6: MutableSet<String> = ConcurrentHashMap.newKeySet()
     @Volatile private var scanDeadline = Long.MAX_VALUE
     private val castRequests = ServiceAdmission(32)
+    private val metadataRequests = ServiceAdmission(96, 32)
+    private val metadataTimeouts = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     private val multicastNames = ServiceAdmission(128)
     private val wsPeers = ServiceAdmission(64)
     private val wsRecords = ServiceAdmission(256, 8)
@@ -67,6 +69,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val mdnsQuestions = LinkedHashMap<String, ReverseQuestion>()
     private val mdnsRetries = MdnsRetries()
     private val mdnsAssembly = MdnsAssembly()
+    private val nativeServiceEvidence = NativeServiceEvidence(mdnsAssembly)
+    private val mdnsQuestionSuppression = MdnsQuestionSuppression()
     private val directServices: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val modernQueue: Queue<ModernRequest> = ArrayDeque()
     private val legacyBrowses: Queue<LegacyBrowse> = ArrayDeque()
@@ -116,11 +120,14 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         cancelled.set(true)
         accepting = false
         enriching = false
+        finishMetadataLookups(true)
         workers.shutdownNow()
         enrichment.shutdownNow()
+        metadataTimeouts.shutdownNow()
         closeIo()
         cleanupNsd()
         mdnsAssembly.close()
+        mdnsQuestionSuppression.close()
     }
     @Synchronized fun refreshNetwork(current: NetworkState): Boolean {
         if (!net.refresh(current)) return false
@@ -147,7 +154,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     fun scan(cidr: String?, listener: Listener) {
         Thread({
             if (!ACTIVE.compareAndSet(false, true)) {
-                workers.shutdownNow(); enrichment.shutdownNow()
+                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow()
                 listener.finished(emptyList(), false, "Another scan is finishing. Try again shortly.")
                 return@Thread
             }
@@ -182,6 +189,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else IpRange.address(if (selected.prefix >= 31) selected.first else selected.first - 1) + "/" + selected.prefix + " · IPv4 + IPv6 advertised services"
                 total = hosts.size; started = true; accepting = true; enriching = true
                 health.begin("IPv4 checks"); health.skipped("UPnP descriptions", "No supported description advertised")
+                for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
                 observePhoneAddresses(net.addresses)
                 listener.progressSnapshot(0, total, ::snapshot)
                 val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(55)
@@ -267,7 +275,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else e.message ?: "Could not finish this scan."
             } finally {
                 accepting = false; enriching = false
-                workers.shutdownNow(); enrichment.shutdownNow(); closeIo(); cleanupNsd()
+                finishMetadataLookups(cancelled.get())
+                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow(); closeIo(); cleanupNsd()
                 health.finish(cancelled.get())
                 if (started && done.get() != total) health.truncated("IPv4 checks", "Address checks did not finish")
                 try {
@@ -772,6 +781,72 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {}; health.workFinished(source) }
         })) health.workFinished(source)
     }
+    /** Called only with current wire records, never Android's cached/native service metadata. */
+    private fun finishMetadataLookups(stopped: Boolean) {
+        for (d in found.values) synchronized(d) { d.metadataLookups.finish(stopped) }
+    }
+    private fun requestMetadata(d: Device, service: MdnsPacket.Service) {
+        if (!enriching || cancelled.get() || d.self || !freshResponders.contains(d.ip)) return
+        val peer = peerAddress(d.ip)
+        if (!inScope(peer)) return
+        val request = LocalMetadata.request(service) ?: return
+        val source = request.kind.source
+        // One attempt per peer/protocol: changing TXT paths or ports cannot grow work.
+        val admission = metadataRequests.admit(d.ip, request.kind.name)
+        if (admission == ServiceAdmission.Result.LIMIT) {
+            synchronized(d) {
+                if (enriching && !cancelled.get() && d.metadataLookups.queue(request)) d.metadataLookups.limit(request.kind)
+            }
+            health.truncated(source, "32-per-method / 96-total metadata limit reached"); return
+        }
+        if (admission != ServiceAdmission.Result.ADMITTED) return
+        synchronized(d) {
+            if (!enriching || cancelled.get() || !d.metadataLookups.queue(request)) return
+        }
+        health.workStarted(source)
+        if (!submitEnrichment(DiscoveryWork.Lane.METADATA, source, Runnable {
+            val socket = Socket(); sockets.add(socket)
+            val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(2))
+            try {
+                if (!enriching || cancelled.get()) return@Runnable
+                if (System.nanoTime() >= deadline) { health.truncated(source, "Scan time limit reached"); return@Runnable }
+                net.check(context)
+                if (!inScope(peer) || !freshResponders.contains(d.ip)) return@Runnable
+                net.network!!.bindSocket(socket)
+                health.count(source, "requests")
+                val report = MetadataHttp.exchange(socket, peer, request, deadline, metadataTimeouts) { enriching && !cancelled.get() }
+                if (!enriching || cancelled.get()) return@Runnable
+                net.check(context)
+                if (!inScope(peer) || !freshResponders.contains(d.ip)) return@Runnable
+                synchronized(d) {
+                    if (enriching && !cancelled.get()) {
+                        applyMetadata(d, report, source + " (reported)")
+                        d.metadataLookups.success(request.kind, report)
+                        health.count(source, if (report.hints.values.any { it.isNotEmpty() } || report.mac.isNotEmpty() || report.details.values.any { it.isNotEmpty() }) "metadata replies" else "no extra details")
+                    }
+                }
+            } catch (e: Exception) {
+                blocked(e)
+                if (!cancelled.get()) {
+                    val failure = AndroidMetadataFailure.classify(e, !enriching || System.nanoTime() >= deadline)
+                    d.metadataLookups.failure(request.kind, failure)
+                    MetadataHttp.recordFailure(health, source, failure, false)
+                }
+            } finally {
+                d.metadataLookups.incomplete(request.kind)
+                sockets.remove(socket); try { socket.close() } catch (_: IOException) {}
+                health.workFinished(source)
+            }
+        })) {
+            d.metadataLookups.limit(request.kind)
+            health.workFinished(source)
+        }
+    }
+    private fun applyMetadata(d: Device, report: LocalMetadata.Report, source: String) {
+        for ((field, value) in report.hints) d.hint(field, value, source, if (field == "Name") 90 else 80)
+        for ((field, value) in report.details) d.detail(field, value)
+        if (report.mac.isNotEmpty()) d.hardware(report.mac, source + " MAC address; may be another interface")
+    }
     private fun description(d: Device, responder: InetAddress, location: String?) {
         if (!enriching || !inScope(responder) || d.self) return
         val target = UpnpDescription.target(location, responder)
@@ -984,6 +1059,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             // A live snapshot must not observe Failed before its prior-attempt
             // reason and terminal counter have been published.
             synchronized(health) {
+                nativeServiceEvidence.failed(request.info.serviceName, type, System.nanoTime())?.let { health.diagnostic("mDNS " + type, it) }
                 health.resolveFailed(key, reason)
                 if (request.previousFailure.isNotEmpty()) health.fail("mDNS " + type, "First attempt: " + request.previousFailure)
                 health.count("mDNS " + type, "failed")
@@ -1016,25 +1092,35 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 net.network!!.bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 255; socket.soTimeout = 200
                 val group = InetAddress.getByName(if (ipv6) "ff02::fb%" + net.iface else "224.0.0.251")
                 socket.joinGroup(InetSocketAddress(group, 5353), iface)
-                val start = System.nanoTime(); var nextBatch = 0L; var enumerations = 0; var packets = 0
+                val start = System.nanoTime(); var nextBatch = 0L; var enumerations = 0
+                val traffic = MdnsTraffic(health, ipv6)
                 val typeAttempts = HashMap<String, Int>(); val typeNext = HashMap<String, Long>()
                 while (accepting && !cancelled.get()) {
                     val now = System.nanoTime()
                     if (enumerations < 2 && now - start >= TimeUnit.SECONDS.toNanos((enumerations * 2).toLong())) {
                         val question = MdnsPacket.query(Collections.singletonList(MdnsPacket.ENUMERATION))
                         socket.send(DatagramPacket(question, question.size, group, 5353)); enumerations++; health.count(MDNS_SOURCE, "type queries")
+                        health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
                     }
                     if (now >= nextBatch) {
                         drainMdns(now)
                         val batch = mdnsBatch(ipv6, now, typeAttempts, typeNext)
                         if (batch.questions.isNotEmpty()) {
-                            val query = MdnsPacket.query(batch.questions); socket.send(DatagramPacket(query, query.size, group, 5353))
+                            val known = mdnsAssembly.knownAnswers(ipv6, batch.questions, now)
+                            for (query in MdnsPacket.queryPackets(batch.questions, known)) {
+                                if (!accepting || cancelled.get()) break
+                                socket.send(DatagramPacket(query, query.size, group, 5353))
+                                health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
+                                val answers = ((query[6].toInt() and 255) shl 8) or (query[7].toInt() and 255)
+                                if (answers > 0) health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_KNOWN_ANSWERS, answers)
+                            }
                             health.count(MDNS_SOURCE, "hostname batches"); if (batch.retry) health.count(MDNS_SOURCE, "service retry batches")
                         }
-                        val followUps = mdnsAssembly.due(ipv6, now, 4)
+                        val followUps = mdnsAssembly.due(ipv6, now, 4).filter { shouldAsk(ipv6, it, now) }
                         if (followUps.isNotEmpty()) {
                             val query = MdnsPacket.followUp(followUps)
                             socket.send(DatagramPacket(query, query.size, group, 5353))
+                            health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_SENT)
                             health.count("mDNS service details", "query batches")
                         }
                         if (mdnsAssembly.limited) health.truncated("mDNS service details", "Current-record or follow-up limit reached")
@@ -1042,9 +1128,11 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     }
                     val bytes = ByteArray(MdnsPacket.MAX_PACKET + 1); val packet = DatagramPacket(bytes, bytes.size)
                     try { socket.receive(packet) } catch (_: SocketTimeoutException) { continue }
-                    if (++packets > 1024) { health.truncated(MDNS_SOURCE, "1024-packet safety limit reached"); break }
-                    if (packet.port != 5353 || !inScope(packet.address)) continue
-                    mdnsResolved(packet.address, MdnsPacket.parse(bytes, packet.length))
+                    val response = traffic.receive(bytes, packet.length, packet.port, inScope(packet.address)) { questions ->
+                        if (accepting && !cancelled.get()) mdnsQuestionSuppression.observe(packet.address.address.size == 16, questions, System.nanoTime())
+                    }
+                    if (traffic.limited) break
+                    if (response != null) mdnsResolved(packet.address, response)
                 }
                 if (!cancelled.get()) health.ok(MDNS_SOURCE)
             } catch (e: Exception) { if (accepting && !cancelled.get()) { blocked(e); health.fail(MDNS_SOURCE, "Could not receive local multicast queries") } }
@@ -1055,19 +1143,27 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private class MdnsBatch(names: List<String>, val retry: Boolean) {
         val questions: List<String> = Collections.unmodifiableList(names)
     }
+    private fun shouldAsk(ipv6: Boolean, question: MdnsPacket.Question, now: Long): Boolean {
+        if (!mdnsQuestionSuppression.suppress(ipv6, question, now)) return true
+        health.diagnostic(MDNS_SOURCE, DiscoveryHealth.Diagnostic.MDNS_COALESCED)
+        return false
+    }
     @Synchronized private fun mdnsBatch(ipv6: Boolean, now: Long, typeAttempts: MutableMap<String, Int>, typeNext: MutableMap<String, Long>): MdnsBatch {
         val questions = ArrayList<String>()
-        for (type in mdnsRetries.due(ipv6, now, 8)) questions.add(type + "local")
+        val retries = mdnsRetries.due(ipv6, now, 8)
+        for (type in retries) if (shouldAsk(ipv6, MdnsPacket.Question((type + "local").split('.'), 12), now)) questions.add(type + "local")
         // Recovery queries do not consume normal reverse/type attempts.
-        if (questions.isNotEmpty()) return MdnsBatch(questions, true)
+        if (retries.isNotEmpty()) return MdnsBatch(questions, true)
         for (q in mdnsQuestions.values) if ((Address.bytes(q.ip)!!.size == 16) == ipv6 && q.attempts < 2 && now >= q.next) {
-            questions.add(q.question); q.attempts++; q.next = now + TimeUnit.MILLISECONDS.toNanos(1200)
+            if (shouldAsk(ipv6, MdnsPacket.Question(q.question.split('.'), 12), now)) questions.add(q.question)
+            q.attempts++; q.next = now + TimeUnit.MILLISECONDS.toNanos(1200)
             if (questions.size == 8) break
         }
         for (type in TreeSet(nsdTypes)) {
             if (questions.size == 8) break
             if (typeAttempts.getOrDefault(type, 0) < 2 && now >= typeNext.getOrDefault(type, 0L)) {
-                questions.add(type + "local"); typeAttempts[type] = typeAttempts.getOrDefault(type, 0) + 1
+                if (shouldAsk(ipv6, MdnsPacket.Question((type + "local").split('.'), 12), now)) questions.add(type + "local")
+                typeAttempts[type] = typeAttempts.getOrDefault(type, 0) + 1
                 typeNext[type] = now + TimeUnit.MILLISECONDS.toNanos(1200)
             }
         }
@@ -1198,12 +1294,13 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             if (!d.self) d.hint("Name", name, source + " instance", if (type.contains("http")) 25 else if (type.contains("androidtvremote2")) 85 else 65)
             if (!d.self) d.hint("Hostname", service.host, source + " host", 60)
             val attrs = service.attributes
-            val model = if (HomeKitInfo.applies(type)) attribute(attrs, "md", "model")
+            val model = if (type == "_meshcop._udp.") ""
+                else if (HomeKitInfo.applies(type)) attribute(attrs, "md", "model")
                 else if (type.contains("raop")) attribute(attrs, "am", "model", "md")
                 else if (type.contains("companion-link")) attribute(attrs, "rpMd", "model")
                 else if (type.contains("ipp") || type.contains("printer") || type.contains("pdl-datastream") || type.contains("scanner")) attribute(attrs, "ty", "usb_MDL", "mdl", "model", "product")
                 else attribute(attrs, "model", "md", "ty", "product", "usb_MDL", "mdl")
-            val manufacturer = attribute(attrs, "manufacturer", "usb_MFG", "mfg")
+            val manufacturer = if (type == "_meshcop._udp.") "" else attribute(attrs, "manufacturer", "usb_MFG", "mfg")
             d.hint("Model", model, source + " TXT", if (type.contains("device-info")) 20 else 80)
             d.hint("Manufacturer", manufacturer, source + " TXT", 80)
             if (!d.self) d.hint("Name", attribute(attrs, "fn", "friendlyname"), source + " friendly name", 90)
@@ -1223,6 +1320,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             else if (type.contains("smb")) d.hint("Device type", "File-sharing device", source, 40)
             d.hint("Firmware", attribute(attrs, "fv", "fwversion", "firmware"), source + " TXT", 80)
             d.hint("OS", attribute(attrs, "osvers", "os"), source + " TXT", 80)
+            applyMetadata(d, LocalMetadata.advertisement(type, attrs), source + " TXT")
             if (!d.self && HomeKitInfo.applies(type)) {
                 val homeKit = HomeKitInfo.parse(type, attrs)
                 d.hint("Device type", homeKit.kind, source + " category", if (homeKit.kind == "HomeKit accessory") 35 else 80)
@@ -1232,6 +1330,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             else if (!d.self && type == "_meshcop._udp.") d.hint("Device type", "Thread border router service", source + " service", 35)
         }
         maybeCast(d)
+        requestMetadata(d, service)
     }
     private fun readLegacyArp() {
         if (Build.VERSION.SDK_INT >= 29) return
@@ -1248,6 +1347,11 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         } catch (_: Exception) {}
     }
     @Synchronized private fun cleanupNsd() {
+        for ((type, later) in nativeServiceEvidence.finish(System.nanoTime())) {
+            if (later.observed > 0) health.diagnostic("mDNS " + type, DiscoveryHealth.Diagnostic.NSD_WIRE_LATER_OBSERVED, later.observed)
+            if (later.complete > 0) health.diagnostic("mDNS " + type, DiscoveryHealth.Diagnostic.NSD_WIRE_LATER_COMPLETE, later.complete)
+        }
+        mdnsQuestionSuppression.close()
         resolverTimeouts.removeCallbacksAndMessages(null)
         for (browse in legacyBrowses) health.truncated("mDNS " + browse.type, if (cancelled.get()) "Scan stopped before this type was checked" else "Scan window ended before this type was checked")
         legacyBrowses.clear(); legacyActive.clear()
@@ -1265,7 +1369,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         private val NSD_HANDLE = ServiceHandle<NsdManager>()
         private val ACTIVE = AtomicBoolean()
         private val PORTS = intArrayOf(80, 443, 22, 445, 62078, 631, 8008)
-        private const val MDNS_SOURCE = "mDNS type and hostname queries"
+        private const val MDNS_SOURCE = MdnsTraffic.SOURCE
         private const val WSD_SOURCE = "WS-Discovery"
         private const val ICMP_SOURCE = "ICMP echo"
         private const val IPV6_SOURCE = "IPv6 service checks"

@@ -5,7 +5,7 @@ import java.util.concurrent.*
 
 /** Independent bounded lanes keep slow name lookups out of other workers. */
 class DiscoveryWork {
-    enum class Lane { DETAILS, NAMES, DESCRIPTIONS, CONFIRM, CAST, IPV6 }
+    enum class Lane { DETAILS, NAMES, DESCRIPTIONS, CONFIRM, CAST, IPV6, METADATA }
 
     private val pools = EnumMap<Lane, ThreadPoolExecutor>(Lane::class.java)
     init {
@@ -15,6 +15,7 @@ class DiscoveryWork {
         add(Lane.CONFIRM, 4, 128)
         add(Lane.CAST, 2, 32)
         add(Lane.IPV6, 4, 32)
+        add(Lane.METADATA, 2, 32)
     }
     private fun add(lane: Lane, threads: Int, queued: Int) {
         pools[lane] = ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue(queued))

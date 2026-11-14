@@ -53,9 +53,17 @@ internal object TypographyChecks {
         val ipv4 = "192.0.2.5"
         val variants = listOf("2001:db8:1234:5678:90ab:cdef:1234:5678",
             "fe80:0000:0000:0000:1234:5678:9abc:def0%wlan_fixture0", "2001:db8::192.0.2.123")
+        val request = LocalMetadata.Request(LocalMetadata.Kind.SPOTIFY, 8080, "/fixture")
         fun fixture(v6: String) = listOf(
-            Device().apply { ip = ipv4; name = "Synthetic dual-stack device"; model = "Fixture model"; link("typography:dual") },
-            Device().apply { ip = v6; link("typography:dual") })
+            Device().apply {
+                ip = ipv4; name = "Synthetic dual-stack device"; link("typography:dual")
+                hint("Model", "Fixture model", "UPnP description (reported)", 80)
+                metadataLookups.queue(request); metadataLookups.success(request.kind, LocalMetadata.Report())
+            },
+            Device().apply {
+                ip = v6; link("typography:dual"); metadataLookups.queue(request)
+                metadataLookups.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.CONNECTION_REFUSED))
+            })
         fun inspect(view: TextView, expected: String, context: String) {
             val layout = view.layout
             check(view.text.toString() == expected, "$context preserves the exact address and scope")
@@ -127,6 +135,16 @@ internal object TypographyChecks {
                         check(all.single { it.text.toString() == v6 }.isTextSelectable, "Details $label allow selecting the original address")
                         val missing = all.filter { it.text.toString() == "Not available" }
                         check(missing.isNotEmpty() && missing.all { it.typeface == AppTypography.face(14, false) }, "Unknown MAC values use interface text")
+                        val lookupText = listOf("Spotify Connect device information · IPv4 · port 8080", "Spotify Connect device information · IPv6 · port 8080",
+                            "Succeeded; model not reported; manufacturer not reported\nModel available from UPnP description (reported)", "Connection refused")
+                        for (value in lookupText) {
+                            val view = all.single { it.text.toString() == value }; val layout = view.layout!!
+                            check(layout.getLineEnd(layout.lineCount - 1) == value.length && (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 },
+                                "Lookup $label retains the full endpoint-specific source/outcome")
+                            check(view.height - view.compoundPaddingTop - view.compoundPaddingBottom >= layout.height &&
+                                (0 until layout.lineCount).all { layout.getLineMax(it) <= view.width - view.compoundPaddingLeft - view.compoundPaddingRight + 1 },
+                                "Lookup $label fits its native text layout at the user's font size")
+                        }
                         if (variant == 1 && width == 320 && scale == 2f) {
                             val address = all.single { it.text.toString() == v6 }
                             var panel: View = address
@@ -143,6 +161,8 @@ internal object TypographyChecks {
                         val copied = clipboard.primaryClip!!.getItemAt(0).text.toString()
                         check(copied.contains("IP: $ipv4\n") && copied.contains("IP: $v6\n"), "Copy $label retains every full address including its scope")
                         check(copied.none { it in "\u200b\u00ad\u2060" }, "Copy $label contains no inserted wrapping characters")
+                        check(copied.contains("IPv4 · port 8080: Succeeded") && copied.contains("IPv6 · port 8080: Connection refused") &&
+                            copied.contains("Model available from UPnP description (reported)"), "Copy $label preserves separate outcomes and the current alternative source")
                     }
                 }
             }
