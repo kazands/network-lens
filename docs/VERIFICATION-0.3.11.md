@@ -1,7 +1,7 @@
 # Network Lens 0.3.11 verification
 
 Historical verification record for the artifact named below. For the current
-download and functionality, see [release verification](VERIFICATION-0.3.14.md)
+download and functionality, see [release verification](VERIFICATION-0.3.15.md)
 and [development status](STATUS.md).
 
 Verified locally on 2026-10-30 for the 0.3.11 development pre-release. This update improves typography and IPv6 presentation. Discovery behavior and its known limitations are unchanged.

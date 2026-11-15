@@ -772,7 +772,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                             d.port(port); d.latency = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start).toInt()
                         }
                         break
-                    } catch (e: Exception) { if (refused(e)) break; blocked(e) }
+                    } catch (e: Exception) { blocked(e) }
                     finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
                 }
                 val retry = synchronized(d) { d.hostname.isEmpty() || d.mac.isEmpty() }
@@ -913,9 +913,19 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun description(d: Device, responder: InetAddress, location: String?) {
         if (!enriching || !inScope(responder) || d.self) return
         val target = UpnpDescription.target(location, responder)
-        if (target == null) { if (location != null) health.count("UPnP descriptions", "unsupported URLs"); return }
+        if (target == null) {
+            if (location != null) {
+                health.count("UPnP descriptions", "unsupported URLs")
+                synchronized(d) { if (!descriptions.hasSuccess(d.ip)) d.detail("UPnP description status", "Advertised description URL is unsupported; model details were not read") }
+            }
+            return
+        }
         val offer = descriptions.offer(d.ip, target)
-        if (offer == DescriptionQueue.Offer.LIMIT) { health.truncated("UPnP descriptions", "32-device / 3-location description limit reached"); return }
+        if (offer == DescriptionQueue.Offer.LIMIT) {
+            health.truncated("UPnP descriptions", "32-device / 3-location description limit reached")
+            synchronized(d) { if (!descriptions.hasSuccess(d.ip)) d.detail("UPnP description status", "Description request limit reached; model details were not read") }
+            return
+        }
         if (offer != DescriptionQueue.Offer.START) return
         health.begin("UPnP descriptions")
         submitEnrichment(DiscoveryWork.Lane.DESCRIPTIONS, "UPnP descriptions", Runnable {
@@ -947,11 +957,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             if (values.isEmpty()) throw IOException("No supported description fields")
             synchronized(d) {
                 if (!enriching || cancelled.get()) return
-                val source = "UPnP device description"
-                d.hint("Name", values["friendlyName"], source + " friendly name", 80)
-                d.hint("Manufacturer", values["manufacturer"], source, 70); d.hint("Model", values["modelName"], source, 70)
-                d.detail("UPnP model number", values["modelNumber"]); d.detail("UPnP serial number", values["serialNumber"])
-                d.detail("UPnP device type", values["deviceType"]); d.detail("UPnP description status", "Description received")
+                applyDescription(d, values)
             }
             descriptions.record(d.ip, true); health.count("UPnP descriptions", "received")
         } catch (e: Exception) {
@@ -963,6 +969,18 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 }
             }
         } finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
+    }
+    private fun applyDescription(d: Device, values: Map<String, String>) {
+        val source = "UPnP device description"
+        d.hint("Name", values["friendlyName"], source + " friendly name", 80)
+        d.hint("Manufacturer", values["manufacturer"], source, 70)
+        d.hint("Model", values["modelName"], source, 70)
+        d.hint("Device type", UpnpDescription.deviceKind(values), source + " device type", 80)
+        d.detail("UPnP model number", values["modelNumber"])
+        d.detail("UPnP model description", values["modelDescription"])
+        d.detail("UPnP serial number", values["serialNumber"])
+        d.detail("UPnP device type", values["deviceType"])
+        d.detail("UPnP description status", if (IdentityHints.specific(values["modelName"])) "Description received" else "Description received without a specific model")
     }
     private fun finishDescriptions() {
         if (descriptions.peers() == 0) return
@@ -1246,6 +1264,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         if (result.records.isNotEmpty()) { health.begin("mDNS service details"); health.ok("mDNS service details") }
         if (mdnsAssembly.limited) health.truncated("mDNS service details", "Current-record or follow-up limit reached")
         applyRecovered(peer, recovered)
+        applyAssociatedModels(responder, System.nanoTime())
         applyRouted(System.nanoTime())
         val ip = net.scoped(responder); val question = mdnsQuestions[ip] ?: return
         if (question.attempts == 0) return
@@ -1266,7 +1285,21 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             val peer = net.scoped(sender)
             if (freshResponders.contains(peer)) applyRecovered(peer, services)
         }
+        // A TXT-only model can become unambiguous after a conflicting record expires.
+        for (sender in mdnsAssembly.modelPeers(now)) applyAssociatedModels(sender, now)
         applyRouted(now)
+    }
+    private fun applyAssociatedModels(sender: InetAddress, now: Long) {
+        if (!accepting || cancelled.get() || !inScope(sender)) return
+        val peer = net.scoped(sender)
+        if (!freshResponders.contains(peer)) return
+        val device = found[peer] ?: return
+        if (device.self) return
+        for (attributes in mdnsAssembly.associatedModels(sender, now)) synchronized(device) {
+            device.recognizeModel(attributes)
+            device.hint("Model", attribute(attributes, "model"), "mDNS current _device-info._tcp. TXT", 20)
+            device.evidence("Current associated Bonjour model record from this address")
+        }
     }
     private fun applyRouted(now: Long, only: String? = null) {
         if (!enriching || cancelled.get()) return
@@ -1349,7 +1382,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun applyCurrentService(d: Device, service: MdnsPacket.Service) {
         if (!accepting || cancelled.get()) return
         synchronized(d) {
-            if (service.type == "_device-info._tcp.") d.recognizeModel(service.attributes)
+            d.recognizeServiceModel(service.type, service.attributes)
             applyService(d, service, "mDNS current")
         }
     }
@@ -1381,7 +1414,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             } else if (type.contains("raop")) {
                 val at = name.indexOf('@')
                 if (at == 12) d.hardware(name.substring(0, at), "RAOP advertised hardware ID; may be another interface")
-                d.hint("Device type", "Audio device", source, 60)
+                d.hint("Device type", "Audio service", source, 60)
             } else if (type.contains("ipp") || type.contains("printer") || type.contains("pdl-datastream") || type.contains("scanner")) d.hint("Device type", "Printer service", source, 80)
             else if (type.contains("cast")) d.hint("Device type", "Cast device", source, 70)
             else if (type.contains("smb")) d.hint("Device type", "File-sharing device", source, 40)

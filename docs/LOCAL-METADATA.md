@@ -147,7 +147,7 @@ fix for the native-resolution issue or Spotify connection failures.
 ## Verification and known limits
 
 Current release checks and exact artifact identities are in
-[release verification](VERIFICATION-0.3.14.md). Earlier synthetic transport,
+[release verification](VERIFICATION-0.3.15.md). Earlier synthetic transport,
 TLS, mDNS, Android and authorized physical diagnostics are retained in the
 [metadata verification history](archive/METADATA-VERIFICATION.md).
 

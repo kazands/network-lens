@@ -1,0 +1,994 @@
+{
+  "source": "https://github.com/littlebyteorg/appledb/blob/gh-pages/device/main.json",
+  "sourceGitBlob": "22e79f5e8fa7cb79a53b7509450fec614dbc5877",
+  "sourceSha256": "eea28e9f8265901e17826a56bbf9c8f9b340677efecfdf64051e82adf1c13c5b",
+  "licenseGitBlob": "11a08f9af7d8af49a9977c9da8a1352fc87d95a3",
+  "reviewDate": "2026-11-15",
+  "policy": "Exact released iPad/iPhone identifiers only; no board/model-number guessing; existing Recog mappings retained; ambiguous identifiers fail generation.",
+  "references": [
+    "https://support.apple.com/en-us/108043",
+    "https://support.apple.com/en-us/111840"
+  ],
+  "count": 128,
+  "mappings": [
+    {
+      "code": "iPad1,1",
+      "title": "iPad",
+      "category": "TABLET",
+      "key": "iPad1,1"
+    },
+    {
+      "code": "iPad11,1",
+      "title": "iPad mini (5th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad11,1"
+    },
+    {
+      "code": "iPad11,2",
+      "title": "iPad mini (5th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad11,2"
+    },
+    {
+      "code": "iPad11,3",
+      "title": "iPad Air (3rd generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad11,3"
+    },
+    {
+      "code": "iPad11,4",
+      "title": "iPad Air (3rd generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad11,4"
+    },
+    {
+      "code": "iPad13,10",
+      "title": "iPad Pro 12.9-inch (5th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad13,10"
+    },
+    {
+      "code": "iPad13,11",
+      "title": "iPad Pro 12.9-inch (5th generation) Wi-Fi + Cellular (1 or 2 TB)",
+      "category": "TABLET",
+      "key": "iPad13,11"
+    },
+    {
+      "code": "iPad13,16",
+      "title": "iPad Air (5th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad13,16"
+    },
+    {
+      "code": "iPad13,17",
+      "title": "iPad Air (5th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad13,17"
+    },
+    {
+      "code": "iPad13,18",
+      "title": "iPad (10th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad13,18"
+    },
+    {
+      "code": "iPad13,19",
+      "title": "iPad (10th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad13,19"
+    },
+    {
+      "code": "iPad13,8",
+      "title": "iPad Pro 12.9-inch (5th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad13,8"
+    },
+    {
+      "code": "iPad13,9",
+      "title": "iPad Pro 12.9-inch (5th generation) Wi-Fi (1 or 2 TB)",
+      "category": "TABLET",
+      "key": "iPad13,9"
+    },
+    {
+      "code": "iPad14,10",
+      "title": "iPad Air 13-inch (M2) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad14,10"
+    },
+    {
+      "code": "iPad14,11",
+      "title": "iPad Air 13-inch (M2) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad14,11"
+    },
+    {
+      "code": "iPad14,3",
+      "title": "iPad Pro 11-inch (4th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad14,3"
+    },
+    {
+      "code": "iPad14,4",
+      "title": "iPad Pro 11-inch (4th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad14,4"
+    },
+    {
+      "code": "iPad14,5",
+      "title": "iPad Pro 12.9-inch (6th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad14,5"
+    },
+    {
+      "code": "iPad14,6",
+      "title": "iPad Pro 12.9-inch (6th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad14,6"
+    },
+    {
+      "code": "iPad14,8",
+      "title": "iPad Air 11-inch (M2) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad14,8"
+    },
+    {
+      "code": "iPad14,9",
+      "title": "iPad Air 11-inch (M2) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad14,9"
+    },
+    {
+      "code": "iPad15,3",
+      "title": "iPad Air 11-inch (M3) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad15,3"
+    },
+    {
+      "code": "iPad15,4",
+      "title": "iPad Air 11-inch (M3) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad15,4"
+    },
+    {
+      "code": "iPad15,5",
+      "title": "iPad Air 13-inch (M3) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad15,5"
+    },
+    {
+      "code": "iPad15,6",
+      "title": "iPad Air 13-inch (M3) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad15,6"
+    },
+    {
+      "code": "iPad15,7",
+      "title": "iPad (A16) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad15,7"
+    },
+    {
+      "code": "iPad15,8",
+      "title": "iPad (A16) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad15,8"
+    },
+    {
+      "code": "iPad16,1",
+      "title": "iPad mini (A17 Pro) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad16,1"
+    },
+    {
+      "code": "iPad16,10",
+      "title": "iPad Air 13-inch (M4) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad16,10"
+    },
+    {
+      "code": "iPad16,11",
+      "title": "iPad Air 13-inch (M4) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad16,11"
+    },
+    {
+      "code": "iPad16,2",
+      "title": "iPad mini (A17 Pro) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad16,2"
+    },
+    {
+      "code": "iPad16,3",
+      "title": "iPad Pro 11-inch (M4) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad16,3"
+    },
+    {
+      "code": "iPad16,4",
+      "title": "iPad Pro 11-inch (M4) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad16,4"
+    },
+    {
+      "code": "iPad16,5",
+      "title": "iPad Pro 13-inch (M4) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad16,5"
+    },
+    {
+      "code": "iPad16,6",
+      "title": "iPad Pro 13-inch (M4) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad16,6"
+    },
+    {
+      "code": "iPad16,8",
+      "title": "iPad Air 11-inch (M4) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad16,8"
+    },
+    {
+      "code": "iPad16,9",
+      "title": "iPad Air 11-inch (M4) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad16,9"
+    },
+    {
+      "code": "iPad17,1",
+      "title": "iPad Pro 11-inch Wi-Fi (M5)",
+      "category": "TABLET",
+      "key": "iPad17,1"
+    },
+    {
+      "code": "iPad17,2",
+      "title": "iPad Pro 11-inch Wi-Fi + Cellular (M5)",
+      "category": "TABLET",
+      "key": "iPad17,2"
+    },
+    {
+      "code": "iPad17,3",
+      "title": "iPad Pro 13-inch Wi-Fi (M5)",
+      "category": "TABLET",
+      "key": "iPad17,3"
+    },
+    {
+      "code": "iPad17,4",
+      "title": "iPad Pro 13-inch Wi-Fi + Cellular (M5)",
+      "category": "TABLET",
+      "key": "iPad17,4"
+    },
+    {
+      "code": "iPad19,1",
+      "title": "iPad mini (A20 Pro) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad19,1"
+    },
+    {
+      "code": "iPad19,2",
+      "title": "iPad mini (A20 Pro) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad19,2"
+    },
+    {
+      "code": "iPad2,1",
+      "title": "iPad 2 Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad2,1"
+    },
+    {
+      "code": "iPad2,2",
+      "title": "iPad 2 Wi-Fi + 3G (GSM)",
+      "category": "TABLET",
+      "key": "iPad2,2"
+    },
+    {
+      "code": "iPad2,3",
+      "title": "iPad 2 Wi-Fi + 3G (CDMA)",
+      "category": "TABLET",
+      "key": "iPad2,3"
+    },
+    {
+      "code": "iPad2,4",
+      "title": "iPad 2 Wi-Fi (Mid 2012)",
+      "category": "TABLET",
+      "key": "iPad2,4"
+    },
+    {
+      "code": "iPad2,5",
+      "title": "iPad mini Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad2,5"
+    },
+    {
+      "code": "iPad2,6",
+      "title": "iPad mini Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad2,6"
+    },
+    {
+      "code": "iPad2,7",
+      "title": "iPad mini Wi-Fi + Cellular (MM)",
+      "category": "TABLET",
+      "key": "iPad2,7"
+    },
+    {
+      "code": "iPad3,1",
+      "title": "iPad (3rd generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad3,1"
+    },
+    {
+      "code": "iPad3,2",
+      "title": "iPad (3rd generation) Wi-Fi + Cellular (VZ)",
+      "category": "TABLET",
+      "key": "iPad3,2"
+    },
+    {
+      "code": "iPad3,3",
+      "title": "iPad (3rd generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad3,3"
+    },
+    {
+      "code": "iPad3,4",
+      "title": "iPad (4th generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad3,4"
+    },
+    {
+      "code": "iPad3,5",
+      "title": "iPad (4th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad3,5"
+    },
+    {
+      "code": "iPad3,6",
+      "title": "iPad (4th generation) Wi-Fi + Cellular (MM)",
+      "category": "TABLET",
+      "key": "iPad3,6"
+    },
+    {
+      "code": "iPad4,1",
+      "title": "iPad Air Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad4,1"
+    },
+    {
+      "code": "iPad4,2",
+      "title": "iPad Air Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad4,2"
+    },
+    {
+      "code": "iPad4,3",
+      "title": "iPad Air Wi-Fi + Cellular (TD-LTE)",
+      "category": "TABLET",
+      "key": "iPad4,3"
+    },
+    {
+      "code": "iPad4,4",
+      "title": "iPad mini 2 Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad4,4"
+    },
+    {
+      "code": "iPad4,5",
+      "title": "iPad mini 2 Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad4,5"
+    },
+    {
+      "code": "iPad4,6",
+      "title": "iPad mini 2 Wi-Fi + Cellular (TD-LTE)",
+      "category": "TABLET",
+      "key": "iPad4,6"
+    },
+    {
+      "code": "iPad4,7",
+      "title": "iPad mini 3 Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad4,7"
+    },
+    {
+      "code": "iPad4,8",
+      "title": "iPad mini 3 Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad4,8"
+    },
+    {
+      "code": "iPad5,1",
+      "title": "iPad mini 4 Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad5,1"
+    },
+    {
+      "code": "iPad5,4",
+      "title": "iPad Air 2 Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad5,4"
+    },
+    {
+      "code": "iPad6,12",
+      "title": "iPad (5th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad6,12"
+    },
+    {
+      "code": "iPad6,3",
+      "title": "iPad Pro (9.7-inch) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad6,3"
+    },
+    {
+      "code": "iPad6,4",
+      "title": "iPad Pro (9.7-inch) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad6,4"
+    },
+    {
+      "code": "iPad6,7",
+      "title": "iPad Pro (12.9-inch) (1st generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad6,7"
+    },
+    {
+      "code": "iPad6,8",
+      "title": "iPad Pro (12.9-inch) (1st generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad6,8"
+    },
+    {
+      "code": "iPad7,1",
+      "title": "iPad Pro (12.9-inch) (2nd generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad7,1"
+    },
+    {
+      "code": "iPad7,2",
+      "title": "iPad Pro (12.9-inch) (2nd generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad7,2"
+    },
+    {
+      "code": "iPad7,3",
+      "title": "iPad Pro (10.5-inch) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad7,3"
+    },
+    {
+      "code": "iPad7,4",
+      "title": "iPad Pro (10.5-inch) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad7,4"
+    },
+    {
+      "code": "iPad7,6",
+      "title": "iPad (6th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad7,6"
+    },
+    {
+      "code": "iPad8,12",
+      "title": "iPad Pro 12.9-inch (4th generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad8,12"
+    },
+    {
+      "code": "iPad8,2",
+      "title": "iPad Pro 11-inch (1st generation) Wi-Fi (1TB)",
+      "category": "TABLET",
+      "key": "iPad8,2"
+    },
+    {
+      "code": "iPad8,3",
+      "title": "iPad Pro 11-inch (1st generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad8,3"
+    },
+    {
+      "code": "iPad8,4",
+      "title": "iPad Pro 11-inch (1st generation) Wi-Fi + Cellular (1TB)",
+      "category": "TABLET",
+      "key": "iPad8,4"
+    },
+    {
+      "code": "iPad8,6",
+      "title": "iPad Pro 12.9-inch (3rd generation) Wi-Fi (1TB)",
+      "category": "TABLET",
+      "key": "iPad8,6"
+    },
+    {
+      "code": "iPad8,7",
+      "title": "iPad Pro 12.9-inch (3rd generation) Wi-Fi + Cellular",
+      "category": "TABLET",
+      "key": "iPad8,7"
+    },
+    {
+      "code": "iPad8,8",
+      "title": "iPad Pro 12.9-inch (3rd generation) Wi-Fi + Cellular (1TB)",
+      "category": "TABLET",
+      "key": "iPad8,8"
+    },
+    {
+      "code": "iPad8,9",
+      "title": "iPad Pro 11-inch (2nd generation) Wi-Fi",
+      "category": "TABLET",
+      "key": "iPad8,9"
+    },
+    {
+      "code": "iPhone1,1",
+      "title": "iPhone",
+      "category": "PHONE",
+      "key": "iPhone1,1"
+    },
+    {
+      "code": "iPhone1,2",
+      "title": "iPhone 3G",
+      "category": "PHONE",
+      "key": "iPhone1,2"
+    },
+    {
+      "code": "iPhone13,1",
+      "title": "iPhone 12 mini",
+      "category": "PHONE",
+      "key": "iPhone13,1"
+    },
+    {
+      "code": "iPhone14,6",
+      "title": "iPhone SE (3rd generation)",
+      "category": "PHONE",
+      "key": "iPhone14,6"
+    },
+    {
+      "code": "iPhone14,7",
+      "title": "iPhone 14",
+      "category": "PHONE",
+      "key": "iPhone14,7"
+    },
+    {
+      "code": "iPhone14,8",
+      "title": "iPhone 14 Plus",
+      "category": "PHONE",
+      "key": "iPhone14,8"
+    },
+    {
+      "code": "iPhone15,2",
+      "title": "iPhone 14 Pro",
+      "category": "PHONE",
+      "key": "iPhone15,2"
+    },
+    {
+      "code": "iPhone15,3",
+      "title": "iPhone 14 Pro Max",
+      "category": "PHONE",
+      "key": "iPhone15,3"
+    },
+    {
+      "code": "iPhone15,4",
+      "title": "iPhone 15",
+      "category": "PHONE",
+      "key": "iPhone15,4"
+    },
+    {
+      "code": "iPhone15,5",
+      "title": "iPhone 15 Plus",
+      "category": "PHONE",
+      "key": "iPhone15,5"
+    },
+    {
+      "code": "iPhone16,1",
+      "title": "iPhone 15 Pro",
+      "category": "PHONE",
+      "key": "iPhone16,1"
+    },
+    {
+      "code": "iPhone16,2",
+      "title": "iPhone 15 Pro Max",
+      "category": "PHONE",
+      "key": "iPhone16,2"
+    },
+    {
+      "code": "iPhone17,1",
+      "title": "iPhone 16 Pro",
+      "category": "PHONE",
+      "key": "iPhone17,1"
+    },
+    {
+      "code": "iPhone17,2",
+      "title": "iPhone 16 Pro Max",
+      "category": "PHONE",
+      "key": "iPhone17,2"
+    },
+    {
+      "code": "iPhone17,3",
+      "title": "iPhone 16",
+      "category": "PHONE",
+      "key": "iPhone17,3"
+    },
+    {
+      "code": "iPhone17,4",
+      "title": "iPhone 16 Plus",
+      "category": "PHONE",
+      "key": "iPhone17,4"
+    },
+    {
+      "code": "iPhone17,5",
+      "title": "iPhone 16e",
+      "category": "PHONE",
+      "key": "iPhone17,5"
+    },
+    {
+      "code": "iPhone18,1",
+      "title": "iPhone 17 Pro",
+      "category": "PHONE",
+      "key": "iPhone18,1"
+    },
+    {
+      "code": "iPhone18,2",
+      "title": "iPhone 17 Pro Max",
+      "category": "PHONE",
+      "key": "iPhone18,2"
+    },
+    {
+      "code": "iPhone18,3",
+      "title": "iPhone 17",
+      "category": "PHONE",
+      "key": "iPhone18,3"
+    },
+    {
+      "code": "iPhone18,4",
+      "title": "iPhone Air",
+      "category": "PHONE",
+      "key": "iPhone18,4"
+    },
+    {
+      "code": "iPhone18,5",
+      "title": "iPhone 17e",
+      "category": "PHONE",
+      "key": "iPhone18,5"
+    },
+    {
+      "code": "iPhone19,2",
+      "title": "iPhone 18 Pro",
+      "category": "PHONE",
+      "key": "iPhone19,2"
+    },
+    {
+      "code": "iPhone19,3",
+      "title": "iPhone 18 Pro Max (US)",
+      "category": "PHONE",
+      "key": "iPhone19,3"
+    },
+    {
+      "code": "iPhone19,4",
+      "title": "iPhone Duo",
+      "category": "PHONE",
+      "key": "iPhone19,4"
+    },
+    {
+      "code": "iPhone19,7",
+      "title": "iPhone 18 Pro Max (Global)",
+      "category": "PHONE",
+      "key": "iPhone19,7"
+    },
+    {
+      "code": "iPhone2,1",
+      "title": "iPhone 3GS",
+      "category": "PHONE",
+      "key": "iPhone2,1"
+    },
+    {
+      "code": "iPhone3,1",
+      "title": "iPhone 4 (GSM)",
+      "category": "PHONE",
+      "key": "iPhone3,1"
+    },
+    {
+      "code": "iPhone3,2",
+      "title": "iPhone 4 (GSM, 2012)",
+      "category": "PHONE",
+      "key": "iPhone3,2"
+    },
+    {
+      "code": "iPhone3,3",
+      "title": "iPhone 4 (CDMA)",
+      "category": "PHONE",
+      "key": "iPhone3,3"
+    },
+    {
+      "code": "iPhone4,1",
+      "title": "iPhone 4S",
+      "category": "PHONE",
+      "key": "iPhone4,1"
+    },
+    {
+      "code": "iPhone5,1",
+      "title": "iPhone 5 (GSM)",
+      "category": "PHONE",
+      "key": "iPhone5,1"
+    },
+    {
+      "code": "iPhone5,2",
+      "title": "iPhone 5 (CDMA)",
+      "category": "PHONE",
+      "key": "iPhone5,2"
+    },
+    {
+      "code": "iPhone5,3",
+      "title": "iPhone 5c (GSM)",
+      "category": "PHONE",
+      "key": "iPhone5,3"
+    },
+    {
+      "code": "iPhone5,4",
+      "title": "iPhone 5c (CDMA)",
+      "category": "PHONE",
+      "key": "iPhone5,4"
+    },
+    {
+      "code": "iPhone6,1",
+      "title": "iPhone 5s (GSM)",
+      "category": "PHONE",
+      "key": "iPhone6,1"
+    },
+    {
+      "code": "iPhone6,2",
+      "title": "iPhone 5s (CDMA)",
+      "category": "PHONE",
+      "key": "iPhone6,2"
+    },
+    {
+      "code": "iPhone7,1",
+      "title": "iPhone 6 Plus",
+      "category": "PHONE",
+      "key": "iPhone7,1"
+    },
+    {
+      "code": "iPhone7,2",
+      "title": "iPhone 6",
+      "category": "PHONE",
+      "key": "iPhone7,2"
+    },
+    {
+      "code": "iPhone8,1",
+      "title": "iPhone 6s",
+      "category": "PHONE",
+      "key": "iPhone8,1"
+    },
+    {
+      "code": "iPhone8,2",
+      "title": "iPhone 6s Plus",
+      "category": "PHONE",
+      "key": "iPhone8,2"
+    },
+    {
+      "code": "iPhone8,4",
+      "title": "iPhone SE (1st generation)",
+      "category": "PHONE",
+      "key": "iPhone8,4"
+    },
+    {
+      "code": "iPhone9,1",
+      "title": "iPhone 7 (CDMA)",
+      "category": "PHONE",
+      "key": "iPhone9,1"
+    },
+    {
+      "code": "iPhone9,3",
+      "title": "iPhone 7 (GSM)",
+      "category": "PHONE",
+      "key": "iPhone9,3"
+    }
+  ],
+  "exclusions": [
+    {
+      "key": "iPad11,6",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad11,7",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad12,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad12,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,20",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad13,21",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad13,4",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,6",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad13,7",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad14,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad14,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad4,9",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad5,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad5,3",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad5,5",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad5,6",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad6,1",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad6,11",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad6,2",
+      "reason": "internal or not released by review date"
+    },
+    {
+      "key": "iPad7,11",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad7,12",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad7,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad8,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad8,10",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad8,11",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPad8,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,3",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,4",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone10,6",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone11,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone11,4",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone11,6",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone11,8",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone12,1",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone12,3",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone12,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone12,8",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone13,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone13,3",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone13,4",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone14,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone14,3",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone14,4",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone14,5",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone9,2",
+      "reason": "existing reviewed Recog mapping retained"
+    },
+    {
+      "key": "iPhone9,4",
+      "reason": "existing reviewed Recog mapping retained"
+    }
+  ],
+  "generatedSha256": "0c6f6b9b22f61fb081aaae57c5dd7b6cb696084a80f97962cfce8e338ddc08ee"
+}

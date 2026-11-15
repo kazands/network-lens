@@ -1,5 +1,22 @@
 # Third-party code and assets
 
+## Supplemental Apple mobile model facts
+
+AppleDB device facts are MIT-licensed, Copyright (c) 2022 emiyl. The complete
+notice is retained in `appledb-original/LICENSE` and packaged in
+`app/src/main/res/raw/appledb_license.txt`. The upstream README, including its
+credits to apple-knowledge, apple-data and The Apple Wiki, is retained alongside
+the original `device/main.json` snapshot. Source: https://github.com/littlebyteorg/appledb .
+
+`apple-model-provenance.json` pins the source Git blob and SHA-256, records every
+selected/excluded mobile identifier and the generation policy. The supplemental
+table contains 128 exact released iPad/iPhone codes absent from the existing
+Recog table. Internal/unreleased products, board IDs and unreviewed device types
+are excluded. Existing conservative Recog interpretations are retained. No
+upstream executable code, API client, artwork or runtime network lookup is used.
+The original full source is retained for reproduction; only selected mapping
+facts and the license are bundled in the application.
+
 ## Public product catalogue facts
 
 The manufacturer-qualified catalogue combines a filtered NIST CPE hardware

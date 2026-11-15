@@ -6,8 +6,15 @@ import java.util.Locale
 internal object DeviceCatalog {
     enum class Category(val label: String) {
         LAPTOP("Laptop"), DESKTOP("Desktop computer"), TABLET("Tablet"), PHONE("Smartphone"),
-        SPEAKER("Smart speaker"), TV_PLAYER("Streaming device"), HANDHELD("Portable media player"),
-        RECORDER("Network video recorder"), CONSOLE("Game console"), THERMOSTAT("Thermostat"), UNSPECIFIED("Not classified")
+        SPEAKER("Speaker"), TV_PLAYER("Streaming device"), HANDHELD("Portable media player"),
+        RECORDER("Network video recorder"), CONSOLE("Game console"), THERMOSTAT("Thermostat"), TV("Television"),
+        CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
+        SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
+        AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
+        AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
+        SECURITY_SYSTEM("Security system"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
+        ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
+        SHOWER("Shower"), REMOTE("Remote control"), UNSPECIFIED("Not classified")
     }
     data class Product(val id: String, val brand: String, val title: String, val category: Category,
                        val models: Set<String>, val redundantNames: Set<String> = emptySet(), val familyOnly: Boolean = false,
@@ -30,13 +37,17 @@ internal object DeviceCatalog {
         Product("sony:playstation-5", "Sony", "Sony PlayStation 5", Category.CONSOLE,
             keys("PS5", "PlayStation 5", "Sony PlayStation 5"), familyOnly = true),
         Product("ecobee:smart-thermostat-premium", "ecobee", "ecobee Smart Thermostat Premium", Category.THERMOSTAT,
-            keys("Smart_Thermostat_Premium", "Smart Thermostat Premium", "ecobee Smart Thermostat Premium"), manufacturerRequired = true)
+            keys("Smart_Thermostat_Premium", "Smart Thermostat Premium", "ecobee Smart Thermostat Premium", "ECB601"), manufacturerRequired = true),
+        Product("samsung:pn59d550", "Samsung", "Samsung PN59D550", Category.TV,
+            keys("PN59D550", "PN59D550C1F", "PN59D550C1FXZC"), familyOnly = true, manufacturerRequired = true)
     )
     private fun brand(value: String): String = when (key(value)) {
         "hikvision", "hangzhou hikvision digital technology co., ltd.", "hangzhou hikvision digital technology co.,ltd." -> "hikvision"
         "nvidia", "nvidia corporation" -> "nvidia"
         "sony", "sony corporation", "sony interactive entertainment", "sony interactive entertainment inc.", "sony_tv" -> "sony"
         "samsung", "samsung electronics", "samsung electronics co., ltd." -> "samsung"
+        "ecobee", "ecobee inc.", "ecobee inc" -> "ecobee"
+        "apple", "apple inc.", "apple inc", "apple computer, inc." -> "apple"
         "google", "google llc" -> "google"
         "dlink", "d-link", "d-link corporation" -> "d-link"
         "hp", "hp inc.", "hewlett-packard", "hewlett packard", "hewlett-packard company" -> "hp"
@@ -63,7 +74,7 @@ internal object DeviceCatalog {
             (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
         val maker = brand(manufacturer)
         val entry = global.lookup(maker, model) ?: return null
-        return Product("catalog:$maker:${key(model).removePrefix(maker + " ")}", entry.brand, entry.title, Category.UNSPECIFIED,
+        return Product("catalog:$maker:${key(entry.title)}", entry.brand, entry.title, Category.UNSPECIFIED,
             keys(model), familyOnly = entry.source.contains("NIST-CPE@"), reference = entry.source)
     }
     fun fromRecog(model: Recog.Model): Match {
@@ -87,6 +98,7 @@ internal object DeviceCatalog {
         private var firstModel = ""
         private var modelSource = ""
         private val models = HashSet<String>()
+        private val modelSources = HashMap<String, String>()
         private var manufacturer = ""
         private var manufacturerSource = ""
         private var playStationResponse = false
@@ -106,6 +118,7 @@ internal object DeviceCatalog {
                     if (next !in models) {
                         if (models.size == 8) conflicted = true
                         else models.add(next)
+                        if (!conflicted) modelSources[next] = source
                     }
                     if (firstModel.isEmpty()) { firstModel = value; modelSource = source }
                 }
@@ -114,6 +127,17 @@ internal object DeviceCatalog {
         fun compatible(product: Product): Boolean = !conflicted &&
             models.all(product::acceptsModel) &&
             (manufacturer.isEmpty() || manufacturer == brand(product.brand))
+        /** Hardware can be known when the exact product is ambiguous. Unknown model tokens
+         * do not turn a known thermostat into an audio device; contradictory known types do. */
+        fun categories(): List<HardwareClassification.Fact> {
+            if (conflicted) return emptyList()
+            return models.mapNotNull { model ->
+                val product = lookup(model, manufacturer) ?: return@mapNotNull null
+                if (product.category == Category.UNSPECIFIED ||
+                    product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) null
+                else HardwareClassification.Fact(product.category, "Local product catalogue · Model=$model · ${modelSources[model]}")
+            }
+        }
         fun match(): Match? {
             val product = lookup(firstModel, manufacturer) ?: return null
             if (!compatible(product)) return null
@@ -127,10 +151,16 @@ internal object DeviceCatalog {
         }
         fun copy(): Evidence = Evidence().also {
             it.firstModel = firstModel; it.modelSource = modelSource
-            it.models.addAll(models)
+            it.models.addAll(models); it.modelSources.putAll(modelSources)
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
             it.playStationResponse = playStationResponse
+        }
+        fun include(other: Evidence) {
+            if (other.conflicted) conflicted = true
+            other.models.sorted().forEach { offer("Model", it, other.modelSources[it].orEmpty()) }
+            offer("Manufacturer", other.manufacturer, other.manufacturerSource)
+            playStationResponse = playStationResponse || other.playStationResponse
         }
     }
 }

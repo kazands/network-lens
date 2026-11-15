@@ -2157,11 +2157,20 @@ class SmokeInstrumentation : Instrumentation() {
             observer.joinGroup(InetSocketAddress(group, 5353), iface)
             var p: ByteArray = splitPacket(live.ip, 0)
             receive.invoke(wired, InetAddress.getByName(live.ip), MdnsPacket.parse(p, p.size))
+            // A valid whitespace-only DNS label must survive auxiliary model querying.
+            // The later ordinary reply also proves this input did not terminate the receiver.
+            for (part in 0..3) {
+                val anchor = splitPacket(live.ip, part, "_companion-link._tcp.local", " ")
+                receive.invoke(wired, InetAddress.getByName(live.ip), MdnsPacket.parse(anchor, anchor.size))
+            }
+            check(wired.snapshot().single { it.ip == live.ip }.model.isEmpty(),
+                "Whitespace anchor has no model before the later ordinary multicast reply")
             worker = (raw.invoke(wired, false) as Thread?)
             var sawSrv: Boolean = false
             var sawTxt: Boolean = false
+            var sawRawModelName = false
             var deadline: Long = (SystemClock.uptimeMillis() + 5000)
-            while (((SystemClock.uptimeMillis() < deadline) && !(((sawSrv && sawTxt))))) {
+            while (SystemClock.uptimeMillis() < deadline && !(sawSrv && sawTxt && sawRawModelName)) {
                 var b: ByteArray = ByteArray(2048)
                 var packet: DatagramPacket = DatagramPacket(b, b.size)
                 try {
@@ -2172,6 +2181,9 @@ class SmokeInstrumentation : Instrumentation() {
                 if (((packet.length < 12) || ((((b[2]).toInt() and (128).toInt())) != 0))) {
                     continue
                 }
+                if (MdnsPacket.multicastQuestions(b, packet.length).any {
+                    it.kind == 16 && it.labels == listOf(" ", "_device-info", "_tcp", "local")
+                }) sawRawModelName = true
                 var n: Int =
                     ((((((((b[4]).toInt() and (255).toInt()))).toInt() shl (8).toInt()))).toInt() or
                         ((((b[5]).toInt() and (255).toInt()))).toInt())
@@ -2219,6 +2231,8 @@ class SmokeInstrumentation : Instrumentation() {
                 (sawSrv && sawTxt),
                 "Actual selected-interface multicast carries explicit SRV and TXT follow-up questions",
             )
+            check(sawRawModelName && worker!!.isAlive,
+                "Auxiliary multicast preserves the raw whitespace label and keeps the discovery receiver running")
             run {
                 var part: Int = 1
                 while ((part < 4)) {
@@ -2493,8 +2507,8 @@ class SmokeInstrumentation : Instrumentation() {
                     ("Correct Lucide role for " + d.kind),
                 )
                 check(
-                    icon.label.equals(d.kind),
-                    "Accessibility label preserves the actual reported category",
+                    icon.label == HardwareClassification.reported(d.kind)?.label,
+                    "Accessibility label describes the interpreted physical category",
                 )
                 devices.add(d)
                 i++
@@ -8991,9 +9005,8 @@ class SmokeInstrumentation : Instrumentation() {
             return bytes.toByteArray()
         }
 
-        private fun splitPacket(address: String, part: Int): ByteArray {
-            var type: String = "_networklens-fixture._tcp.local"
-            var instance: String = ("Split fixture." + type)
+        private fun splitPacket(address: String, part: Int, type: String = "_networklens-fixture._tcp.local", label: String = "Split fixture"): ByteArray {
+            var instance: String = (label + "." + type)
             var body: ByteArrayOutputStream = ByteArrayOutputStream()
             var payload: DataOutputStream = DataOutputStream(body)
             var owner: String? = null
@@ -9013,7 +9026,9 @@ class SmokeInstrumentation : Instrumentation() {
                     if ((part == 2)) {
                         owner = instance
                         kind = 16
-                        for (field in arrayOf("fn=Fresh split name", "md=Fresh split model")) {
+                        val fields = if (type == "_companion-link._tcp.local") arrayOf("rpVr=1")
+                            else arrayOf("fn=Fresh split name", "md=Fresh split model")
+                        for (field in fields) {
                             var v: ByteArray =
                                 field.toByteArray(java.nio.charset.Charset.forName("UTF-8"))
                             payload.writeByte(v.size)

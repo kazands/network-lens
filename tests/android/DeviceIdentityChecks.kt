@@ -48,6 +48,7 @@ internal object DeviceIdentityChecks {
         check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Identity fixtures reject physical devices")
         DeviceCatalogLoader.load(test.targetContext)
         check(DeviceCatalog.extendedSize() == 256338, "The packaged global catalogue loads all pinned aliases offline")
+        RecognitionEvidenceChecks.run(test, check)
         val broadCases = listOf(Triple("Samsung", "SM-S918B", "Samsung Galaxy S23 Ultra"),
             Triple("Google", "Pixel 8", "Google Pixel 8"), Triple("QNAP", "TS-469U", "QNAP TS-469U"),
             Triple("Sony", "PlayStation 3", "Sony PlayStation 3"))
@@ -165,14 +166,20 @@ internal object DeviceIdentityChecks {
             service("_airplay._tcp."); service("_raop._tcp."); service("_spotify-connect._tcp.")
             link("synthetic:thermostat")
         }
-        val thermostatV6 = Device().apply { ip = "2001:db8::18"; seen = true; service("_raop._tcp."); link("synthetic:thermostat") }
+        thermostat.hint("Manufacturer", "ecobee Inc.", "mDNS current _airplay._tcp. TXT", 80)
+        thermostat.hint("Model", "ECB601", "mDNS current _airplay._tcp. TXT", 80)
+        val thermostatV6 = Device().apply {
+            ip = "2001:db8::18"; seen = true; service("_raop._tcp."); link("synthetic:thermostat")
+            hint("Manufacturer", "ecobee Inc.", "mDNS current _airplay._tcp. TXT", 80)
+            hint("Model", "ECB601", "mDNS current _raop._tcp. TXT", 80)
+        }
         val thermostatGroup = Device.grouped(listOf(thermostatV6, thermostat)).single()
         check(thermostatGroup.presentation().title == "ecobee Smart Thermostat Premium" &&
             thermostatGroup.presentation().subtitle == "Thermostat · Fixture climate" &&
             DeviceIcon.forGroup(thermostatGroup).drawable == R.drawable.ic_device_thermostat && DeviceIcon.forGroup(thermostatGroup).label == "Thermostat",
             "A dual-stack Ecobee uses its thermostat title, category and icon despite audio services")
         check(thermostat.kind == "AirPlay device" && thermostat.model == "Smart_Thermostat_Premium" &&
-            thermostatV6.identifiedProduct() == null && thermostatV6.manufacturer.isEmpty(),
+            thermostatV6.identifiedProduct()?.product?.title == "ecobee Smart Thermostat Premium" && thermostatV6.manufacturer == "ecobee Inc.",
             "Recognition preserves raw service/model values and does not fill in another endpoint's identity")
         val genericAudio = Device().apply { ip = "192.0.2.19"; service("_spotify-connect._tcp.") }
         check(genericAudio.presentation().title == "Unidentified device" && genericAudio.presentation().subtitle == "Audio service",
@@ -228,11 +235,31 @@ internal object DeviceIdentityChecks {
                         "Console row $label remains reachable and fully visible by scrolling; row=${row.height}, visible=${visible.height()}, viewport=${scroll.height}, y=${scroll.scrollY}")
                 }
                 capture(test, activity, "list-bottom-$label")
-                for (term in listOf("Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8", "ecobee", "Smart_Thermostat_Premium", "Fixture climate")) {
+                for (term in listOf("Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8", "ecobee", "Smart_Thermostat_Premium", "ECB601", "AirPlay audio", "Fixture climate")) {
                     main(test) { texts(activity.window.decorView).filterIsInstance<EditText>().single().setText(term) }
                     settle(test)
                     main(test) { check((get(activity, "deviceRows") as Map<*, *>).values.toSet().size == 1, "Search $label finds one device group for $term") }
                 }
+                main(test) { (get(activity, "deviceRows") as Map<String, View>).getValue(thermostat.ip).performClick() }
+                settle(test)
+                main(test) {
+                    val all = texts(activity.window.decorView)
+                    check(all.any { it.text.toString() == "Primary device type" } && all.any { it.text.toString() == "Thermostat" },
+                        "Thermostat details $label lead with physical type")
+                    check(all.any { it.text.toString() == "Services available" } && all.any { it.text.toString() == "AirPlay, AirPlay audio (RAOP), Spotify Connect" },
+                        "Thermostat details $label keep all media capabilities separate")
+                    for (view in all.filter { it.text.toString() in listOf("Primary device type", "Services available", "AirPlay, AirPlay audio (RAOP), Spotify Connect") })
+                        layout(view, "Recognition summary $label")
+                }
+                capture(test, activity, "details-thermostat-$label")
+                main(test) {
+                    texts(activity.window.decorView).single { it.text.toString() == "Copy device details" }.performClick()
+                    val copied = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
+                    check(copied.contains("Primary device type: Thermostat") && copied.contains("Reported Model · mDNS current _airplay._tcp. TXT: ECB601") &&
+                        copied.contains("Services available: AirPlay, AirPlay audio (RAOP), Spotify Connect"), "Copy $label includes raw alias source, primary type and capabilities")
+                    activity.onBackPressed()
+                }
+                settle(test)
                 main(test) { texts(activity.window.decorView).filterIsInstance<EditText>().single().setText("Hikvision") }
                 settle(test)
                 main(test) { (get(activity, "deviceRows") as Map<String, View>)[recorder.ip]!!.performClick() }

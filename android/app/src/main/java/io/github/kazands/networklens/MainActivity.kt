@@ -422,7 +422,8 @@ class MainActivity : Activity() {
             for (d in group.endpoints()) {
                 val recognition = d.identifiedProduct()
                 val all = (labels.title + " " + labels.subtitle + " " + group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services + " " +
-                    recognition?.product?.title.orEmpty() + " " + recognition?.product?.category?.label.orEmpty()).lowercase(Locale.ROOT)
+                    recognition?.product?.title.orEmpty() + " " + recognition?.product?.category?.label.orEmpty() + " " +
+                    group.capabilities().joinToString(" ") + " " + d.observations().joinToString(" ") { it.value }).lowercase(Locale.ROOT)
                 if (all.contains(term)) { shown.add(group); break }
             }
         }
@@ -526,6 +527,14 @@ class MainActivity : Activity() {
         val title = text(d.presentation().title, 26, ink, true); title.letterSpacing = -.01f; body.addView(title); space(body, 8)
         body.addView(text(if (d.self) "This phone" else if (d.gateway) "Wi-Fi gateway" else "Details from your scan", 13, muted, false)); space(body, 21)
         if (d.endpoints().size > 1) { body.addView(text("" + d.endpoints().size + " IP addresses grouped together. Each address keeps its own reported details.", 13, accent, true)); space(body, 16) }
+        val classification = d.classification()
+        val capabilities = d.capabilities()
+        if (classification.category != null || classification.conflicted || capabilities.isNotEmpty()) {
+            val summary = panel(); summary.setPadding(dp(18), dp(10), dp(18), dp(10))
+            detailRow(summary, "Primary device type", if (classification.conflicted) "Conflicting reports" else classification.category?.label ?: "Not identified")
+            if (capabilities.isNotEmpty()) detailRow(summary, "Services available", capabilities.joinToString(", "))
+            body.addView(summary); space(body, 16)
+        }
         for (endpoint in d.endpoints()) {
             val addresses = panel(); addresses.setPadding(dp(18), dp(18), dp(18), dp(12))
             field(addresses, "IP address", endpoint.ip, true); field(addresses, "MAC address", endpoint.mac.ifEmpty { "Not available" }, endpoint.mac.isNotEmpty())
@@ -537,7 +546,7 @@ class MainActivity : Activity() {
             body.addView(addresses); space(body, 16)
             val facts = panel(); facts.setPadding(dp(18), dp(10), dp(18), dp(10)); val missing = ArrayList<String>()
             if (endpoint.name.isNotEmpty()) detailRow(facts, "Network name", endpoint.name)
-            val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Device type", endpoint.kind, "device type"))
+            val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Reported type", endpoint.kind, "device type"))
             for (item in identity) { if (item[1].isEmpty()) missing.add(item[2]) else detailRow(facts, item[0], item[1]) }
             val vendor = MacVendors.lookup(endpoint.mac)
             if (vendor.isNotEmpty()) { detailRow(facts, "MAC vendor", vendor); facts.addView(text("IEEE-registered organization; may identify the network interface supplier rather than the device brand.", 14, muted, false)) }
@@ -554,7 +563,7 @@ class MainActivity : Activity() {
                 recognized.addView(text("Locally recognized", 16, ink, true))
                 detailRow(recognized, if (match.product.familyOnly) "Device family" else "Device", match.product.title)
                 if (match.product.category != DeviceCatalog.Category.UNSPECIFIED) detailRow(recognized, "Device type", match.product.category.label)
-                recognized.addView(text(if (match.recog != null) "Inferred from the reported model code using offline Recog rules."
+                recognized.addView(text(if (match.recog != null) "Interpreted from the reported model code using the offline Apple model catalogue."
                     else "Interpreted from current reported model data using the local product catalogue.", 14, muted, false))
                 body.addView(recognized); space(body, 8)
             }
@@ -607,6 +616,7 @@ class MainActivity : Activity() {
         field(panel, "Observed / advertised ports", if (endpoint.ports.isEmpty()) "None reported" else endpoint.ports.toString(), false)
         for ((key, value) in endpoint.details) if (key !in listOf("ONVIF hardware (advertised)", "OS (advertised)", "Firmware (advertised)", "ICMP response time", "ICMPv6 response time")) field(panel, key, value, false)
         for (hint in endpoint.observations()) field(panel, "Reported " + hint.field.lowercase(Locale.ROOT) + " · " + hint.source, hint.value, false)
+        for (fact in endpoint.classification().facts) field(panel, "Device type evidence · " + fact.source, fact.category.label, false)
         endpoint.identifiedProduct()?.let { match ->
             field(panel, "Local recognition source", match.source, false)
             field(panel, "Recognition input", match.input, false)
@@ -614,6 +624,9 @@ class MainActivity : Activity() {
     }
     private fun deviceText(group: Device): String {
         val text = StringBuilder(group.presentation().title)
+        val classification = group.classification()
+        text.append("\nPrimary device type: ").append(if (classification.conflicted) "Conflicting reports" else classification.category?.label ?: "Not identified")
+        if (group.capabilities().isNotEmpty()) text.append("\nServices available: ").append(group.capabilities().joinToString(", "))
         for (d in group.endpoints()) {
             text.append("\n\nIP: ").append(d.ip).append("\nMAC: ").append(d.mac.ifEmpty { "Not available" }).append("\nMAC source: ").append(reported(d.macSource))
                 .append("\nNetwork name: ").append(reported(d.name)).append("\nHostname: ").append(reported(d.hostname)).append("\nManufacturer: ").append(reported(d.manufacturer)).append("\nModel: ").append(reported(d.model))
@@ -625,6 +638,9 @@ class MainActivity : Activity() {
                 text.append("\nRecognition source: ").append(match.source).append("\nRecognition input: ").append(match.input)
             }
             for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
+            for (hint in d.observations()) text.append("\nReported ").append(hint.field).append(" · ").append(hint.source).append(": ").append(hint.value)
+            for (fact in d.classification().facts) text.append("\nDevice type evidence · ").append(fact.source).append(": ").append(fact.category.label)
+            d.details["UPnP description status"]?.let { text.append("\nUPnP description status: ").append(it) }
             d.details["HomeKit setup (advertised)"]?.let { text.append("\nHomeKit setup (advertised): ").append(it) }
             if (vendor.isNotEmpty()) text.append("\nMAC vendor (IEEE registry): ").append(vendor)
             d.details["Network identifier (DNS)"]?.let { text.append("\nNetwork identifier (DNS): ").append(it) }

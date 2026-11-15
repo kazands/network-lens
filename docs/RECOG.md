@@ -1,9 +1,10 @@
 # Offline model recognition
 
-Network Lens interprets the `model` TXT field of admitted current-wire
-`_device-info._tcp` services using a small, pinned Rapid7 Recog subset. It adds no
-network request, permission, cloud lookup, account, persistent history or runtime
-dependency. Existing discovery work limits, network scope and the 55-second work
+Network Lens interprets model fields admitted from reviewed current-wire Bonjour
+services using pinned Rapid7 Recog and supplemental AppleDB tables. The tables
+add no cloud lookup, account, persistent history, permission or runtime dependency.
+Missing auxiliary model records may use the bounded local TXT queries described
+below. Existing discovery work limits, network scope and the 55-second work
 deadline remain in effect. A recognition match cannot establish presence, join
 devices together or supply a hardware MAC address.
 
@@ -11,8 +12,11 @@ devices together or supply a hardware MAC address.
 
 The generated table contains 156 exact canonical Apple model-code examples from
 the retained upstream data: Mac notebooks/desktops, iPad, iPhone, HomePod, Apple TV
-and iPod Touch. A code must be listed exactly; newer products and unsupported
-families are not recognized by this Recog subset. The separate
+and iPod Touch. A supplemental AppleDB table adds **128 exact iPad/iPhone codes**
+not present in that subset, including `iPad13,18` (10th-generation Wi-Fi),
+`iPad13,19` (10th-generation Wi-Fi + Cellular), and `iPhone17,3` (iPhone 16).
+The combined tables contain **284 codes**. A code must be listed exactly;
+unsupported families are not recognized by these tables. The separate
 [global product catalogue](DEVICE-IDENTITIES.md) covers exact manufacturer/model
 reports from worldwide hardware, including Android and IoT products. Neither
 path establishes retail-model accuracy on physical hardware by itself.
@@ -27,17 +31,17 @@ MAC and IEEE interface vendor are not rewritten. JSON has a separate
 `localRecognition` object, including whether only a family is inferred.
 
 Matching categories select Lucide laptop, desktop, tablet, smartphone, smart
-speaker, TV media player or portable-player pictograms. This-phone, gateway and
-specific HomeKit/surveillance roles retain their existing icon precedence.
-Unknown or conflicting recognition retains the existing service/general icon
-selection. An icon is a category interpretation, not an assertion of ownership,
+speaker, TV media player or portable-player pictograms. This-phone and gateway roles retain precedence. Other physical type facts
+are resolved together; contradictory types produce a conflict label instead of an
+arbitrary winning icon. Unknown hardware retains a service/general icon.
+See [the evidence resolver](RECOGNITION-EVIDENCE.md). An icon is a category interpretation, not an assertion of ownership,
 authenticity or security.
 
 ## Admission and conflicts
 
-- Recognition enters only through the current-wire device-info admission path.
-  Native Android callbacks, cached records, other service types and routed proxy
-  advertisements cannot seed this fingerprint input.
+- Recognition enters only through the reviewed current-wire model admission paths
+  listed below. Native Android callbacks, cached records, unreviewed service types
+  and routed proxy advertisements cannot seed these inputs.
 - Each endpoint keeps at most one input code, two distinct reported model values
   and a conflict flag. Input codes are bounded to 64 printable ASCII bytes and
   compared without trimming, case folding, prefix matching or sanitization into
@@ -107,7 +111,7 @@ The host-test and direct app-build scripts run this check automatically.
 ## Verification
 
 The current release's exact artifact hashes, checks and limits are recorded in
-[release verification](VERIFICATION-0.3.14.md). The merged recognition and
+[release verification](VERIFICATION-0.3.15.md). The merged recognition and
 catalogue feature passed all 26 host suites / 29,914 checks, including independent
 review execution. The versioned download passed the 300-check API 37 identity
 mode; earlier corrected-feature API 37 coverage also passed the 298-check Recog
@@ -117,3 +121,37 @@ Earlier parser, admission, family-description and native layout checks remain in
 the [Recog verification history](archive/RECOG-VERIFICATION.md). Physical-device
 model accuracy, unlisted hardware, physical TalkBack and phone performance remain
 unverified for this release.
+
+## Additional current Apple model sources
+
+The same exact model-to-product mapping now accepts the reviewed current-wire
+Companion Link `rpMd`, AirPlay `model`, and RAOP `am` fields. These adapted inputs
+are labelled **Apple model catalogue**, with the actual service source and pinned
+Recog mapping provenance; they are not presented as an observed device-info fingerprint.
+Original device-info matches from the retained Recog table keep their Recog source
+label. AppleDB matches instead identify AppleDB and its pinned source blob; no
+Rapid7 rule is claimed for those entries. The original Recog table is unchanged.
+
+Bonjour device-info may consist of a TXT record without a listening service. Such a
+record can now qualify when a complete, unexpired service with the exact same
+instance name was received from the same endpoint in this scan. Eligible anchors
+are Companion Link, AirPlay, SMB and workstation services. A missing model triggers
+at most two TXT questions under the existing shared follow-up budget. Proxy records,
+native cached callbacks, unrelated instance names and expired records cannot qualify.
+The auxiliary record never creates a listening port, MAC address or presence proof.
+
+Companion Link without a reported model remains **Apple companion service**. The
+app does not infer a hardware generation or manufacturer field from a user-chosen name.
+
+## Supplemental Apple data maintenance
+
+The complete public AppleDB device snapshot and MIT notice are retained in
+`android/appledb-original/`, with upstream credits intact. Source Git blob
+`22e79f5e8fa7cb79a53b7509450fec614dbc5877` was reviewed on 2026-11-15.
+`scripts/generate-apple-models.py --check` verifies source and license hashes,
+exact identifier syntax, release eligibility, unambiguous mappings and generated
+output. Builds and host tests run this check offline. Existing Recog mappings
+retain precedence, including conservative shared-model descriptions. New source
+snapshots require explicit review and regeneration; the app does not contact
+AppleDB. Exact code mapping alone does not prove the physical device reported
+that code, nor does it establish Fing's recognition method.
