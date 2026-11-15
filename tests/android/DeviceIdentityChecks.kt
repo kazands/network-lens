@@ -149,10 +149,37 @@ internal object DeviceIdentityChecks {
         val hostname = Device().apply { ip = "192.0.2.14"; hint("Name", "thinkstation-X900.local", "Synthetic current hostname", 80); hint("Hostname", name, "Synthetic current hostname", 80) }
         val cast = Device().apply { ip = "192.0.2.15"; hint("Name", "Fixture lounge", "Synthetic casting name", 80); service("_googlecast._tcp.") }
         val unknown = Device().apply { ip = "192.0.2.16" }
-        val ps5 = model("PS5", 17).apply { hint("Name", "Fixture console", "Synthetic current name", 80) }
+        val ps5 = model("PS5", 17).apply {
+            hint("Name", "Fixture console", "Synthetic current name", 80)
+            hint("Manufacturer", "sony_tv", "Spotify Connect device information (reported)", 80)
+            hint("Model", "ps5", "Spotify Connect device information (reported)", 80)
+            service("_spotify-connect._tcp.")
+        }
+        check(ps5.presentation().title == "Sony PlayStation 5" && ps5.presentation().subtitle == "Game console · Fixture console" &&
+            DeviceIcon.forGroup(ps5).label == "Game console" && ps5.manufacturer == "sony_tv",
+            "Spotify brand spelling preserves the reported field while console identity overrides the audio service")
+        val thermostat = model("Smart_Thermostat_Premium", 18).apply {
+            hint("Name", "Fixture climate", "Synthetic current name", 80)
+            hint("Manufacturer", "ecobee", "Spotify Connect device information (reported)", 80)
+            hint("Device type", "AirPlay device", "Synthetic current AirPlay service", 60)
+            service("_airplay._tcp."); service("_raop._tcp."); service("_spotify-connect._tcp.")
+            link("synthetic:thermostat")
+        }
+        val thermostatV6 = Device().apply { ip = "2001:db8::18"; seen = true; service("_raop._tcp."); link("synthetic:thermostat") }
+        val thermostatGroup = Device.grouped(listOf(thermostatV6, thermostat)).single()
+        check(thermostatGroup.presentation().title == "ecobee Smart Thermostat Premium" &&
+            thermostatGroup.presentation().subtitle == "Thermostat · Fixture climate" &&
+            DeviceIcon.forGroup(thermostatGroup).drawable == R.drawable.ic_device_thermostat && DeviceIcon.forGroup(thermostatGroup).label == "Thermostat",
+            "A dual-stack Ecobee uses its thermostat title, category and icon despite audio services")
+        check(thermostat.kind == "AirPlay device" && thermostat.model == "Smart_Thermostat_Premium" &&
+            thermostatV6.identifiedProduct() == null && thermostatV6.manufacturer.isEmpty(),
+            "Recognition preserves raw service/model values and does not fill in another endpoint's identity")
+        val genericAudio = Device().apply { ip = "192.0.2.19"; service("_spotify-connect._tcp.") }
+        check(genericAudio.presentation().title == "Unidentified device" && genericAudio.presentation().subtitle == "Audio service",
+            "An audio capability alone is labelled as a service rather than a hardware category")
         val samsung = model("SM-S918B", 12).apply { hint("Manufacturer", "Samsung", "Synthetic current manufacturer", 80) }
         val pixel = model("Pixel 8", 13).apply { hint("Manufacturer", "Google", "Synthetic current manufacturer", 80) }
-        val fixtures = listOf(recorder, shield, samsung, pixel, hostname, cast, unknown, ps5)
+        val fixtures = listOf(recorder, shield, samsung, pixel, hostname, cast, unknown, ps5, thermostat, thermostatV6)
         Store(test.targetContext).clear()
         val activity = test.startActivitySync(Intent(test.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo", true)) as MainActivity
         settle(test)
@@ -173,11 +200,13 @@ internal object DeviceIdentityChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    for (title in listOf("Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unidentified device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8")) layout(all.single { it.text.toString() == title }, "List $title $label")
+                    for (title in listOf("Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unidentified device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8", "ecobee Smart Thermostat Premium")) layout(all.single { it.text.toString() == title }, "List $title $label")
                     check(all.none { it.text.toString() == "MAC not available" || it.text.toString().startsWith("Locally recognized ·") }, "List $label removes repetitive missing-MAC and interpretation lines")
                     check(all.any { it.text.toString() == "MAC   02:00:00:00:00:10" } && all.any { it.text.toString() == "Casting device" }, "List $label retains known MACs and cautious service categories")
                     val rows = get(activity, "deviceRows") as Map<String, View>
                     check(rows[ps5.ip]!!.contentDescription.contains("Sony PlayStation 5") && !rows[unknown.ip]!!.contentDescription.contains("MAC not available"), "Accessibility $label follows the cleaned identity")
+                    check(rows[thermostatGroup.ip]!!.contentDescription.contains("Thermostat") && !rows[thermostatGroup.ip]!!.contentDescription.contains("Audio device"),
+                        "Thermostat accessibility $label uses the recognized primary category")
                     check(rows[unknown.ip]!!.contentDescription.contains("1 IP address, IPv4") && !rows[unknown.ip]!!.contentDescription.contains(", ,"), "Accessibility $label omits empty fields and uses singular address wording")
                 }
                 // Let the previous explicit-copy toast/clipboard preview leave the surface.
@@ -199,10 +228,10 @@ internal object DeviceIdentityChecks {
                         "Console row $label remains reachable and fully visible by scrolling; row=${row.height}, visible=${visible.height()}, viewport=${scroll.height}, y=${scroll.scrollY}")
                 }
                 capture(test, activity, "list-bottom-$label")
-                for (term in listOf("Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8")) {
+                for (term in listOf("Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8", "ecobee", "Smart_Thermostat_Premium", "Fixture climate")) {
                     main(test) { texts(activity.window.decorView).filterIsInstance<EditText>().single().setText(term) }
                     settle(test)
-                    main(test) { check((get(activity, "deviceRows") as Map<*, *>).size == 1, "Search $label finds $term") }
+                    main(test) { check((get(activity, "deviceRows") as Map<*, *>).values.toSet().size == 1, "Search $label finds one device group for $term") }
                 }
                 main(test) { texts(activity.window.decorView).filterIsInstance<EditText>().single().setText("Hikvision") }
                 settle(test)

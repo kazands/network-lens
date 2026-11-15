@@ -7,11 +7,11 @@ internal object DeviceCatalog {
     enum class Category(val label: String) {
         LAPTOP("Laptop"), DESKTOP("Desktop computer"), TABLET("Tablet"), PHONE("Smartphone"),
         SPEAKER("Smart speaker"), TV_PLAYER("Streaming device"), HANDHELD("Portable media player"),
-        RECORDER("Network video recorder"), CONSOLE("Game console"), UNSPECIFIED("Not classified")
+        RECORDER("Network video recorder"), CONSOLE("Game console"), THERMOSTAT("Thermostat"), UNSPECIFIED("Not classified")
     }
     data class Product(val id: String, val brand: String, val title: String, val category: Category,
                        val models: Set<String>, val redundantNames: Set<String> = emptySet(), val familyOnly: Boolean = false,
-                       val reference: String = "") {
+                       val reference: String = "", val manufacturerRequired: Boolean = false) {
         private fun modelKey(value: String) = key(value).removePrefix(key(brand) + " ")
         fun acceptsModel(value: String): Boolean = key(value) in models ||
             reference.isNotEmpty() && models.any { modelKey(it) == modelKey(value) } && global.lookup(brand, value)?.title == title
@@ -28,12 +28,14 @@ internal object DeviceCatalog {
         Product("nvidia:shield-tv", "NVIDIA", "NVIDIA SHIELD TV", Category.TV_PLAYER,
             keys("SHIELD Android TV", "SHIELD TV", "NVIDIA SHIELD Android TV", "NVIDIA SHIELD TV"), keys("SHIELD"), true),
         Product("sony:playstation-5", "Sony", "Sony PlayStation 5", Category.CONSOLE,
-            keys("PS5", "PlayStation 5", "Sony PlayStation 5"), familyOnly = true)
+            keys("PS5", "PlayStation 5", "Sony PlayStation 5"), familyOnly = true),
+        Product("ecobee:smart-thermostat-premium", "ecobee", "ecobee Smart Thermostat Premium", Category.THERMOSTAT,
+            keys("Smart_Thermostat_Premium", "Smart Thermostat Premium", "ecobee Smart Thermostat Premium"), manufacturerRequired = true)
     )
     private fun brand(value: String): String = when (key(value)) {
         "hikvision", "hangzhou hikvision digital technology co., ltd.", "hangzhou hikvision digital technology co.,ltd." -> "hikvision"
         "nvidia", "nvidia corporation" -> "nvidia"
-        "sony", "sony corporation", "sony interactive entertainment", "sony interactive entertainment inc." -> "sony"
+        "sony", "sony corporation", "sony interactive entertainment", "sony interactive entertainment inc.", "sony_tv" -> "sony"
         "samsung", "samsung electronics", "samsung electronics co., ltd." -> "samsung"
         "google", "google llc" -> "google"
         "dlink", "d-link", "d-link corporation" -> "d-link"
@@ -57,7 +59,8 @@ internal object DeviceCatalog {
     internal fun extendedSize(): Int = global.size
     fun lookup(model: String, manufacturer: String = ""): Product? {
         if (model.length !in 1..160) return null
-        products.singleOrNull { it.acceptsModel(model) && (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
+        products.singleOrNull { it.acceptsModel(model) && (!it.manufacturerRequired || manufacturer.isNotEmpty()) &&
+            (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
         val maker = brand(manufacturer)
         val entry = global.lookup(maker, model) ?: return null
         return Product("catalog:$maker:${key(model).removePrefix(maker + " ")}", entry.brand, entry.title, Category.UNSPECIFIED,

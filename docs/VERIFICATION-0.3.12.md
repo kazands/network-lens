@@ -1,7 +1,7 @@
 # Network Lens 0.3.12 verification
 
 Historical verification record for the artifact named below. For the current
-download and functionality, see [release verification](VERIFICATION-0.3.13.md)
+download and functionality, see [release verification](VERIFICATION-0.3.14.md)
 and [development status](STATUS.md).
 
 Verified locally on 2026-11-14 for the 0.3.12 development preview. This release

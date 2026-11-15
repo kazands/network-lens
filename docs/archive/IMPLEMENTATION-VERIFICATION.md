@@ -2,7 +2,7 @@
 
 Historical results for the specific candidates described below. These are not
 fresh test claims for the current download. See [current status](../STATUS.md)
-and [release verification](../VERIFICATION-0.3.13.md) for the supported release.
+and [release verification](../VERIFICATION-0.3.14.md) for the supported release.
 
 ## Clear device identities and global catalogue (0.3.13)
 

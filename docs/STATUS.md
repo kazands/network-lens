@@ -1,8 +1,8 @@
 # Development status
 
-Network Lens 0.3.13 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.13.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.13).
+Network Lens 0.3.14 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.14.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.14).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
@@ -22,8 +22,10 @@ user-started Wi-Fi device finder with all scan state held in memory.
   The pinned public sources, provenance, filtering and precision are documented
   in [device identities](DEVICE-IDENTITIES.md).
 - Interpret 156 exact current Apple model codes through the pinned
-  [Recog subset](RECOG.md). Reviewed recorder, streaming and console profiles
-  select more specific Lucide icons, including **Sony PlayStation 5**.
+  [Recog subset](RECOG.md). Reviewed recorder, streaming, console and thermostat
+  profiles select more specific Lucide icons, including **Sony PlayStation 5**
+  and **ecobee Smart Thermostat Premium**. An unmatched audio capability is
+  labelled **Audio service** rather than a hardware category.
   Unknown form factors keep categories justified by observed services.
 - Read bounded, source-labelled [local metadata](LOCAL-METADATA.md) from Thread,
   ESPHome, Shelly, WLED, Spotify Connect and IPP services. Lookup outcomes and
@@ -46,21 +48,19 @@ uploading device identifiers.
 
 ## Verification
 
-The merged feature and its response-order corrections passed all 26 host suites
-/ 29,914 checks, including a fresh independent Deep review run. That final review
-approved both corrections without substantive findings. Initial feature matrices
-covered API 26/36/37; the final logic corrections passed 300 identity checks on
-API 26 and four modes / 678 checks on API 37.
+The category corrections passed all 26 host suites / 29,949 checks and 344
+identity/presentation checks on an isolated API 37 emulator. Synthetic fixtures
+cover the Sony Spotify brand spelling, exact Ecobee maker/model reports,
+conflicts, raw-field separation, dual-stack grouping, icons, search, accessibility
+labels, both appearances and normal/200% text at 320dp/411dp.
 
-For the versioned download, both direct builds and package audits passed, along
-with 116 isolated signing assertions, 300 API 37 identity checks and 21 checks
-updating the exact public-signed APK from the previous public release. The app UID
-and nonempty runtime grants were retained. Development/public application payloads
-match; only versioned manifest metadata differs from the reviewed feature APK.
-Exact hashes, test setup corrections and platform scope are in
-[release verification](VERIFICATION-0.3.13.md). Earlier candidate hashes and
-implementation-specific counts remain in the
-[verification history](archive/IMPLEMENTATION-VERIFICATION.md).
+Versioned release checks and their exact scope are recorded in
+[release verification](VERIFICATION-0.3.14.md). Earlier release checks remain in
+[0.3.13 verification](VERIFICATION-0.3.13.md) and the
+[implementation verification history](archive/IMPLEMENTATION-VERIFICATION.md).
+A read-only phone inspection informed these corrections; the corrected APK still
+needs physical-device verification. Emulator checks do not establish household
+recognition accuracy or complete discovery.
 
 ## Known limits
 

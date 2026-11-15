@@ -10,7 +10,9 @@ A product-like hostname or service name alone never establishes hardware.
 Unidentified endpoints use “Unidentified device”; useful reported names remain
 visible. Cosmetic hostname formatting removes a matching `.local` suffix and
 separates hyphens, without asserting a manufacturer or model. Service categories
-such as casting and file sharing describe the observed service only.
+such as casting and file sharing describe the observed service only. An unmatched
+audio capability is labelled “Audio service”; it does not establish the device's
+primary purpose. A reviewed product's category takes precedence over that service.
 
 ## Display examples
 
@@ -22,6 +24,7 @@ not infer a product from a friendly name or MAC vendor.
 | Sony manufacturer + `PS5`, or an accepted current console reply | Sony PlayStation 5 | Game console; useful custom name beneath it |
 | Reported `SHIELD Android TV` model | NVIDIA SHIELD TV | Streaming device; no guessed year or Pro edition |
 | Reported `DS-7608NI-I2/8P` model | Hikvision DS-7608NI-I2/8P | Network video recorder |
+| ecobee manufacturer + `Smart_Thermostat_Premium` | ecobee Smart Thermostat Premium | Thermostat and thermostat icon, including when AirPlay/Spotify services are present |
 | HP manufacturer + `LaserJet P4015` | HP LaserJet P4015 | Product family; printer category only if current services support it |
 | Samsung manufacturer + `SM-S918B` | Samsung Galaxy S23 Ultra | Supported product title; the broad catalogue alone does not select a phone icon |
 | QNAP manufacturer + `TS-469U` | QNAP TS-469U | Supported product family; service-based category remains separate |
@@ -106,7 +109,7 @@ Primary sources: [NIST CPE](https://nvd.nist.gov/products/cpe),
 
 ## Catalogue and evidence policy
 
-`DeviceCatalog.kt` contains three reviewed product profiles layered over that index, in addition to the
+`DeviceCatalog.kt` contains four reviewed product profiles layered over that index, in addition to the
 156 exact Apple model-code mappings from the pinned [Recog subset](RECOG.md).
 Recog descriptions gain an Apple brand prefix where needed for the display title.
 Its source-specific input admission and conservative family descriptions remain.
@@ -116,12 +119,19 @@ Its source-specific input admission and conservative family descriptions remain.
 | Hikvision DS-7608NI-I2/8P | `DS-7608NI-I2/8P`, `Hikvision DS-7608NI-I2/8P` | Network video recorder; exact reported model | [Hikvision NVR manual](https://assets.hikvision.com/prd/public/all/doc/m000065352/UD39811B-A_Network-Video-Recorder_User-Manual_V5.04.000_20250425.pdf) |
 | NVIDIA SHIELD TV | `SHIELD Android TV`, `SHIELD TV`, `NVIDIA SHIELD Android TV`, `NVIDIA SHIELD TV` | Streaming device; family only, no year or Pro variant | [NVIDIA SHIELD TV](https://www.nvidia.com/en-us/shield/shield-tv/) |
 | Sony PlayStation 5 | `PS5`, `PlayStation 5`, `Sony PlayStation 5` | Game console; family only, no edition or revision | Current PS5 discovery response described below |
+| ecobee Smart Thermostat Premium | `Smart_Thermostat_Premium`, `Smart Thermostat Premium`, `ecobee Smart Thermostat Premium` | Thermostat; also requires a reported `ecobee` manufacturer | [ecobee product page](https://www.ecobee.com/en-us/smart-thermostats/smart-thermostat-premium/), [ecobee AirPlay support](https://support.ecobee.com/s/articles/Setting-up-and-using-Siri-and-AirPlay-on-your-SmartThermostat-with-voice-control?language=en_US) |
 
 These are exact aliases, not substring matches or an imported consumer database.
 Bare `SHIELD` is only a redundant display name once a typed model has identified
 the family. A model or manufacturer alone is never used to fill in the other's
 reported field. The recognized brand stays inside the separate interpretation.
 IEEE MAC vendor lookup remains independent and cannot authorize a product match.
+The exact `sony_tv` manufacturer spelling, reported by Spotify Connect, compares
+as Sony for recognition. Its raw reported value remains unchanged in Details.
+It cannot bypass a conflicting model or unrelated manufacturer. The thermostat
+profile requires both exact maker and model evidence; its name or audio service
+alone is insufficient. Ecobee's primary documentation confirms that its thermostat
+can expose AirPlay, so that capability must not replace the thermostat category.
 
 Up to eight distinct model spellings, the first model/source, normalized
 manufacturer and manufacturer source are retained per endpoint. Alias validation
@@ -173,7 +183,8 @@ with the existing script and recorded in `android/lucide-provenance.json`.
 ## Validation
 
 Host suites exercise exact aliases, all printer report-order permutations,
-delayed catalogue loading, both PS5 source orders, hostile/ambiguous inputs, model/brand
+delayed catalogue loading, both PS5 source orders, Sony Spotify brand aliases,
+Ecobee maker/model permutations, hostile/ambiguous inputs, model/brand
 conflicts, family precision, bounded receive traffic, wrong ports and scope,
 deadlines, cancellation, duplicate responses and 10,000 malformed packets.
 The `device-identities` Android mode uses synthetic fixtures without an Android
@@ -184,7 +195,9 @@ separation, list titles, icons, search, clipboard, accessibility and Back at
 synthetic fixtures. The existing Recog and typography modes cover Apple models
 and complete IPv4/IPv6 wrapping.
 
-Physical PS5 discovery, actual household devices, TalkBack operation and scan
+Read-only phone inspection confirmed that console and thermostat metadata can
+reach Details while service labels obscure their primary categories. The corrected
+APK presentation still needs physical verification. TalkBack operation and scan
 performance on a phone remain unverified. Recognition coverage is deliberately
 limited; these changes do not resolve the existing discovery limitations in
-[STATUS.md](STATUS.md). Current release checks are in [release verification](VERIFICATION-0.3.13.md); earlier candidate results remain in the linked verification history.
+[STATUS.md](STATUS.md). Current release checks are in [release verification](VERIFICATION-0.3.14.md); earlier candidate results remain in the linked verification history.

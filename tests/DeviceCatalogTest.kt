@@ -47,6 +47,43 @@ object DeviceCatalogTest {
             offer("Model", "SHIELD Android TV", "Fixture model")
         }
         check(brandAliases.match()?.product?.brand == "NVIDIA", "Reviewed maker aliases corroborate the same brand")
+        val reportOrders = listOf(listOf(0, 1, 2), listOf(0, 2, 1), listOf(1, 0, 2), listOf(1, 2, 0), listOf(2, 0, 1), listOf(2, 1, 0))
+        val thermostatReports = listOf(Triple("Manufacturer", "ecobee", "Synthetic current manufacturer"),
+            Triple("Model", "Smart_Thermostat_Premium", "Synthetic current Spotify model"),
+            Triple("Model", "Smart Thermostat Premium", "Synthetic current model"))
+        for (order in reportOrders) {
+            val thermostat = DeviceCatalog.Evidence()
+            order.forEach { n -> thermostatReports[n].let { (field, value, source) -> thermostat.offer(field, value, source) } }
+            val product = thermostat.match()?.product
+            check(product?.title == "ecobee Smart Thermostat Premium" && product.category.label == "Thermostat",
+                "Exact Ecobee maker/model reports identify a thermostat in order $order")
+            val labels = DevicePresentation.labels("Fixture climate", "", "Smart_Thermostat_Premium", "Audio service", product, false, false)
+            check(labels.title == "ecobee Smart Thermostat Premium" && labels.subtitle == "Thermostat · Fixture climate",
+                "Recognized thermostat category overrides an advertised audio service")
+            val snapshot = thermostat.copy()
+            thermostat.offer("Manufacturer", "Fixture unrelated brand", "Synthetic current conflict")
+            check(thermostat.match() == null && snapshot.match()?.product == product, "Ecobee manufacturer conflicts remain suppressed independently")
+        }
+        for (maker in listOf("", "Fixture unrelated brand")) {
+            check(DeviceCatalog.lookup("Smart_Thermostat_Premium", maker) == null,
+                "A generic thermostat model requires its exact reviewed manufacturer")
+        }
+        check(DeviceCatalog.Evidence().apply { offer("Manufacturer", "ecobee", "Synthetic maker only") }.match() == null,
+            "An Ecobee manufacturer alone cannot identify its product")
+        check(DeviceCatalog.lookup("Smart_Thermostat_Premium_2", "ecobee") == null,
+            "An unreviewed Ecobee model variant cannot inherit the Premium profile")
+        val spotifyConsoleReports = listOf(Triple("Manufacturer", "sony_tv", "Spotify Connect device information (reported)"),
+            Triple("Model", "ps5", "Spotify Connect device information (reported)"),
+            Triple("Model", "PS5", "PlayStation discovery host-type"))
+        for (order in reportOrders) {
+            val console = DeviceCatalog.Evidence()
+            order.forEach { n -> spotifyConsoleReports[n].let { (field, value, source) -> console.offer(field, value, source) } }
+            console.offer("Manufacturer", "Sony Corporation", "Synthetic corroborating maker")
+            check(console.match()?.product?.title == "Sony PlayStation 5", "Sony's exact Spotify brand token corroborates console evidence in order $order")
+            console.offer("Manufacturer", "Fixture unrelated brand", "Synthetic conflicting maker")
+            check(console.match() == null, "The Sony brand alias does not bypass conflicting manufacturer evidence")
+        }
+        check(DeviceCatalog.lookup("PS5", "sony_tv_extra") == null, "Sony brand tokens require an exact reviewed alias")
         val rejected = DeviceCatalog.Evidence().apply {
             offer("Model", "PS5", ""); offer("Model", "Unknown", "Fixture model")
         }

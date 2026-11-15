@@ -32,12 +32,12 @@ class DeviceIcon private constructor() {
         private val HANDHELD = Spec(R.drawable.ic_device_smartphone, "Locally recognized portable media player")
         private val RECORDER = Spec(R.drawable.ic_device_recorder, "Network video recorder")
         private val CONSOLE = Spec(R.drawable.ic_device_game_console, "Game console")
+        private val RECOGNIZED_THERMOSTAT = Spec(R.drawable.ic_device_thermostat, "Thermostat")
 
         internal fun categoryLabel(group: Device): String = when (val label = forGroup(group).label) {
             "This phone" -> "This phone"
             "Router" -> "Wi-Fi gateway"
             "Device type unknown" -> ""
-            "Audio service" -> "Audio device"
             "Casting service" -> "Casting device"
             "File sharing" -> "File-sharing service"
             else -> label
@@ -73,6 +73,7 @@ class DeviceIcon private constructor() {
                     DeviceCatalog.Category.HANDHELD -> HANDHELD
                     DeviceCatalog.Category.RECORDER -> RECORDER
                     DeviceCatalog.Category.CONSOLE -> CONSOLE
+                    DeviceCatalog.Category.THERMOSTAT -> RECOGNIZED_THERMOSTAT
                     DeviceCatalog.Category.UNSPECIFIED -> null
                 }
                 if (specific != null) return specific
