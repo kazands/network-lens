@@ -6,17 +6,17 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.13 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.13/Network-Lens-0.3.13.apk)
+[![Download Android APK — Network Lens 0.3.14 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.14/Network-Lens-0.3.14.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.13) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.14) · No GitHub account required to download.
 
-**Development preview: 0.3.13.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.14.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
 The public APK updates existing public-signed Network Lens installations in place. It retains the application ID `io.github.kazands.networklens` and the pinned app-signing identity. See [application identity and updates](docs/APPLICATION-IDENTITY.md) for build and installation details.
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.13 verification notes](docs/VERIFICATION-0.3.13.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.14 verification notes](docs/VERIFICATION-0.3.14.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 ## What it does
 

@@ -107,7 +107,7 @@ The host-test and direct app-build scripts run this check automatically.
 ## Verification
 
 The current release's exact artifact hashes, checks and limits are recorded in
-[release verification](VERIFICATION-0.3.13.md). The merged recognition and
+[release verification](VERIFICATION-0.3.14.md). The merged recognition and
 catalogue feature passed all 26 host suites / 29,914 checks, including independent
 review execution. The versioned download passed the 300-check API 37 identity
 mode; earlier corrected-feature API 37 coverage also passed the 298-check Recog
