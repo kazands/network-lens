@@ -5,6 +5,10 @@ Original source code, documentation and original artwork: GPL-3.0-only.
 See LICENSE for the complete GNU General Public License version 3.
 
 Third-party material is not relicensed by this notice:
+- Supplemental AppleDB iPad/iPhone model facts: MIT, Copyright (c) 2022 emiyl.
+  Full terms are packaged in android/app/src/main/res/raw/appledb_license.txt;
+  source and upstream credits are retained in android/appledb-original/.
+  See android/apple-model-provenance.json.
 - Rapid7 Recog model mappings and retained source: BSD-2-Clause, Copyright
   (c) 2014-2015, Rapid7. Full terms are packaged in
   android/app/src/main/res/raw/recog_license.txt and retained in

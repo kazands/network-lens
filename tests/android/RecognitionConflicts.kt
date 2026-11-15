@@ -27,7 +27,8 @@ internal object RecognitionConflicts {
             check(retained.size == 8 && retained.none { it.value == bad }, "$field fixture reaches actual eight-observation eviction")
             check(d.locallyRecognized() == null && d.groupRecognition() == null,
                 "$field conflict survives eviction when reported ${if (before) "before" else "after"} the model code")
-            check(DeviceIcon.forGroup(d).label == "Device type unknown", "$field eviction cannot restore an inferred icon")
+            check(DeviceIcon.forGroup(d).label == if (field == "Manufacturer") "Device type unknown" else "Locally recognized laptop",
+                "$field conflict preserves the distinction between exact product identity and independently supported hardware type")
             val snapshot = d.copy()
             repeat(12) { n -> d.hint(field, good, "Later fixture $n", 100) }
             check(snapshot.locallyRecognized() == null && d.locallyRecognized() == null,

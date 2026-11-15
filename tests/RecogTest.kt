@@ -1,5 +1,6 @@
 import io.github.kazands.networklens.Recog
 import io.github.kazands.networklens.RecogModels
+import io.github.kazands.networklens.AppleModels
 import io.github.kazands.networklens.MdnsPacket
 import io.github.kazands.networklens.MdnsAssembly
 import java.io.ByteArrayOutputStream
@@ -53,6 +54,45 @@ object RecogTest {
     }
 
     @JvmStatic fun main(args: Array<String>) {
+        for ((code, title, category) in listOf(
+            Triple("iPad13,18", "iPad (10th generation) Wi-Fi", Recog.Category.TABLET),
+            Triple("iPad13,19", "iPad (10th generation) Wi-Fi + Cellular", Recog.Category.TABLET),
+            Triple("iPhone17,3", "iPhone 16", Recog.Category.PHONE),
+            Triple("iPhone13,1", "iPhone 12 mini", Recog.Category.PHONE)
+        )) {
+            val match = Recog.lookup(code)!!
+            check(match.description == title && match.category == category && !match.familyOnly,
+                "Supplemental Apple mapping $code identifies the reviewed model and connectivity variant")
+            check(match.source.contains("AppleDB") && match.source.contains(AppleModels.SOURCE_BLOB) && !match.source.contains("Recog"),
+                "Supplemental catalogue does not claim a Rapid7 fingerprint")
+            for ((service, field) in listOf("_device-info._tcp." to "model", "_companion-link._tcp." to "rpMd", "_airplay._tcp." to "model", "_raop._tcp." to "am")) {
+                val evidence = Recog.Evidence().apply { offerService(service, mapOf(field to code.toByteArray())) }
+                check(evidence.match()?.description == title && evidence.match()!!.input == "mDNS current $service TXT · $field=$code",
+                    "Supplemental mapping retains the actual protocol field")
+                val copy = evidence.copy()
+                evidence.observeReport("Manufacturer", "Synthetic conflicting manufacturer")
+                check(evidence.match() == null && evidence.categories().isEmpty() && copy.match()?.description == title,
+                    "Supplemental mapping preserves manufacturer conflicts and independent snapshots")
+            }
+            for (bad in listOf(code.lowercase(), " $code", "$code-extra", "$code\n", "A2696", "J271AP"))
+                check(Recog.lookup(bad) == null, "Only exact reviewed network model identifiers qualify")
+        }
+        for ((service, key) in listOf("_companion-link._tcp." to "rpMd", "_airplay._tcp." to "model", "_raop._tcp." to "am")) {
+            val evidence = Recog.Evidence()
+            evidence.offerService(service, mapOf(key to "iPad14,1".toByteArray()))
+            check(evidence.match()?.category == Recog.Category.TABLET && evidence.match()!!.input.contains(service), "Reviewed Apple model field $service retains actual input provenance")
+            check(evidence.match()!!.source.startsWith("Apple model catalogue"), "Adapted source does not pretend a device-info fingerprint was observed")
+            evidence.observeReport("Manufacturer", "Apple Inc.")
+            check(evidence.match() != null, "Reviewed Apple maker alias corroborates the same hardware")
+            evidence.observeReport("Model", "Synthetic unmatched secondary model")
+            check(evidence.match() == null && evidence.categories().single().category == io.github.kazands.networklens.DeviceCatalog.Category.TABLET,
+                "An unresolved secondary model does not erase independently supported Apple hardware category")
+            evidence.observeReport("Manufacturer", "Synthetic rival maker")
+            check(evidence.categories().isEmpty(), "Conflicting maker suppresses Apple model type inference")
+        }
+        val unrelated = Recog.Evidence()
+        unrelated.offerService("_http._tcp.", mapOf("model" to "iPad14,1".toByteArray()))
+        check(unrelated.match() == null && unrelated.categories().isEmpty(), "A generic web service cannot borrow an Apple model namespace")
         val cases = listOf(
             Triple("MacBookPro18,3", "MacBook Pro (14-Inch, M1, 2021)", Recog.Category.LAPTOP),
             Triple("MacBookAir10,1", "MacBook Air (M1, 2020)", Recog.Category.LAPTOP),
@@ -74,8 +114,10 @@ object RecogTest {
             check(model.source.contains(RecogModels.REVISION) && model.source.contains("rule ${model.rule}"), "Every match retains the pinned rule identity")
             check(model.input.endsWith("model=$code") && model.rule > 0, "Every interpretation retains its original model field")
             check(model.familyOnly == code.startsWith("AppleTV"), "Low-certainty Apple TV mappings remain family-only")
-            for (bad in listOf("$code-extra", "$code\n", " $code", "${code}0", "model=$code", code.lowercase()))
+            for (bad in listOf("$code-extra", "$code\n", " $code", "model=$code", code.lowercase()))
                 check(Recog.lookup(bad) == null, "Near-match or transformed model code cannot match $code")
+            check(Recog.lookup("${code}0")?.code.let { it == null || it == "${code}0" },
+                "A longer legitimate identifier must match itself, never the shorter code")
             val evidence = Recog.Evidence()
             repeat(200) { evidence.offer(attributes(code)) }
             check(evidence.match() == model, "Repeated current packets retain the same exact interpretation")
@@ -113,7 +155,7 @@ object RecogTest {
             check(match.description == description && match.familyOnly,
                 "Shared $code does not select one of several model years or screen sizes")
         }
-        for (code in listOf("", "Unknown", "MacBookPro999,1", "MacBookPro18,30", "iMac10,1", "iMac11,1", "J305AP", "AirPort4,104", "MacPro", "Phone13,1", "iPhone13,1", "OpenSSH_9.0", "x".repeat(100000)))
+        for (code in listOf("", "Unknown", "MacBookPro999,1", "MacBookPro18,30", "iMac10,1", "iMac11,1", "J305AP", "AirPort4,104", "MacPro", "Phone13,1", "iPhone999,1", "OpenSSH_9.0", "x".repeat(100000)))
             check(Recog.lookup(code) == null, "Unreviewed, ambiguous, board, software or oversized inputs remain unrecognized")
         val valid = "MacBookPro18,3"
         for (bytes in listOf(ByteArray(0), byteArrayOf(0xff.toByte()), "$valid\u0000".toByteArray(), "$valid\u202e".toByteArray(), "x".repeat(65).toByteArray(), " $valid".toByteArray())) {

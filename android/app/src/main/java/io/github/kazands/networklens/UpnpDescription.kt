@@ -40,7 +40,8 @@ class UpnpDescription private constructor() {
                 val windows = path.equals("/upnphost/udhisapi.dll", true) && query != null &&
                     query.matches(Regex("content=uuid:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
                 val ordinary = query == null &&
-                    (path == "/" || path == "/description" || path.lowercase(Locale.ROOT).endsWith(".xml"))
+                    (path == "/" || path == "/description" || path.lowercase(Locale.ROOT).endsWith(".xml") ||
+                        path.matches(Regex("/smp_[0-9]{1,5}_")))
                 return if (windows || ordinary) uri else null
             } catch (_: URISyntaxException) { return null }
             catch (_: IllegalArgumentException) { return null }
@@ -156,6 +157,22 @@ class UpnpDescription private constructor() {
                 handler.values
             } catch (_: Exception) { Collections.emptyMap() }
         }
+
+        /** A DLNA renderer can be a TV, speaker or software. Only explicit Samsung TV
+         * descriptions qualify here; manufacturer, friendlyName and MediaRenderer alone do not. */
+        internal fun deviceKind(values: Map<String, String>): String {
+            when (values["deviceType"]) {
+                "urn:schemas-upnp-org:device:DigitalSecurityCamera:1" -> return "UPnP camera"
+                "urn:schemas-upnp-org:device:DimmableLight:1" -> return "UPnP light"
+            }
+            val maker = DeviceCatalog.key(values["manufacturer"].orEmpty())
+            if (maker !in setOf("samsung", "samsung electronics", "samsung electronics co., ltd.")) return ""
+            val type = values["deviceType"].orEmpty()
+            val description = values["modelDescription"].orEmpty()
+            val tvType = type == "urn:samsung.com:device:MainTVServer2:1"
+            val tvDescription = description in setOf("Samsung TV", "Samsung DTV DMR", "Samsung DTV RCR", "Samsung DTV MainTVServer2")
+            return if (tvType || tvDescription && type in setOf("urn:schemas-upnp-org:device:MediaRenderer:1", "urn:samsung.com:device:RemoteControlReceiver:1")) "Samsung television" else ""
+        }
     }
 
     private class Description : DefaultHandler(), LexicalHandler {
@@ -171,7 +188,7 @@ class UpnpDescription private constructor() {
             val tag = if (local.isEmpty()) q else local
             if (depth == 1 && (tag != "root" || (uri.isNotEmpty() && uri != "urn:schemas-upnp-org:device-1-0"))) throw SAXException("Not a UPnP description")
             if (depth == 2) rootDevice = tag == "device"
-            if (depth == 3 && rootDevice && tag in arrayOf("friendlyName", "manufacturer", "modelName", "modelNumber", "serialNumber", "UDN", "deviceType")) {
+            if (depth == 3 && rootDevice && tag in arrayOf("friendlyName", "manufacturer", "modelName", "modelNumber", "modelDescription", "serialNumber", "UDN", "deviceType")) {
                 field = tag
                 text.setLength(0)
             }

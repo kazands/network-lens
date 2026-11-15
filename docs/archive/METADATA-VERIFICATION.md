@@ -1,7 +1,7 @@
 # Historical local metadata verification
 
 These records apply to their named earlier candidates. See the current
-[release verification](../VERIFICATION-0.3.14.md) and [status](../STATUS.md).
+[release verification](../VERIFICATION-0.3.15.md) and [status](../STATUS.md).
 
 # Local device metadata
 
@@ -73,7 +73,7 @@ there is no automatic export, logging or persistence of endpoint diagnostics.
 
 ## Implementation verification history
 
-Current release checks are in [release verification](../VERIFICATION-0.3.14.md).
+Current release checks are in [release verification](../VERIFICATION-0.3.15.md).
 The following results apply to the earlier candidates explicitly described here.
 
 The outcome increment from `dbf7828` passed 22 host suites / 16,209 checks, direct

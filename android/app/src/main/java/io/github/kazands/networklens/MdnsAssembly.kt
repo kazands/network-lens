@@ -141,6 +141,27 @@ class MdnsAssembly {
     }
 
     private fun records(peer: Peer, labels: List<String>, kind: Int) = peer.sets[setKey(labels, kind)]?.map { it.record } ?: emptyList()
+    // Bonjour device-info can be TXT-only. Bind it to a complete current service
+    // with the exact same instance name AND sender, never a proxy/cached name.
+    private fun modelOwners(peer: Peer): List<List<String>> = instances(peer).filter {
+        MdnsPacket.instanceType(it) in setOf("_companion-link._tcp.", "_airplay._tcp.", "_smb._tcp.", "_workstation._tcp.") &&
+            completeInstance(peer, it)
+    // Protocol identity uses the original label, never the trimmed display name.
+    }.map { listOf(it[0], "_device-info", "_tcp", "local") }.distinctBy { MdnsPacket.key(it) }
+
+    @Synchronized internal fun associatedModels(sender: InetAddress, now: Long): List<Map<String, ByteArray>> {
+        if (closed) return emptyList()
+        expire(now)
+        val peer = peers[peerKey(sender)] ?: return emptyList()
+        return modelOwners(peer).mapNotNull { owner ->
+            records(peer, owner, 16).singleOrNull()?.attributes?.mapValues { it.value.clone() }
+        }
+    }
+    @Synchronized internal fun modelPeers(now: Long): List<InetAddress> {
+        if (closed) return emptyList()
+        expire(now)
+        return peers.values.filter { p -> modelOwners(p).any { records(p, it, 16).size == 1 } }.map { it.address }
+    }
     private fun instances(peer: Peer): List<List<String>> = peer.sets.values.flatten().map { it.record }
         .filter { it.kind == 12 }.map { it.target }.distinctBy { MdnsPacket.key(it) }
 
@@ -253,6 +274,7 @@ class MdnsAssembly {
             if (LocalServices.routedAccessory(MdnsPacket.instanceType(instance)) && records(peer, srv.target, 28).isEmpty())
                 out.add(MdnsPacket.Question(srv.target, 28))
         }
+        for (owner in modelOwners(peer)) if (records(peer, owner, 16).isEmpty()) out.add(MdnsPacket.Question(owner, 16))
         return out
     }
     private fun queryKey(v6: Boolean, q: MdnsPacket.Question) = "$v6|" + setKey(q.labels, q.kind)

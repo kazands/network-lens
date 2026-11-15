@@ -62,7 +62,7 @@ internal object RecogChecks {
             ip = "192.0.2.$n"
             apply.invoke(op, this, service(code, "fixture$n"))
         }
-        val fixtures = listOf(device("MacBookPro18,3", 10), device("iPad14,1", 11), device("Macmini9,1", 12),
+        val fixtures = listOf(device("MacBookPro18,3", 10), device("iPad13,18", 11), device("Macmini9,1", 12),
             device("AppleTV11,1", 13), device("AudioAccessory5,1", 14), device("FixtureUnknown99,1", 15))
         val sharedModels = listOf("MacBookPro15,1" to "MacBook Pro (15-inch)",
             "MacBookPro15,2" to "MacBook Pro (13-inch, Four Thunderbolt 3 ports)",
@@ -102,7 +102,7 @@ internal object RecogChecks {
             check(software.locallyRecognized() == null, "Other protocols cannot reuse a device-info fingerprint")
             val conflicting = laptop.copy()
             apply.invoke(op, conflicting, service("iPad14,1", "conflict"))
-            check(conflicting.locallyRecognized() == null && DeviceIcon.forGroup(conflicting).label == "Device type unknown", "Conflicting codes suppress description and inferred icon")
+            check(conflicting.locallyRecognized() == null && DeviceIcon.forGroup(conflicting).label == "Conflicting device types", "Conflicting hardware categories suppress description and expose the disagreement")
             check(laptop.locallyRecognized() != null, "Progress copies have independent conflict state")
             val reported = laptop.copy().apply { hint("Model", "Fixture genuine model", "UPnP description", 80) }
             check(reported.locallyRecognized() == null && reported.model == "Fixture genuine model", "A contradictory directly reported model outranks interpretation")
@@ -117,7 +117,7 @@ internal object RecogChecks {
                 check(DeviceIcon.forGroup(d).label == label, "The $flag role keeps icon precedence")
             }
             val light = laptop.copy().apply { hint("Device type", "HomeKit light", "HomeKit category", 80) }
-            check(DeviceIcon.forGroup(light).label == "HomeKit light", "An explicit HomeKit category retains icon precedence")
+            check(DeviceIcon.forGroup(light).label == "Conflicting device types", "Contradictory physical categories are explicit rather than resolved by branch order")
             val v6 = Device().apply { ip = "2001:db8::10"; link("fixture:dual") }
             val v4 = laptop.copy().apply { link("fixture:dual") }
             val grouped = Device.grouped(listOf(v6, v4)).single()
@@ -179,7 +179,7 @@ internal object RecogChecks {
                         "Details $label retain the reported code and unknown manufacturer")
                     layout(all.single { it.text.toString() == "Locally recognized" }, "Recognition heading $label")
                     all.filter { it.text.toString() == fixtures[0].identifiedProduct()!!.product.title }.forEach { layout(it, "Recognition description $label") }
-                    layout(all.single { it.text.toString() == "Inferred from the reported model code using offline Recog rules." }, "Recognition explanation $label")
+                    layout(all.single { it.text.toString() == "Interpreted from the reported model code using the offline Apple model catalogue." }, "Recognition explanation $label")
                     if (width == 320 && scale == 2f || width == 411 && scale == 1f) {
                         val scroll = get(activity, "detailScroll") as ScrollView
                         var panel: View = all.single { it.text.toString() == "Locally recognized" }

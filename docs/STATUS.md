@@ -1,10 +1,19 @@
 # Development status
 
-Network Lens 0.3.14 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.14.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.14).
+Network Lens 0.3.15 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.15.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.15).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
+
+## Recognition improvements in this preview
+
+This preview separates primary physical type from service capabilities,
+resolves cross-protocol aliases and grouped evidence, expands Samsung UPnP
+description compatibility and uses current Companion/AirPlay/RAOP plus associated
+Bonjour model records. A pinned AppleDB supplement adds 128 missing iPad/iPhone
+codes to the existing 156-code Recog table. See [recognition evidence](RECOGNITION-EVIDENCE.md) for exact scope,
+source provenance and completed checks. Fresh physical-device verification remains outstanding. In-app update checking remains unimplemented.
 
 ## Current functionality
 
@@ -55,7 +64,7 @@ conflicts, raw-field separation, dual-stack grouping, icons, search, accessibili
 labels, both appearances and normal/200% text at 320dp/411dp.
 
 Versioned release checks and their exact scope are recorded in
-[release verification](VERIFICATION-0.3.14.md). Earlier release checks remain in
+[release verification](VERIFICATION-0.3.15.md). Earlier release checks remain in
 [0.3.13 verification](VERIFICATION-0.3.13.md) and the
 [implementation verification history](archive/IMPLEMENTATION-VERIFICATION.md).
 A read-only phone inspection informed these corrections; the corrected APK still

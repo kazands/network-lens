@@ -125,8 +125,90 @@ object MdnsAssemblyTest {
         return a.accept(peer, parse(*p), now)
     }
 
+    private fun associatedAppleModels() {
+        val peer = ip("192.0.2.90")
+        val other = ip("192.0.2.91")
+        val type = listOf("_companion-link", "_tcp", "local")
+        val instance = listOf("Synthetic tablet") + type
+        val host = listOf("synthetic-tablet", "local")
+        val modelOwner = listOf("Synthetic tablet", "_device-info", "_tcp", "local")
+        val anchor = parse(rr(type, 12, name(instance), 120, false), rr(instance, 33, srv(host), 120, true),
+            rr(instance, 16, txt("rpVr=1"), 120, true), rr(host, 1, peer.address, 120, true))
+        val model = parse(rr(modelOwner, 16, txt("model=iPad14,1"), 120, true))
+        val now = 1_000_000_000L
+        for (modelFirst in listOf(false, true)) {
+            val assembly = MdnsAssembly()
+            assembly.accept(peer, if (modelFirst) model else anchor, now)
+            check(assembly.associatedModels(peer, now).isEmpty(), "Neither standalone model nor model-less anchor fabricates model evidence")
+            if (!modelFirst) {
+                val questions = assembly.due(false, now, 4)
+                check(questions.any { it.kind == 16 && it.labels == modelOwner }, "Complete Companion service requests its bounded associated TXT model")
+                check(MdnsPacket.followUp(questions).isNotEmpty(), "Associated model query uses the normal bounded wire encoder")
+            }
+            assembly.accept(peer, if (modelFirst) anchor else model, now + 1)
+            check(String(assembly.associatedModels(peer, now + 1).single().getValue("model")) == "iPad14,1", "TXT-only device-info binds to current same-sender exact instance in either order")
+            check(assembly.associatedModels(other, now + 1).isEmpty(), "Another endpoint cannot borrow the model")
+            check(assembly.modelPeers(now + 1) == listOf(peer), "Only the associated current endpoint is emitted")
+            assembly.accept(peer, parse(rr(modelOwner, 16, txt("model=iPhone14,3"), 120, true)), now + 2)
+            check(assembly.associatedModels(peer, now + 2).isEmpty(), "Conflicting current TXT RRset is not arbitrarily resolved")
+            check(assembly.associatedModels(peer, now + 11_000_000_000L).isEmpty(), "Expired model and anchor cannot be reused")
+            assembly.close()
+            check(assembly.associatedModels(peer, now).isEmpty() && assembly.modelPeers(now).isEmpty() && assembly.due(false, now, 4).isEmpty(), "Stopped scan emits no associated models or queries")
+        }
+        val proxy = MdnsAssembly()
+        proxy.accept(other, anchor, now); proxy.accept(other, model, now)
+        check(proxy.associatedModels(other, now).isEmpty(), "Proxy advertisement for a different address cannot authorize auxiliary model identity")
+        val mismatch = MdnsAssembly()
+        mismatch.accept(peer, anchor, now)
+        mismatch.accept(peer, parse(rr(listOf("Other name", "_device-info", "_tcp", "local"), 16, txt("model=iPad14,1"), 120, true)), now)
+        check(mismatch.associatedModels(peer, now).isEmpty(), "Same sender but different service instance is not enough")
+        mismatch.accept(peer, model, now)
+        mismatch.accept(peer, parse(rr(modelOwner, 16, txt("model=iPad14,1"), 0, true)), now + 1)
+        check(mismatch.associatedModels(peer, now + 1).isEmpty(), "TXT goodbye immediately removes model evidence")
+        val retry = MdnsAssembly(); retry.accept(peer, anchor, now)
+        check(retry.due(false, now, 4).size == 1 && retry.due(false, now + 100, 4).isEmpty(), "Auxiliary queries respect retry spacing")
+        check(retry.due(false, now + 2_000_000_000L, 4).size == 1 && retry.due(false, now + 4_000_000_000L, 4).isEmpty(), "Auxiliary query has at most two attempts per scan")
+    }
+
+    private fun associatedModelWireNames() {
+        val now = 1_000_000_000L
+        for (peer in listOf(ip("192.0.2.92"), ip("2001:db8::92"))) {
+            for (service in listOf("_companion-link", "_airplay", "_smb", "_workstation")) {
+                for (rawName in listOf(" ", "  ", " Fixture", "Fixture ", " Fixture ", "Fixture", "Fixture.room", "é".repeat(31))) {
+                    val type = listOf(service, "_tcp", "local")
+                    val instance = listOf(rawName) + type
+                    val host = listOf("synthetic-wire-name", "local")
+                    val owner = listOf(rawName, "_device-info", "_tcp", "local")
+                    val assembly = MdnsAssembly()
+                    val anchor = parse(rr(type, 12, name(instance), 120, false),
+                        rr(instance, 33, srv(host), 120, true), rr(instance, 16, txt("fixture=1"), 120, true),
+                        rr(host, if (peer is Inet4Address) 1 else 28, peer.address, 120, true))
+                    check(assembly.accept(peer, anchor, now).size == 1, "Valid raw instance completes on either address family")
+                    val questions = assembly.due(peer is Inet6Address, now, 4)
+                    // Exercise the same encoder called by the production receive loop. A display
+                    // name trimmed to empty must never turn a valid DNS label into a loop-ending exception.
+                    val wire = MdnsPacket.followUp(questions)
+                    check(MdnsPacket.multicastQuestions(wire, wire.size) == listOf(MdnsPacket.Question(owner, 16)),
+                        "Auxiliary question round-trips the original instance label, including whitespace and UTF-8")
+                    val differentName = rawName.trim().takeIf { it.isNotEmpty() && it != rawName } ?: "Different fixture"
+                    assembly.accept(peer, parse(rr(listOf(differentName, "_device-info", "_tcp", "local"),
+                        16, txt("model=iPhone17,3"), 120, true)), now + 1)
+                    check(assembly.associatedModels(peer, now + 1).isEmpty(), "A distinct raw name cannot supply this instance's model")
+                    assembly.accept(peer, parse(rr(owner, 16, txt("model=iPad13,18"), 120, true)), now + 2)
+                    check(String(assembly.associatedModels(peer, now + 2).single().getValue("model")) == "iPad13,18",
+                        "Only the exact raw instance supplies its model after another name was observed")
+                    check(assembly.due(peer is Inet6Address, now + 2_000_000_000L, 4).isEmpty(),
+                        "The exact model response satisfies its original query")
+                    assembly.close()
+                }
+            }
+        }
+    }
+
     @JvmStatic
     fun main(args: kotlin.Array<String>): Unit {
+        associatedModelWireNames()
+        associatedAppleModels()
         var p: kotlin.Array<ByteArray> = parts(PEER)
         var start: Long = TimeUnit.SECONDS.toNanos(30)
         run {

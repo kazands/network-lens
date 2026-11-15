@@ -35,7 +35,7 @@ not infer a product from a friendly name or MAC vendor.
 
 The bundled global table contains **256,338 exact manufacturer/model aliases**,
 **86,540 distinct product titles** and **5,263 brand keys**, plus the existing
-156 Apple Recog codes and the reviewed profiles below. These are catalogue
+156 Apple Recog codes, 128 supplemental AppleDB mobile codes and the reviewed profiles below. These are catalogue
 counts, not a claim that a scan can identify every listed product or that every
 alias is a different retail model. The data covers worldwide manufacturers and
 hardware beyond Android: printers, routers, computers/servers, storage devices,
@@ -109,7 +109,7 @@ Primary sources: [NIST CPE](https://nvd.nist.gov/products/cpe),
 
 ## Catalogue and evidence policy
 
-`DeviceCatalog.kt` contains four reviewed product profiles layered over that index, in addition to the
+`DeviceCatalog.kt` contains five reviewed product profiles layered over that index, in addition to the
 156 exact Apple model-code mappings from the pinned [Recog subset](RECOG.md).
 Recog descriptions gain an Apple brand prefix where needed for the display title.
 Its source-specific input admission and conservative family descriptions remain.
@@ -119,7 +119,8 @@ Its source-specific input admission and conservative family descriptions remain.
 | Hikvision DS-7608NI-I2/8P | `DS-7608NI-I2/8P`, `Hikvision DS-7608NI-I2/8P` | Network video recorder; exact reported model | [Hikvision NVR manual](https://assets.hikvision.com/prd/public/all/doc/m000065352/UD39811B-A_Network-Video-Recorder_User-Manual_V5.04.000_20250425.pdf) |
 | NVIDIA SHIELD TV | `SHIELD Android TV`, `SHIELD TV`, `NVIDIA SHIELD Android TV`, `NVIDIA SHIELD TV` | Streaming device; family only, no year or Pro variant | [NVIDIA SHIELD TV](https://www.nvidia.com/en-us/shield/shield-tv/) |
 | Sony PlayStation 5 | `PS5`, `PlayStation 5`, `Sony PlayStation 5` | Game console; family only, no edition or revision | Current PS5 discovery response described below |
-| ecobee Smart Thermostat Premium | `Smart_Thermostat_Premium`, `Smart Thermostat Premium`, `ecobee Smart Thermostat Premium` | Thermostat; also requires a reported `ecobee` manufacturer | [ecobee product page](https://www.ecobee.com/en-us/smart-thermostats/smart-thermostat-premium/), [ecobee AirPlay support](https://support.ecobee.com/s/articles/Setting-up-and-using-Siri-and-AirPlay-on-your-SmartThermostat-with-voice-control?language=en_US) |
+| ecobee Smart Thermostat Premium | `Smart_Thermostat_Premium`, `Smart Thermostat Premium`, `ecobee Smart Thermostat Premium`, `ECB601` | Thermostat; also requires a reported ecobee manufacturer, including the reviewed `ecobee Inc.` / `ecobee Inc` aliases | [ecobee product page](https://www.ecobee.com/en-us/smart-thermostats/smart-thermostat-premium/), [ecobee AirPlay support](https://support.ecobee.com/s/articles/Setting-up-and-using-Siri-and-AirPlay-on-your-SmartThermostat-with-voice-control?language=en_US) |
+| Samsung PN59D550 | `PN59D550`, `PN59D550C1F`, `PN59D550C1FXZC` | Television family; requires a reported Samsung manufacturer | [Samsung model support](https://www.samsung.com/ca/support/model/PN59D550C1FXZC/) |
 
 These are exact aliases, not substring matches or an imported consumer database.
 Bare `SHIELD` is only a redundant display name once a typed model has identified
@@ -133,7 +134,7 @@ profile requires both exact maker and model evidence; its name or audio service
 alone is insufficient. Ecobee's primary documentation confirms that its thermostat
 can expose AirPlay, so that capability must not replace the thermostat category.
 
-Up to eight distinct model spellings, the first model/source, normalized
+Up to eight distinct model spellings with a source for each, the first model/source, normalized
 manufacturer and manufacturer source are retained per endpoint. Alias validation
 waits for the required manufacturer and catalogue to be available, so equivalent
 make-and-model and model-only reports work in either arrival order. Every retained
@@ -145,8 +146,9 @@ Conflicting specific model or manufacturer reports suppress recognition for the
 rest of the scan, including when their display observations are evicted. Known
 aliases of the same product may corroborate one another. Sources and values are
 sanitized before entry. Progress copies retain independent evidence; fresh
-endpoints inherit none. Group presentation may use a product only when every
-member is compatible; per-address Details never borrow a neighbour's evidence.
+endpoints inherit none. Group presentation combines complementary current reports and may use a product only when every
+member is compatible. Global product identifiers use canonical brand/title rather than the input alias.
+Per-address Details never borrow a neighbour's reported fields.
 
 ## Read-only PlayStation discovery
 
@@ -200,4 +202,12 @@ reach Details while service labels obscure their primary categories. The correct
 APK presentation still needs physical verification. TalkBack operation and scan
 performance on a phone remain unverified. Recognition coverage is deliberately
 limited; these changes do not resolve the existing discovery limitations in
-[STATUS.md](STATUS.md). Current release checks are in [release verification](VERIFICATION-0.3.14.md); earlier candidate results remain in the linked verification history.
+[STATUS.md](STATUS.md). Current release checks are in [release verification](VERIFICATION-0.3.15.md); earlier candidate results remain in the linked verification history.
+
+## Physical type and service evidence
+
+The broader evidence resolver is described in [recognition evidence](RECOGNITION-EVIDENCE.md).
+An unresolved exact retail identity does not erase an independently supported physical type.
+Contradictory physical types are displayed as conflicting reports. Audio, casting and other
+capabilities remain separate from the primary device type. Missing or withheld model information
+is not supplied by a large catalogue or inferred from a personal device name.

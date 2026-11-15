@@ -32,6 +32,7 @@ class Device : Grouping.Endpoint {
     private var hints = IdentityHints()
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
+    private var hardwareType = HardwareClassification.Evidence()
     internal var metadataLookups = MetadataLookups()
         private set
 
@@ -54,14 +55,15 @@ class Device : Grouping.Endpoint {
     @Synchronized fun observations(): MutableList<IdentityHints.Hint> = hints.observations()
     /** Called only by current-wire device-info admission, never native/cached callbacks. */
     @Synchronized internal fun recognizeModel(attributes: Map<String, ByteArray>) = recognition.offer(attributes)
+    @Synchronized internal fun recognizeServiceModel(type: String, attributes: Map<String, ByteArray>) = recognition.offerService(type, attributes)
 
     @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
         recognition.compatible(candidate) &&
-            (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || manufacturer.equals("Apple", true)) &&
+            (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || Recog.appleMaker(manufacturer)) &&
             (model.isEmpty() || !IdentityHints.specific(model) || model == candidate.code || model == candidate.description) &&
             hints.observations().none { hint -> IdentityHints.specific(hint.value) && when (hint.field) {
                 "Model" -> hint.value != candidate.code && hint.value != candidate.description
-                "Manufacturer" -> !hint.value.equals("Apple", true)
+                "Manufacturer" -> !Recog.appleMaker(hint.value)
                 else -> false
             } }
 
@@ -70,8 +72,9 @@ class Device : Grouping.Endpoint {
 
     internal fun groupRecognition(): Recog.Model? {
         val endpoints = endpoints()
-        val matches = endpoints.mapNotNull { it.locallyRecognized() }.distinct()
-        val candidate = matches.singleOrNull() ?: return null
+        val matches = endpoints.mapNotNull { it.locallyRecognized() }
+        val candidate = matches.firstOrNull() ?: return null
+        if (matches.any { it.code != candidate.code }) return null
         return candidate.takeIf { endpoints.all { it.recognitionCompatible(candidate) } }
     }
     @Synchronized internal fun identifiedProduct(): DeviceCatalog.Match? =
@@ -90,16 +93,31 @@ class Device : Grouping.Endpoint {
     internal fun groupProduct(): DeviceCatalog.Match? {
         val endpoints = endpoints()
         val matches = endpoints.mapNotNull { it.identifiedProduct() }
-        val candidate = matches.firstOrNull() ?: return null
+        val combined = DeviceCatalog.Evidence()
+        endpoints.forEach { endpoint -> synchronized(endpoint) { combined.include(endpoint.catalogue) } }
+        val candidate = combined.match() ?: matches.firstOrNull() ?: return null
         if (matches.any { it.product.id != candidate.product.id }) return null
         return candidate.takeIf { endpoints.all { it.productCompatible(candidate) } }
     }
     internal fun presentation(): DevicePresentation.Labels {
         val product = groupProduct()?.product
-        val role = if (product == null || product.category == DeviceCatalog.Category.UNSPECIFIED) DeviceIcon.categoryLabel(this) else ""
-        return DevicePresentation.labels(name, hostname, model, role, product, self, gateway)
+        val classification = classification()
+        val displayProduct = product?.copy(category = classification.category ?: DeviceCatalog.Category.UNSPECIFIED)
+        return DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
     }
+    @Synchronized private fun hardwareFacts(): List<HardwareClassification.Fact> =
+        hardwareType.snapshot() + catalogue.categories() + recognition.categories() + listOfNotNull(
+            HardwareClassification.reported(kind)?.let { HardwareClassification.Fact(it, "Selected reported device type") })
+
+    internal fun classification(): HardwareClassification.Result {
+        val combined = DeviceCatalog.Evidence()
+        val endpoints = endpoints()
+        endpoints.forEach { endpoint -> synchronized(endpoint) { combined.include(endpoint.catalogue) } }
+        return HardwareClassification.resolve(endpoints.flatMap { it.hardwareFacts() } + combined.categories())
+    }
+    internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
+        if (field == "Device type") hardwareType.offer(SafeText.label(value, 160), SafeText.label(source, 128))
         if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
             val cleanValue = SafeText.label(value, 160)
             recognition.observeReport(field, cleanValue)
@@ -209,6 +227,7 @@ class Device : Grouping.Endpoint {
         copy.evidence.addAll(evidence); copy.details.putAll(details); copy.hints = hints.copy()
         copy.recognition = recognition.copy()
         copy.catalogue = catalogue.copy()
+        copy.hardwareType = hardwareType.copy()
         copy.metadataLookups = metadataLookups.copy()
         for (member in members) copy.members.add(member.copy())
         return copy
