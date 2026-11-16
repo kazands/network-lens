@@ -174,7 +174,7 @@ object ScanEngineTest {
         check(
             (CastInfo.needsName("Chromecast-abcdef12345") &&
                 !(CastInfo.needsName("Kitchen speaker"))),
-            "Avoid requesting names already supplied by better sources",
+            "Useful names remain distinct from generated Cast names",
         )
         for (generic in arrayOf("Chromecast", "Android TV")) {
             for (reverse in booleanArrayOf(false, true)) {
@@ -222,7 +222,7 @@ object ScanEngineTest {
             String(CastInfo.request(InetAddress.getByName("fd00::20")), StandardCharsets.US_ASCII)
         check(
             (request.contains("Host: [fd00:0:0:0:0:0:0:20]:8008") &&
-                request.startsWith("GET /setup/eureka_info?options=detail HTTP/1.1")),
+                request.startsWith("GET /setup/eureka_info?params=device_info,name HTTP/1.1")),
             "Cast request has a fixed local path and valid IPv6 Host header",
         )
         var a: ByteArray = response("fixture.local", 1, 120, byteArrayOf((192).toByte(), 0, 2, 20))

@@ -66,7 +66,7 @@ class DeviceIcon private constructor() {
                     DeviceCatalog.Category.FAN, DeviceCatalog.Category.AIR_PURIFIER -> Spec(R.drawable.ic_device_fan, category.label)
                     DeviceCatalog.Category.HEATER, DeviceCatalog.Category.AIR_CONDITIONER,
                     DeviceCatalog.Category.HUMIDIFIER, DeviceCatalog.Category.DEHUMIDIFIER -> Spec(R.drawable.ic_device_thermostat, category.label)
-                    DeviceCatalog.Category.AUDIO_RECEIVER -> Spec(R.drawable.ic_device_speaker, category.label)
+                    DeviceCatalog.Category.AMPLIFIER, DeviceCatalog.Category.AUDIO_RECEIVER -> Spec(R.drawable.ic_device_speaker, category.label)
                     DeviceCatalog.Category.ROUTER, DeviceCatalog.Category.RANGE_EXTENDER -> Spec(R.drawable.ic_device_router, category.label)
                     DeviceCatalog.Category.SECURITY_SYSTEM -> Spec(R.drawable.ic_device_lock, category.label)
                     DeviceCatalog.Category.BRIDGE, DeviceCatalog.Category.GARAGE_DOOR, DeviceCatalog.Category.DOOR,
@@ -83,6 +83,8 @@ class DeviceIcon private constructor() {
             if (kinds.any { it.contains("cast") || it.contains("airplay") } || services.any { it in listOf("_googlecast._tcp.", "_airplay._tcp.") }) return CAST
             if (kinds.any { it.contains("file-sharing") } || "_smb._tcp." in services) return FILES
             if ("_companion-link._tcp." in services) return Spec(R.drawable.ic_device_network, "Apple companion service")
+            if (AppleDeviceInfo.SERVICE.lowercase(Locale.ROOT) in services) return Spec(R.drawable.ic_device_network, AppleDeviceInfo.SERVICE)
+            if ("cast speaker group" in services) return Spec(R.drawable.ic_device_network, "Speaker group service")
             val accessory = endpoints.map { it.kind }.sorted().firstOrNull { it.startsWith("HomeKit ") || it.startsWith("Matter ") }
             if (accessory != null) return Spec(R.drawable.ic_device_network, accessory)
             if (endpoints.any { it.kind == "Thread border router service" }) return Spec(R.drawable.ic_device_router, "Thread border router service")

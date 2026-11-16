@@ -29,6 +29,12 @@ class Device : Grouping.Endpoint {
     @JvmField val services: MutableList<String> = ArrayList()
     @JvmField val evidence: MutableList<String> = ArrayList()
     @JvmField val details: MutableMap<String, String> = LinkedHashMap()
+    internal val audioPlayers = linkedMapOf<String, AudioPlayers.Player>()
+    internal val audioPlayerStatuses = linkedMapOf<String, String>()
+    internal var audioReport: AudioZones.Report? = null
+    internal var audioStatus = ""
+    internal var audioIdentity = ""
+    internal var audioRows: List<Pair<String, String>> = emptyList()
     private var hints = IdentityHints()
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
@@ -56,6 +62,7 @@ class Device : Grouping.Endpoint {
     /** Called only by current-wire device-info admission, never native/cached callbacks. */
     @Synchronized internal fun recognizeModel(attributes: Map<String, ByteArray>) = recognition.offer(attributes)
     @Synchronized internal fun recognizeServiceModel(type: String, attributes: Map<String, ByteArray>) = recognition.offerService(type, attributes)
+    @Synchronized internal fun recognizeAppleModel(code: String) = recognition.offerAppleModel(code)
 
     @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
         recognition.compatible(candidate) &&
@@ -208,6 +215,8 @@ class Device : Grouping.Endpoint {
             for (h in hints.observations()) observations.put(JSONObject().put("field", h.field).put("value", h.value)
                 .put("source", h.source).put("priority", h.priority))
             out.put("observations", observations)
+            out.put("audioMapping", JSONArray(audioRows.map { (label, value) -> JSONObject().put("label", label).put("value", value) }))
+            if (audioStatus.isNotEmpty()) out.put("audioLookup", audioStatus)
             identifiedProduct()?.let { match -> out.put("localRecognition", JSONObject()
                 .put("description", match.product.title).put("deviceType", match.product.category.label)
                 .put("recognizedBrand", match.product.brand).put("familyOnly", match.product.familyOnly)
@@ -229,13 +238,27 @@ class Device : Grouping.Endpoint {
         copy.catalogue = catalogue.copy()
         copy.hardwareType = hardwareType.copy()
         copy.metadataLookups = metadataLookups.copy()
+        copy.audioReport = audioReport?.copy(members = audioReport!!.members.toList())
+        copy.audioPlayers.putAll(audioPlayers)
+        copy.audioPlayerStatuses.putAll(audioPlayerStatuses)
+        copy.audioIdentity = audioIdentity; copy.audioStatus = audioStatus; copy.audioRows = audioRows.toList()
         for (member in members) copy.members.add(member.copy())
         return copy
     }
 
     companion object {
+        internal fun audioRows(devices: List<Device>) {
+            val zones = devices.mapNotNull { d -> d.audioReport?.let { AudioZones.Endpoint(d.ip, it) } }
+            val players = devices.flatMap { d -> d.audioPlayers.values.map { AudioPlayers.Current(d.ip, it) } }
+            for (d in devices) d.audioRows =
+                (d.audioReport?.let { AudioZones.rows(AudioZones.Endpoint(d.ip, it), zones) } ?: emptyList()) +
+                d.audioPlayerStatuses.values.sorted().map { "Audio lookup" to it } +
+                d.audioPlayers.toSortedMap().values.flatMap { AudioPlayers.rows(AudioPlayers.Current(d.ip, it), players) }
+        }
+
         @JvmStatic fun grouped(raw: List<Device>): MutableList<Device> {
-            val sorted = ArrayList(raw)
+            val sorted = ArrayList(raw.map { it.copy() })
+            audioRows(sorted)
             sorted.sortWith { a, b -> Address.compare(a.ip, b.ip) }
             val out = ArrayList<Device>()
             for (group in Grouping.groups(sorted)) {

@@ -42,6 +42,23 @@ exclusions and merge rules. The build verifies the generated compressed table
 offline. The table neither supplies presence nor turns an IEEE interface vendor
 into a reported manufacturer. It adds no cloud service, paid licence or account.
 
+## LineageOS Wiki hardware-category facts
+
+The separate Android category table derives from LineageOS Wiki contributors at
+commit `09e2176e2693dca067e9ce803ea1a5eb909806c3`. Wiki content is CC BY-SA 3.0,
+as declared in the retained `lineage-original/footer.html`. This is separate from
+the wiki theme's MIT licence. Attribution, adaptation notice and the complete
+CC BY-SA 3.0 licence are packaged in `app/src/main/res/raw/lineage_categories_notice.txt`.
+The source projection and category table adaptations remain CC BY-SA 3.0.
+
+Source: https://github.com/LineageOS/lineage_wiki/tree/09e2176e2693dca067e9ce803ea1a5eb909806c3/_data/devices .
+The retained projection contains only vendor, name, explicit models and physical
+type, plus original path/hash. No installation instructions or device artwork are
+used. The generator cross-checks exact manufacturer/model pairs against the
+pinned Google-supported naming data and rejects ambiguity. It supplies neither
+presence nor reported manufacturer. See `android-hardware-provenance.json` and
+[Android recognition](../docs/ANDROID-RECOGNITION.md).
+
 ## Rapid7 Recog model mappings
 
 The exact offline model-code table derives from Rapid7 Recog at commit

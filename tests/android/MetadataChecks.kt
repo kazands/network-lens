@@ -72,7 +72,7 @@ internal object MetadataChecks {
             check(plans.size() == 4, "Supported protocols have independent per-peer opportunities")
             check(d.metadataLookups.snapshot().size == 4 && d.metadataLookupRows().all { it.first.contains("IPv4") && it.second == "Waiting or checking\nModel available from mDNS current _meshcop._udp. TXT\nManufacturer available from mDNS current _meshcop._udp. TXT" },
                 "Queued outcomes identify their endpoint family and current alternative sources")
-            check(LocalMetadata.Kind.values().all { op.sources()[it.source]?.startsWith("Running") == true }, "Queued metadata appears as pending source work")
+            check(listOf(LocalMetadata.Kind.SHELLY, LocalMetadata.Kind.WLED, LocalMetadata.Kind.SPOTIFY, LocalMetadata.Kind.IPP).all { op.sources()[it.source]?.startsWith("Running") == true }, "Queued metadata appears as pending source work")
             val outside = Device().apply { ip = "203.0.113.20" }; fresh.add(outside.ip)
             request.invoke(op, outside, service("_shelly._tcp."))
             d.self = true; request.invoke(op, d, service("_shelly._tcp.")); d.self = false

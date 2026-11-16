@@ -1,0 +1,19 @@
+{
+  "revision": "09e2176e2693dca067e9ce803ea1a5eb909806c3",
+  "source": "https://github.com/LineageOS/lineage_wiki/tree/09e2176e2693dca067e9ce803ea1a5eb909806c3/_data/devices",
+  "attribution": "LineageOS Wiki contributors",
+  "license": "CC-BY-SA-3.0",
+  "accessed": "2026-11-16",
+  "source_projection_sha256": "8964b0e2745e0dd5bfffd2e0b526aec8a9630f633b976b2f156c6688ff7e7338",
+  "generated_sha256": "92d2ffbd52bcf0cf5f5bf680f7fa0050a4f01081a14ef953665062f7c5a3925a",
+  "selection": "Exact manufacturer/model pairs in the existing Google-cross-checked naming table. Use explicit upstream models, otherwise join exact manufacturer + marketing name offline. Exclude conflicting categories and unsupported types. No runtime name, codename, OUI, prefix or substring inference.",
+  "counts": {
+    "qualified_pairs": 651,
+    "brands": 24,
+    "categories": {
+      "PHONE": 607,
+      "TABLET": 43,
+      "TV_PLAYER": 1
+    }
+  }
+}

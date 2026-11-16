@@ -66,14 +66,19 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
+            if (mode == "audio-zones" || mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "device-identities") {
+            if (mode == "audio-zones") {
+                AudioZoneChecks.run(this, ::check)
+                BroadAudioChecks.run(this, ::check)
+            } else if (mode == "device-identities") {
+                AppleRecognitionChecks.run(this, ::check)
+                AndroidRecognitionChecks.run(this, ::check)
                 DeviceIdentityChecks.run(this, ::check)
             } else if (mode == "recog") {
                 RecogChecks.run(this, ::check)
@@ -4126,7 +4131,8 @@ class SmokeInstrumentation : Instrumentation() {
                 var device: Device? =
                     (observe.invoke(names, live.ip, "Explicit test responder") as Device?)
                 device!!.hint("Name", "Chromecast", "Fixture TXT friendly name", 90)
-                device!!.service("_googlecast._tcp")
+                Discovery::class.java.getDeclaredMethod("applyCurrentService", Device::class.java, MdnsPacket.Service::class.java)
+                    .apply { isAccessible = true }.invoke(names, device, MdnsPacket.Service("Chromecast", "_googlecast._tcp.").apply { port = 8009 })
                 cast.invoke(names, device)
                 serving!!.get(5, TimeUnit.SECONDS)
                 var end: Long = (SystemClock.uptimeMillis() + 3000)
@@ -4138,7 +4144,7 @@ class SmokeInstrumentation : Instrumentation() {
                 }
                 check(
                     (device!!.name.equals("Fixture Cast speaker") &&
-                        "GET /setup/eureka_info?options=detail HTTP/1.1".equals(line!!.get())),
+                        "GET /setup/eureka_info?params=device_info,name HTTP/1.1".equals(line!!.get())),
                     "Bound local Cast fallback supplies a missing friendly name",
                 )
                 check(

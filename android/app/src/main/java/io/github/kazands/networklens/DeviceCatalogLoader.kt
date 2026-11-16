@@ -12,6 +12,10 @@ internal object DeviceCatalogLoader {
             catch (_: IOException) { ProductModelIndex.EMPTY }
             catch (_: RuntimeException) { ProductModelIndex.EMPTY }
         DeviceCatalog.install(index)
+        val hardware = try { context.resources.openRawResource(R.raw.android_hardware).use(AndroidHardwareIndex::read) }
+            catch (_: IOException) { AndroidHardwareIndex.EMPTY }
+            catch (_: RuntimeException) { AndroidHardwareIndex.EMPTY }
+        DeviceCatalog.installHardware(hardware)
         ready = true
     }
 }

@@ -11,13 +11,19 @@ internal object HardwareClassification {
             "_raop._tcp." -> "AirPlay audio (RAOP)"
             "_spotify-connect._tcp." -> "Spotify Connect"
             "_googlecast._tcp." -> "Google Cast"
+            "_androidtvremote2._tcp." -> "Android TV remote service"
             "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.", "_pdl-datastream._tcp." -> "Printing"
             "_smb._tcp." -> "File sharing"
             "_hap._tcp.", "_hap._udp." -> "HomeKit"
             "_matter._tcp.", "_matterc._udp." -> "Matter"
             "_meshcop._udp." -> "Thread border router"
             "_companion-link._tcp." -> "Apple Companion Link"
-            else -> if (service == "urn:schemas-upnp-org:device:MediaRenderer:1") "DLNA media playback" else null
+            else -> when (service) {
+                "urn:schemas-upnp-org:device:MediaRenderer:1" -> "DLNA media playback"
+                AppleDeviceInfo.SERVICE -> AppleDeviceInfo.SERVICE
+                "Cast speaker group" -> "Cast speaker group"
+                else -> null
+            }
         }
     }.distinct().sorted()
 
@@ -26,8 +32,8 @@ internal object HardwareClassification {
         "HomeKit thermostat" -> DeviceCatalog.Category.THERMOSTAT
         "HomeKit television", "Samsung television" -> DeviceCatalog.Category.TV
         "HomeKit TV media player" -> DeviceCatalog.Category.TV_PLAYER
-        "HomeKit speaker" -> DeviceCatalog.Category.SPEAKER
-        "HomeKit audio receiver" -> DeviceCatalog.Category.AUDIO_RECEIVER
+        "Yamaha soundbar", "Yamaha subwoofer", "HomeKit speaker" -> DeviceCatalog.Category.SPEAKER
+        "HomeKit audio receiver", "Yamaha audio receiver" -> DeviceCatalog.Category.AUDIO_RECEIVER
         "HomeKit light", "UPnP light" -> DeviceCatalog.Category.LIGHT
         "HomeKit lock" -> DeviceCatalog.Category.LOCK
         "HomeKit outlet" -> DeviceCatalog.Category.OUTLET

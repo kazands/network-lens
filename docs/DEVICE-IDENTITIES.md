@@ -88,6 +88,8 @@ removed rather than assigned to whichever row happened to appear first.
 Neither broad source supplies a reliable universal form factor. These entries
 therefore retain icons/categories justified by current reported services; the
 app does not guess a phone, router or camera category from a product name.
+The unpublished [Android category supplement](ANDROID-RECOGNITION.md) adds
+separately attributed, exact manufacturer/model physical types for 651 pairs.
 Reviewed profiles and Recog retain their more specific category icons. The
 small reviewed table below is an override layer, not the entire catalogue.
 
@@ -211,3 +213,5 @@ An unresolved exact retail identity does not erase an independently supported ph
 Contradictory physical types are displayed as conflicting reports. Audio, casting and other
 capabilities remain separate from the primary device type. Missing or withheld model information
 is not supplied by a large catalogue or inferred from a personal device name.
+
+Audio zones: exact VSSL manufacturer/model aliases now classify A.1/A.3/A.6 and their x variants as streaming amplifiers. Sonos group membership and VSSL chassis relationships remain separate from physical endpoint identity; see [AUDIO-ZONES.md](AUDIO-ZONES.md).

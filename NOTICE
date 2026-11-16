@@ -5,6 +5,11 @@ Original source code, documentation and original artwork: GPL-3.0-only.
 See LICENSE for the complete GNU General Public License version 3.
 
 Third-party material is not relicensed by this notice:
+- LineageOS Wiki device-category facts and adapted category table: CC BY-SA 3.0,
+  attribution to LineageOS Wiki contributors. Full attribution and terms are
+  packaged in android/app/src/main/res/raw/lineage_categories_notice.txt.
+  Source projection, licence declaration and provenance are retained under
+  android/lineage-original/ and android/android-hardware-provenance.json.
 - Supplemental AppleDB iPad/iPhone model facts: MIT, Copyright (c) 2022 emiyl.
   Full terms are packaged in android/app/src/main/res/raw/appledb_license.txt;
   source and upstream credits are retained in android/appledb-original/.

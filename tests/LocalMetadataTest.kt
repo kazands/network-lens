@@ -411,7 +411,7 @@ object LocalMetadataTest {
         val fresh = MetadataLookups()
         check(fresh.snapshot().isEmpty(), "A new endpoint/scan has no previous outcomes")
         for (kind in LocalMetadata.Kind.values()) fresh.queue(request.copy(kind = kind))
-        check(fresh.snapshot().size == 4, "Endpoint diagnostics remain bounded by the four allowed protocols")
+        check(fresh.snapshot().size == 5, "Endpoint diagnostics remain bounded by the five allowed protocols")
         fresh.limit(LocalMetadata.Kind.WLED)
         fresh.incomplete(LocalMetadata.Kind.SHELLY)
         fresh.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.HTTP_STATUS, 403, IOException("fixture-secret")))
