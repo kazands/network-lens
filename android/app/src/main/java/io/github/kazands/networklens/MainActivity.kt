@@ -567,6 +567,13 @@ class MainActivity : Activity() {
                     else "Interpreted from current reported model data using the local product catalogue.", 14, muted, false))
                 body.addView(recognized); space(body, 8)
             }
+            if (endpoint.audioStatus.isNotEmpty() || endpoint.audioRows.isNotEmpty()) {
+                val audio = panel(); audio.setPadding(dp(18), dp(10), dp(18), dp(14))
+                audio.addView(text("Audio system", 16, ink, true))
+                if (endpoint.audioStatus.isNotEmpty()) detailRow(audio, "Lookup", endpoint.audioStatus)
+                for ((label, value) in endpoint.audioRows) detailRow(audio, label, value)
+                body.addView(audio); space(body, 8)
+            }
             val lookups = endpoint.metadataLookupRows()
             if (lookups.isNotEmpty()) {
                 val lookupPanel = panel(); lookupPanel.setPadding(dp(18), dp(10), dp(18), dp(14))
@@ -637,10 +644,13 @@ class MainActivity : Activity() {
                 if (match.product.category != DeviceCatalog.Category.UNSPECIFIED) text.append("\nRecognized device type: ").append(match.product.category.label)
                 text.append("\nRecognition source: ").append(match.source).append("\nRecognition input: ").append(match.input)
             }
+            if (d.audioStatus.isNotEmpty()) text.append("\nAudio lookup: ").append(d.audioStatus)
+            for ((label, value) in d.audioRows) text.append("\n").append(label).append(": ").append(value)
             for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
             for (hint in d.observations()) text.append("\nReported ").append(hint.field).append(" · ").append(hint.source).append(": ").append(hint.value)
             for (fact in d.classification().facts) text.append("\nDevice type evidence · ").append(fact.source).append(": ").append(fact.category.label)
             d.details["UPnP description status"]?.let { text.append("\nUPnP description status: ").append(it) }
+            d.details[AppleDeviceInfo.SOURCE]?.let { text.append("\n").append(AppleDeviceInfo.SOURCE).append(": ").append(it) }
             d.details["HomeKit setup (advertised)"]?.let { text.append("\nHomeKit setup (advertised): ").append(it) }
             if (vendor.isNotEmpty()) text.append("\nMAC vendor (IEEE registry): ").append(vendor)
             d.details["Network identifier (DNS)"]?.let { text.append("\nNetwork identifier (DNS): ").append(it) }

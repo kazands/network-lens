@@ -1,7 +1,8 @@
 # Offline model recognition
 
 Network Lens interprets model fields admitted from reviewed current-wire Bonjour
-services using pinned Rapid7 Recog and supplemental AppleDB tables. The tables
+services and validated [Apple device-service responses](APPLE-RECOGNITION.md)
+using pinned Rapid7 Recog and supplemental AppleDB tables. The tables
 add no cloud lookup, account, persistent history, permission or runtime dependency.
 Missing auxiliary model records may use the bounded local TXT queries described
 below. Existing discovery work limits, network scope and the 55-second work

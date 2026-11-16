@@ -12,11 +12,15 @@ import java.util.Locale
 internal object LocalMetadata {
     enum class Kind(val source: String) {
         SHELLY("Shelly device information"), WLED("WLED device information"),
-        SPOTIFY("Spotify Connect device information"), IPP("IPP printer information")
+        SPOTIFY("Spotify Connect device information"), IPP("IPP printer information"), CAST("Cast device information")
     }
     data class Report(val hints: Map<String, String> = emptyMap(), val details: Map<String, String> = emptyMap(), val mac: String = "")
     data class Request(val kind: Kind, val port: Int, val path: String, val secure: Boolean = false) {
         fun bytes(peer: InetAddress): ByteArray {
+            if (kind == Kind.CAST) {
+                require(port == 8008 && path == "/setup/eureka_info" && !secure)
+                return CastInfo.request(peer)
+            }
             require(port in 1..65535 && safePath(path) == path)
             val authority = authority(peer, port)
             val body = if (kind == Kind.IPP) IppInfo.query("${if (secure) "ipps" else "ipp"}://$authority$path") else ByteArray(0)
@@ -50,6 +54,7 @@ internal object LocalMetadata {
     fun request(service: MdnsPacket.Service): Request? {
         if (service.port !in 1..65535) return null
         return when (LocalServices.canonicalType(service.type)) {
+            "_googlecast._tcp." -> if (CastInfo.isGroup(service)) null else Request(Kind.CAST, 8008, "/setup/eureka_info")
             "_shelly._tcp." -> Request(Kind.SHELLY, service.port, "/shelly")
             "_http._tcp." -> {
                 // Gen1 uses a short (last three MAC bytes) or full ID in its instance/host.
@@ -85,6 +90,7 @@ internal object LocalMetadata {
     } catch (_: Exception) { null }
 
     fun parse(kind: Kind, body: ByteArray): Report? {
+        if (kind == Kind.CAST) return CastInfo.parse(body)
         if (kind == Kind.IPP) return IppInfo.parse(body)?.let { Report(mapOf("Model" to it)) }
         val fields = when (kind) {
             Kind.SHELLY -> BoundedJson.fields(body, setOf("model", "type", "mac", "ver", "fw"))

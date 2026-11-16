@@ -1,19 +1,29 @@
 # Development status
 
-Network Lens 0.3.15 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.15.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.15).
+Network Lens 0.3.16 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.16.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.16).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
 ## Recognition improvements in this preview
 
-This preview separates primary physical type from service capabilities,
-resolves cross-protocol aliases and grouped evidence, expands Samsung UPnP
-description compatibility and uses current Companion/AirPlay/RAOP plus associated
-Bonjour model records. A pinned AppleDB supplement adds 128 missing iPad/iPhone
-codes to the existing 156-code Recog table. See [recognition evidence](RECOGNITION-EVIDENCE.md) for exact scope,
-source provenance and completed checks. Fresh physical-device verification remains outstanding. In-app update checking remains unimplemented.
+[Apple service model lookup](APPLE-RECOGNITION.md) adds a bounded, read-only
+ProductType request to current eligible Apple service endpoints without pairing.
+[Android/Cast recognition](ANDROID-RECOGNITION.md) reads nested receiver metadata
+and adds 651 manufacturer-qualified hardware-category pairs. Virtual playback
+group identity stays separate from physical receiver identity.
+
+[Audio support](AUDIO-ZONES.md) adds VSSL amplifier/zone mapping, Sonos topology,
+HEOS player/groups, MusicCast hardware zones/distribution, per-port BluOS players
+and current AirPlay/Cast group reporting. Group membership cannot create devices,
+supply a neighbour's model or merge physical hardware. Cast HTTP group descriptions
+do not establish speaker membership. All lookups are bounded and local.
+
+Earlier physical-type corrections for Ecobee Premium, Samsung description
+compatibility and the 284-code Apple model catalogue remain. The cause of the
+original missing Samsung model was not confirmed. Fresh physical testing remains
+necessary. In-app update checking remains unimplemented.
 
 ## Current functionality
 
@@ -57,19 +67,14 @@ uploading device identifiers.
 
 ## Verification
 
-The category corrections passed all 26 host suites / 29,949 checks and 344
-identity/presentation checks on an isolated API 37 emulator. Synthetic fixtures
-cover the Sony Spotify brand spelling, exact Ecobee maker/model reports,
-conflicts, raw-field separation, dual-stack grouping, icons, search, accessibility
-labels, both appearances and normal/200% text at 320dp/411dp.
-
-Versioned release checks and their exact scope are recorded in
-[release verification](VERIFICATION-0.3.15.md). Earlier release checks remain in
-[0.3.13 verification](VERIFICATION-0.3.13.md) and the
-[implementation verification history](archive/IMPLEMENTATION-VERIFICATION.md).
-A read-only phone inspection informed these corrections; the corrected APK still
-needs physical-device verification. Emulator checks do not establish household
-recognition accuracy or complete discovery.
+All 31 host suites passed, including 64 broader-audio and 70 VSSL/Sonos checks.
+The final implementation passed 710 API 37 emulator checks across audio zones,
+device identities, grouping, local metadata and scan efficiency. Independent
+Deep Kaz reviews approved the implementation after required corrections.
+Versioned artifacts and exact release checks are recorded in
+[0.3.16 verification](VERIFICATION-0.3.16.md). Earlier results remain in
+[0.3.15 verification](VERIFICATION-0.3.15.md) and the verification archive.
+Synthetic fixtures do not establish household recognition accuracy.
 
 ## Known limits
 

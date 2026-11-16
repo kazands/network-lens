@@ -271,7 +271,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
             "Reverse DNS" -> "Device name lookup"
             "Device port and name checks" -> "Extra device details"
             "Service address checks" -> "Advertised address confirmation"
-            "Cast device names" -> "TV and speaker names"
+            "Cast device information" -> "Cast device details"
             "SADP device discovery" -> "Camera and recorder discovery"
             "SSDP / UPnP" -> "Device advertisements"
             "UPnP descriptions" -> "Device descriptions"
@@ -331,7 +331,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
                 "Reverse DNS" -> "Name lookups finished using the local name servers provided by your Wi-Fi."
                 "Device port and name checks" -> "Optional service-port and computer-name checks finished separately from finding active addresses."
                 "Service address checks" -> "Advertised addresses were checked for a fresh response. Silent addresses were not added solely because a service listed them."
-                "Cast device names" -> "Unnamed Cast devices were asked for a friendly name. Some devices do not share one; no extra name does not mean they are offline."
+                "Cast device information" -> "Current Cast devices were asked for their reported name, model and manufacturer. A service or playback capability alone does not establish the hardware type."
                 "Unanswered device checks" -> "A second pass checked for replies or details missed on the first attempt."
                 else -> "The discovery window finished. Any replies received were used to identify devices; no reply does not mean a device is offline."
             }

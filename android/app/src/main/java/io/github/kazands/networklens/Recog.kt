@@ -16,6 +16,7 @@ internal object Recog {
             else "Apple model catalogue · Recog model mapping $rule · ${RecogModels.REVISION} · $observationSource"
         val input: String get() {
             val field = when (observationSource) {
+                AppleDeviceInfo.MODEL_SOURCE -> "ProductType"
                 "mDNS current _companion-link._tcp. TXT" -> "rpMd"
                 "mDNS current _raop._tcp. TXT" -> "am"
                 else -> "model"
@@ -59,6 +60,8 @@ internal object Recog {
                 (secondReportedModel.isEmpty() || secondReportedModel == model.code || secondReportedModel == model.description)
 
         fun offer(attributes: Map<String, ByteArray>) = offerField(attributes, "model", "mDNS current _device-info._tcp. TXT")
+
+        fun offerAppleModel(code: String) = offerField(mapOf("model" to code.toByteArray(Charsets.UTF_8)), "model", AppleDeviceInfo.MODEL_SOURCE)
 
         /** Reviewed model fields only; still called solely after current-wire admission. */
         fun offerService(type: String, attributes: Map<String, ByteArray>) {

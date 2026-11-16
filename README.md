@@ -6,20 +6,21 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.15 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.15/Network-Lens-0.3.15.apk)
+[![Download Android APK — Network Lens 0.3.16 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.16/Network-Lens-0.3.16.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.15) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.16) · No GitHub account required to download.
 
-**Development preview: 0.3.15.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.16.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview includes the broader recognition improvements described in
-[recognition evidence](docs/RECOGNITION-EVIDENCE.md).
+This preview adds [Apple model lookup](docs/APPLE-RECOGNITION.md),
+[Android recognition and categories](docs/ANDROID-RECOGNITION.md), and
+[audio hardware, zones and group reporting](docs/AUDIO-ZONES.md).
 
 The public APK updates existing public-signed Network Lens installations in place. It retains the application ID `io.github.kazands.networklens` and the pinned app-signing identity. See [application identity and updates](docs/APPLICATION-IDENTITY.md) for build and installation details.
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.15 verification notes](docs/VERIFICATION-0.3.15.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.16 verification notes](docs/VERIFICATION-0.3.16.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 ## What it does
 
@@ -33,6 +34,8 @@ Read the [0.3.15 verification notes](docs/VERIFICATION-0.3.15.md) for completed 
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 - Canonical product names from a free offline catalogue covering 86,540 product/family titles across 5,263 worldwide brands, indexed by 256,338 exact manufacturer-qualified aliases. Useful custom names remain below the product title; raw fields and recognition sources remain in Details. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md).
 - Offline Apple model interpretations for 156 Recog codes and 128 supplemental AppleDB iPad/iPhone codes, plus reviewed recorder, streaming, console, thermostat and television profiles. Supported identities select more specific Lucide icons; unknown categories remain based on observed services. See [Recog coverage](docs/RECOG.md) and [physical type versus service evidence](docs/RECOGNITION-EVIDENCE.md).
+- Read-only Apple service model lookup, nested Cast receiver metadata and 651 manufacturer-qualified Android hardware categories. Playback services do not override a known physical device type.
+- Source-labelled VSSL/Sonos, HEOS, MusicCast, BluOS and AirPlay/Cast audio relationships. BluOS players retain their advertised ports; playback groups never become physical hardware identity. Cast group descriptions do not establish speaker membership.
 - Bounded read-only PS5 discovery, with supported evidence displayed as **Sony PlayStation 5**. Conflicting reports suppress recognition; names or IEEE vendors alone cannot establish a product.
 
 Read [development status](docs/STATUS.md) for current functionality, verification and known limits.

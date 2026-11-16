@@ -75,6 +75,10 @@ not been tied conclusively to a particular description URL or transport failure.
 
 ## Apple compatibility boundary
 
+The unpublished [direct Apple model lookup](APPLE-RECOGNITION.md) complements the
+advertisement paths below. It validates the service before requesting only
+ProductType and retains the same catalogue, conflicts and fresh-scan boundaries.
+
 See [Recog input rules](RECOG.md#additional-current-apple-model-sources). The adapter
 uses exact retained Recog and AppleDB model mappings; it does not infer a generation from an Apple-like
 name or turn Companion Link's private identifiers into MAC addresses.

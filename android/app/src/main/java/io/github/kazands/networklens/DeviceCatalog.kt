@@ -11,7 +11,7 @@ internal object DeviceCatalog {
         CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
         SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
         AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
-        AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
+        AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
         SECURITY_SYSTEM("Security system"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
         SHOWER("Shower"), REMOTE("Remote control"), UNSPECIFIED("Not classified")
@@ -29,7 +29,10 @@ internal object DeviceCatalog {
     private const val PLAYSTATION_SOURCE = "PlayStation discovery host-type"
     private fun keys(vararg values: String) = values.mapTo(HashSet(), ::key)
     // Exact reported-model aliases and primary references: docs/DEVICE-IDENTITIES.md.
-    private val products = listOf(
+    private val products = listOf("A.1", "A.3", "A.6", "A.1x", "A.3x", "A.6x").map { model ->
+        Product("vssl:${key(model)}", "VSSL", "VSSL $model", Category.AMPLIFIER,
+            keys(model, model.replace(".", ""), "VSSL $model", "VSSL ${model.replace(".", "")}"), manufacturerRequired = true)
+    } + listOf(
         Product("hikvision:ds-7608ni-i2-8p", "Hikvision", "Hikvision DS-7608NI-I2/8P", Category.RECORDER,
             keys("DS-7608NI-I2/8P", "Hikvision DS-7608NI-I2/8P")),
         Product("nvidia:shield-tv", "NVIDIA", "NVIDIA SHIELD TV", Category.TV_PLAYER,
@@ -46,9 +49,10 @@ internal object DeviceCatalog {
         "nvidia", "nvidia corporation" -> "nvidia"
         "sony", "sony corporation", "sony interactive entertainment", "sony interactive entertainment inc.", "sony_tv" -> "sony"
         "samsung", "samsung electronics", "samsung electronics co., ltd." -> "samsung"
+        "sonos", "sonos, inc.", "sonos inc." -> "sonos"
         "ecobee", "ecobee inc.", "ecobee inc" -> "ecobee"
         "apple", "apple inc.", "apple inc", "apple computer, inc." -> "apple"
-        "google", "google llc" -> "google"
+        "google", "google llc", "google inc.", "google inc" -> "google"
         "dlink", "d-link", "d-link corporation" -> "d-link"
         "hp", "hp inc.", "hewlett-packard", "hewlett packard", "hewlett-packard company" -> "hp"
         "qnap", "qnap systems, inc." -> "qnap"
@@ -66,7 +70,9 @@ internal object DeviceCatalog {
     }
     internal fun key(value: String): String = value.trim(' ', '\t').lowercase(Locale.ROOT)
     @Volatile private var global = ProductModelIndex.EMPTY
+    @Volatile private var hardware = AndroidHardwareIndex.EMPTY
     internal fun install(index: ProductModelIndex) { global = index }
+    internal fun installHardware(index: AndroidHardwareIndex) { hardware = index }
     internal fun extendedSize(): Int = global.size
     fun lookup(model: String, manufacturer: String = ""): Product? {
         if (model.length !in 1..160) return null
@@ -74,8 +80,9 @@ internal object DeviceCatalog {
             (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
         val maker = brand(manufacturer)
         val entry = global.lookup(maker, model) ?: return null
-        return Product("catalog:$maker:${key(entry.title)}", entry.brand, entry.title, Category.UNSPECIFIED,
-            keys(model), familyOnly = entry.source.contains("NIST-CPE@"), reference = entry.source)
+        val type = hardware.lookup(maker, model)
+        return Product("catalog:$maker:${key(entry.title)}", entry.brand, entry.title, type?.category ?: Category.UNSPECIFIED,
+            keys(model), familyOnly = entry.source.contains("NIST-CPE@"), reference = entry.source + (type?.let { ";" + it.source } ?: ""))
     }
     fun fromRecog(model: Recog.Model): Match {
         val category = when (model.category) {
@@ -135,7 +142,8 @@ internal object DeviceCatalog {
                 val product = lookup(model, manufacturer) ?: return@mapNotNull null
                 if (product.category == Category.UNSPECIFIED ||
                     product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) null
-                else HardwareClassification.Fact(product.category, "Local product catalogue · Model=$model · ${modelSources[model]}")
+                else HardwareClassification.Fact(product.category, "Local product catalogue · Model=$model · ${modelSources[model]}" +
+                    (hardware.lookup(manufacturer, model)?.let { " · " + it.source } ?: ""))
             }
         }
         fun match(): Match? {
