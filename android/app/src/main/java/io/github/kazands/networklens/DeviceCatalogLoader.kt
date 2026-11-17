@@ -16,6 +16,9 @@ internal object DeviceCatalogLoader {
             catch (_: IOException) { AndroidHardwareIndex.EMPTY }
             catch (_: RuntimeException) { AndroidHardwareIndex.EMPTY }
         DeviceCatalog.installHardware(hardware)
+        MatterInfo.index = try { context.resources.openRawResource(R.raw.matter_models).use(MatterInfo.Index::read) }
+            catch (_: IOException) { MatterInfo.Index.EMPTY }
+            catch (_: RuntimeException) { MatterInfo.Index.EMPTY }
         ready = true
     }
 }

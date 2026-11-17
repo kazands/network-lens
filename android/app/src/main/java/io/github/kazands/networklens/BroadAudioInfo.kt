@@ -191,7 +191,14 @@ internal object BroadAudioInfo {
             Protocol.CAST -> {
                 require(plan.port == 8008)
                 val root = doc(fetch(AudioWire.Query(8008, "/setup/eureka_info?params=multizone")))
-                val multi = obj(root["multizone"]) ?: invalid()
+                val multi = obj(root["multizone"]) ?: run {
+                    // Some receivers return an ordinary Eureka identity document and ignore this selector.
+                    // This does not establish an empty roster or a malformed response.
+                    if (!root.containsKey("multizone") && text(root["name"]) != null &&
+                        (text(root["build_version"]) != null || obj(root["device_info"]) != null))
+                        throw MetadataHttp.Failure(MetadataHttp.Reason.NOT_REPORTED)
+                    invalid()
+                }
                 val groups = ArrayList<Group>(); val seen = HashSet<String>()
                 for (key in listOf("groups", "dynamic_groups")) {
                     val entries = if (multi.containsKey(key)) array(multi[key]) ?: invalid() else emptyList()

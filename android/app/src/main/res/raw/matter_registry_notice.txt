@@ -1,0 +1,11 @@
+Matter DCL public registry facts
+Source: Connectivity Standards Alliance Distributed Compliance Ledger
+https://on.dcl.csa-iot.org/
+Snapshot and page-hash provenance: android/matter-model-provenance.json
+
+This offline projection contains public vendor/product identifiers, registered
+names, part numbers and device types. No exclusive rights are claimed over the
+underlying facts. Names and trademarks remain their owners' property. The
+ledger software license is not a blanket license over vendor-submitted data.
+No certification, endorsement or firmware-compatibility claim is made.
+The app never sends scan data to the DCL and performs no runtime DCL lookup.

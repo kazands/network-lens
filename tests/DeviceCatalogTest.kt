@@ -129,7 +129,7 @@ object DeviceCatalogTest {
         check(DeviceCatalog.fromRecog(Recog.lookup("AppleTV11,1")!!).product.title == "Apple TV", "A product already containing its brand does not repeat it")
         fun labels(name: String = "", host: String = "", model: String = "", role: String = "") =
             DevicePresentation.labels(name, host, model, role, null, false, false)
-        check(labels().title == "Unidentified device" && labels().subtitle.isEmpty(), "A missing identity stays unidentified")
+        check(labels().title == "Unnamed device" && labels().subtitle.isEmpty(), "A missing identity stays unidentified")
         check(labels("Fixture lounge", role = "Casting device").subtitle == "Casting device", "A casting role does not guess hardware")
         check(labels("thinkstation-X900.local", "thinkstation-X900.local").let { it.title == "ThinkStation X900" && it.subtitle == "Reported device name" }, "Host typography does not assert a Lenovo product")
         check(labels("Custom.local").title == "Custom.local", "Custom names are preserved without matching hostname evidence")
@@ -137,6 +137,12 @@ object DeviceCatalogTest {
         check(labels(model = "Fixture model").subtitle == "Reported model", "An unmatched model is labelled as reported")
         check(DevicePresentation.labels("Fixture phone", "", "", "", apple.product, true, false).subtitle == "This phone", "Self role keeps precedence")
         check(DevicePresentation.labels("", "", "", "", apple.product, false, true).title == "Router", "Gateway role keeps precedence")
+        check(labels().unnamed && !labels("Fixture device").unnamed && !labels(model = "Fixture model").unnamed, "Missing-name state is independent of its friendly display wording")
+        val matter = DeviceCatalog.Match(apple.product.copy(id = "matter:123:456"), "Fixture registry", "VID=123; PID=456")
+        check(RecognitionCopy.explanation(matter).contains("vendor and product IDs") && !RecognitionCopy.explanation(matter).contains("model code"), "Matter explanation does not invent a reported model")
+        val protocol = DeviceCatalog.Match(apple.product.copy(id = "protocol:fixture:model"), "Fixture discovery", "Model=Fixture")
+        check(RecognitionCopy.explanation(protocol).contains("local discovery service") && !RecognitionCopy.explanation(protocol).contains("catalogue"), "Protocol model explanation does not claim a catalogue match")
+        check(RecognitionCopy.explanation(apple).contains("Apple model catalogue"), "Apple matching explains its actual source")
         println("PASS · $checks product catalogue and presentation checks")
     }
 }

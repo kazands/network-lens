@@ -2,7 +2,7 @@ package io.github.kazands.networklens
 
 /** Identity-only display choices; original names/models remain in endpoint details and search. */
 internal object DevicePresentation {
-    data class Labels(val title: String, val subtitle: String)
+    data class Labels(val title: String, val subtitle: String, val unnamed: Boolean = false)
     fun labels(name: String, hostname: String, model: String, role: String, product: DeviceCatalog.Product?,
                self: Boolean, gateway: Boolean): Labels {
         val clean = SafeText.label(name, 160)
@@ -16,12 +16,12 @@ internal object DevicePresentation {
         }
         val named = networkName.takeIf(IdentityHints::specificName)
         val reportedModel = model.takeIf(IdentityHints::specific)
-        val title = named ?: reportedModel ?: "Unidentified device"
+        val title = named ?: reportedModel ?: "Unnamed device"
         return Labels(title, role.ifEmpty { when {
             named != null -> "Reported device name"
             reportedModel != null -> "Reported model"
             else -> ""
-        } })
+        } }, unnamed = named == null && reportedModel == null)
     }
     private fun reportedName(name: String, hostname: String): String {
         if (hostname.isEmpty() || !name.equals(hostname, true) || !name.endsWith(".local", true)) return name

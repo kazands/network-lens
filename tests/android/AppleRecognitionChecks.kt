@@ -85,6 +85,11 @@ internal object AppleRecognitionChecks {
             apply.invoke(op, withheld, AppleDeviceInfo.Report(AppleDeviceInfo.Status.WITHHELD))
             check(withheld.model.isEmpty() && withheld.manufacturer.isEmpty() && withheld.identifiedProduct() == null &&
                 DeviceIcon.forGroup(withheld).label == AppleDeviceInfo.SERVICE, "Withheld model preserves verified service without guessing an iPhone or iPad")
+            val unavailable = peer(24); queue(unavailable)
+            apply.invoke(op, unavailable, AppleDeviceInfo.Report(AppleDeviceInfo.Status.UNAVAILABLE, failure = MetadataHttp.Reason.READ_FAILED))
+            check(unavailable.services.contains(AppleDeviceInfo.SERVICE) && unavailable.model.isEmpty() &&
+                unavailable.details[AppleDeviceInfo.SOURCE]!!.contains("Response read failed"),
+                "Failed model lookup retains verified Apple service and its diagnostic without guessing hardware")
             val other = peer(21); queue(other); apply.invoke(op, other, AppleDeviceInfo.Report(AppleDeviceInfo.Status.OTHER))
             check(other.services.isEmpty() && other.identifiedProduct() == null, "Non-Apple service on the same port creates no identity")
             val unknown = peer(22); queue(unknown); apply.invoke(op, unknown, AppleDeviceInfo.Report(AppleDeviceInfo.Status.MODEL, "iPad999,1"))

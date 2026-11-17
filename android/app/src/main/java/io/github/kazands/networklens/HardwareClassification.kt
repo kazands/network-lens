@@ -34,7 +34,7 @@ internal object HardwareClassification {
         "HomeKit TV media player" -> DeviceCatalog.Category.TV_PLAYER
         "Yamaha soundbar", "Yamaha subwoofer", "HomeKit speaker" -> DeviceCatalog.Category.SPEAKER
         "HomeKit audio receiver", "Yamaha audio receiver" -> DeviceCatalog.Category.AUDIO_RECEIVER
-        "HomeKit light", "UPnP light" -> DeviceCatalog.Category.LIGHT
+        "HomeKit light", "UPnP light", "Yeelight light" -> DeviceCatalog.Category.LIGHT
         "HomeKit lock" -> DeviceCatalog.Category.LOCK
         "HomeKit outlet" -> DeviceCatalog.Category.OUTLET
         "HomeKit switch" -> DeviceCatalog.Category.SWITCH
@@ -47,12 +47,15 @@ internal object HardwareClassification {
         "HomeKit dehumidifier" -> DeviceCatalog.Category.DEHUMIDIFIER
         "HomeKit video doorbell" -> DeviceCatalog.Category.DOORBELL
         "HomeKit camera", "UPnP camera", "Video surveillance device", "Network surveillance device" -> DeviceCatalog.Category.CAMERA
-        "HomeKit bridge" -> DeviceCatalog.Category.BRIDGE
+        "HomeKit bridge", "Discovery smart-home bridge" -> DeviceCatalog.Category.BRIDGE
         "HomeKit garage door" -> DeviceCatalog.Category.GARAGE_DOOR
         "HomeKit security system" -> DeviceCatalog.Category.SECURITY_SYSTEM
         "HomeKit door" -> DeviceCatalog.Category.DOOR
         "HomeKit window" -> DeviceCatalog.Category.WINDOW
         "HomeKit window covering" -> DeviceCatalog.Category.WINDOW_COVERING
+        "Omada access point", "TP-Link EAP access point" -> DeviceCatalog.Category.ACCESS_POINT
+        "Omada network switch", "TP-Link Easy Smart network switch" -> DeviceCatalog.Category.NETWORK_SWITCH
+        "Omada gateway" -> DeviceCatalog.Category.ROUTER
         "HomeKit router service" -> DeviceCatalog.Category.ROUTER
         "HomeKit range extender" -> DeviceCatalog.Category.RANGE_EXTENDER
         "HomeKit sprinkler" -> DeviceCatalog.Category.SPRINKLER
@@ -67,7 +70,10 @@ internal object HardwareClassification {
         private val facts = linkedMapOf<DeviceCatalog.Category, java.util.TreeSet<String>>()
         fun offer(kind: String, source: String) {
             val category = reported(kind) ?: return
-            if (source.isEmpty()) return
+            offerCategory(category, source)
+        }
+        fun offerCategory(category: DeviceCatalog.Category, source: String) {
+            if (category == DeviceCatalog.Category.UNSPECIFIED || source.isEmpty()) return
             val sources = facts.getOrPut(category) { java.util.TreeSet() }
             sources.add(SafeText.label(source, 128))
             if (sources.size > 4) sources.pollLast()

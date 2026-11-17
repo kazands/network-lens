@@ -38,6 +38,28 @@ class Device : Grouping.Endpoint {
     private var hints = IdentityHints()
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
+    private val matchedFamilies = sortedSetOf<String>()
+    private var familiesOverflow = false
+    @Synchronized internal fun discoveryFamilies(domains: Set<String>, source: String) {
+        for (domain in domains.sorted()) {
+            if (matchedFamilies.size < 32 || domain in matchedFamilies) matchedFamilies.add(domain) else familiesOverflow = true
+            val family = DiscoveryMatchers.family(domain)
+            if (family != null && family.hardware.isNotEmpty()) hint("Device type", family.hardware, DiscoveryMatchers.SOURCE + " · " + source, 60)
+        }
+        detail("Discovery families", matchedFamilies.joinToString(", "))
+    }
+    @Synchronized internal fun recognizeMatter(report: MatterInfo.Report, source: String) {
+        hint("Name", report.name, source + " DN", 65)
+        report.vendor?.let { detail("Matter vendor ID", it.toString()) }
+        report.product?.let { detail("Matter product ID", it.toString()) }
+        report.deviceType?.let {
+            detail("Matter device type ID", it.toString())
+            hardwareType.offerCategory(MatterInfo.category(it), source + " DT")
+        }
+        if (report.vendor != null && report.product != null) {
+            catalogue.offerRegistryIdentity("matter:${report.vendor}:${report.product}")
+        }
+    }
     private var hardwareType = HardwareClassification.Evidence()
     internal var metadataLookups = MetadataLookups()
         private set
@@ -110,7 +132,11 @@ class Device : Grouping.Endpoint {
         val product = groupProduct()?.product
         val classification = classification()
         val displayProduct = product?.copy(category = classification.category ?: DeviceCatalog.Category.UNSPECIFIED)
-        return DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
+        val labels = DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
+        val families = endpoints().flatMap { synchronized(it) { it.matchedFamilies.toList() } }.distinct()
+        val family = families.singleOrNull()?.let(DiscoveryMatchers::family)
+        return if (labels.unnamed && family != null && endpoints().none { it.familiesOverflow })
+            labels.copy(title = family.label, subtitle = labels.subtitle.ifEmpty { "Device family; model not available" }, unnamed = false) else labels
     }
     @Synchronized private fun hardwareFacts(): List<HardwareClassification.Fact> =
         hardwareType.snapshot() + catalogue.categories() + recognition.categories() + listOfNotNull(
@@ -237,6 +263,7 @@ class Device : Grouping.Endpoint {
         copy.recognition = recognition.copy()
         copy.catalogue = catalogue.copy()
         copy.hardwareType = hardwareType.copy()
+        copy.matchedFamilies.addAll(matchedFamilies); copy.familiesOverflow = familiesOverflow
         copy.metadataLookups = metadataLookups.copy()
         copy.audioReport = audioReport?.copy(members = audioReport!!.members.toList())
         copy.audioPlayers.putAll(audioPlayers)

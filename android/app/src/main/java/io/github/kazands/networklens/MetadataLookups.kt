@@ -27,6 +27,15 @@ internal class MetadataLookups {
         entries[request.kind] = Entry(request.kind, request.port, request.secure)
         return true
     }
+    /** Called by the single admitted worker, after the previous candidate failed. */
+    @Synchronized fun beginCandidate(request: LocalMetadata.Request): Boolean {
+        if (closed) return false
+        val prior = entries[request.kind] ?: return queue(request)
+        if (prior.state == State.QUEUED) return prior.port == request.port && prior.secure == request.secure
+        if (prior.state != State.FAILED) return false
+        entries[request.kind] = Entry(request.kind, request.port, request.secure)
+        return true
+    }
     private fun update(kind: LocalMetadata.Kind, transform: (Entry) -> Entry) {
         val entry = entries[kind] ?: return
         if (!closed && entry.state == State.QUEUED) entries[kind] = transform(entry)

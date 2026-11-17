@@ -27,6 +27,8 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         @JvmField val sample = sample
         @JvmField val running = !sample && running
         @JvmField val complete = !sample && !running && report != null && report.complete
+        val statusLabel = report?.statusLabel ?: ""
+        val omittedSources = if (sample || running) 0 else report?.omittedSources ?: 0
         @JvmField val scope = when { sample -> ""; running -> activeScope; report == null -> ""; else -> report.scope }
         @JvmField val reason = if (sample || running || report == null) "" else report.reason
         @JvmField val message = if (sample) "" else message
@@ -39,7 +41,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         fun same(other: Snapshot?): Boolean = other != null && sample == other.sample &&
             running == other.running && complete == other.complete && checked == other.checked &&
             total == other.total && finished == other.finished && scope == other.scope && reason == other.reason &&
-            message == other.message && sources == other.sources
+            message == other.message && sources == other.sources && omittedSources == other.omittedSources
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -84,7 +86,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         val status = when {
             snapshot.sample -> "Sample results"
             snapshot.running -> "Scan in progress"
-            saved -> if (snapshot.complete) "Complete scan" else "Partial scan"
+            saved -> snapshot.statusLabel
             else -> "Ready to scan"
         }
         val statusView = text(status, 21, colors.text, true)
@@ -94,8 +96,8 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         val explanation = when {
             snapshot.sample -> "An example of a scan, using sample devices."
             snapshot.running -> "Network Lens is checking addresses and listening for device details."
-            saved -> if (snapshot.complete) "The planned checks finished. This does not guarantee that every device was found."
-                else "Some checks did not finish successfully. Devices or details may be missing."
+            saved -> if (snapshot.statusLabel == "Scan stopped") "Results collected before the scan stopped."
+                else "Results from devices that replied during this scan."
             else -> "Run Scan Wi-Fi to collect device and scan information."
         }
         summary.addView(text(explanation, 14, colors.muted, false))
@@ -109,7 +111,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
                     if (attention.size > 2) " and " + (attention.size - 2) +
                         " other method" + (if (attention.size == 3) "" else "s") else ""
                 space(summary, 8)
-                summary.addView(text("Needs attention: " + labels, 13, colors.text, true))
+                summary.addView(text("Checks to review: " + labels, 13, colors.text, true))
             }
         }
         if (saved) {
@@ -144,7 +146,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         }
         body.addView(summary)
         val reason = snapshot.reason.replace(" Tap scan status for details.", "")
-        val explainedBySources = reason.startsWith("Device details are partial:") && snapshot.sources.values.any(::needsAttention)
+        val explainedBySources = snapshot.omittedSources == 0 && reason.startsWith("Some checks could not finish:") && snapshot.sources.values.any(::needsAttention)
         if (!snapshot.sample && !snapshot.running && !snapshot.complete && reason.isNotEmpty() && !explainedBySources) {
             space(body, 14); body.addView(text(reason, 14, colors.text, false))
         }
@@ -154,12 +156,23 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         if (saved) {
             space(body, 12)
             body.addView(text("Results reflect responses during this scan. Scan again to refresh them.", 12, colors.muted, false))
+            if (!snapshot.complete && !snapshot.running) {
+                space(body, 16)
+                val nextStep = text("What you can try", 16, colors.text, true)
+                heading(nextStep); body.addView(nextStep); space(body, 7)
+                body.addView(text(RecognitionCopy.NEXT_SCAN, 14, colors.muted, false))
+            }
         }
     }
 
     private fun buildMethods() {
         val snapshot = checkNotNull(snapshot)
         if (snapshot.sample) return
+        if (snapshot.omittedSources > 0) {
+            space(body, 16)
+            body.addView(text("Details for ${snapshot.omittedSources} additional discovery methods could not be retained.",
+                14, colors.text, false))
+        }
         if (snapshot.sources.isEmpty()) {
             space(body, 20)
             val title = text("Discovery methods", 16, colors.text, true)
@@ -178,7 +191,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         }
         if (failed + incomplete > 0) {
             space(body, 20)
-            val attention = text("What may be missing", 16, colors.text, true)
+            val attention = text("Scan notes", 16, colors.text, true)
             heading(attention); body.addView(attention); space(body, 10)
             val issues = card()
             issues.setPadding(dp(15), dp(14), dp(15), dp(2))
@@ -277,6 +290,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
             "UPnP descriptions" -> "Device descriptions"
             "Unanswered device checks" -> "Second-pass checks"
             "WS-Discovery" -> "Printer and camera discovery"
+            OmadaDiscovery.SOURCE -> "Omada network equipment (passive)"
             TpLinkDiscovery.SOURCE -> "TP-Link plugs and switches"
             "mDNS type and hostname queries" -> "Advertised services and hostnames"
             else -> if (name.startsWith("mDNS ")) when (name.substring(5)) {
@@ -318,6 +332,8 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
                 value.contains("could not start") -> "Android could not start this method. Devices or details normally found this way may be missing."
                 else -> "This method could not collect all of its results. Some devices or identifying details may be missing."
             }
+            if (value.startsWith("Truncated") && value.contains(MetadataHttp.Reason.NOT_REPORTED.detail))
+                return "A receiver replied without the requested optional information. Available device identity is kept; group membership remains unknown."
             if (value.startsWith("Truncated")) return "This method stopped before all of its work finished. It may have reached a time or safety limit. Open method details for the recorded reason."
             if (value.startsWith("Running")) return "This method is still checking for devices or collecting their details."
             if (value.startsWith("Not used")) return if (name == "IPv6 service checks")

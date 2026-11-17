@@ -12,7 +12,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -123,13 +122,7 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
             it.setPadding(px(14), px(14), px(14), px(14))
             it.background = RippleDrawable(ColorStateList.valueOf(0x22336644),
                 rounded(if (filled) fill else colors.surface, if (filled) fill else colors.border, 14), null)
-            it.isFocusable = true
-            it.accessibilityDelegate = object : View.AccessibilityDelegate() {
-                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
-                    super.onInitializeAccessibilityNodeInfo(host, info)
-                    info.className = "android.widget.Button"
-                }
-            }
+            AccessibleActions.button(it)
         }
     }
     fun vertical(): LinearLayout = LinearLayout(context).also { it.orientation = LinearLayout.VERTICAL }

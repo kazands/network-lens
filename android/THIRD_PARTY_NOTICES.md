@@ -98,3 +98,27 @@ The offline MAC-vendor index is derived directly from the IEEE Registration Auth
 IEEE's historical statement that it does not assert copyright or restrict distribution of the public listing is recorded in Debian's `ieee-data` copyright record: https://sources.debian.org/src/ieee-data/20240722/debian/copyright/ . The earlier IEEE source URL now redirects to the current registry page. Current IEEE guidance describes using the public listings to identify registered owners: https://standards.ieee.org/products-programs/regauth/ and https://standards-support.ieee.org/hc/en-us/articles/4888705676564-Guidelines-for-Use-of-Extended-Unique-Identifier-EUI-Organizationally-Unique-Identifier-OUI-and-Company-ID-CID . No Debian code, Wireshark database or Nmap database is included.
 
 Refresh explicitly with `python3 scripts/update-ieee-vendors.py --refresh`. The app does not contact IEEE or another lookup service. Registered organizations may be interface suppliers rather than device manufacturers; private, locally administered and multicast addresses do not produce a vendor guess.
+
+## Broader discovery data and protocol references
+
+Home Assistant Core's mDNS/SSDP/HomeKit matcher tables are retained with the
+Apache-2.0 license in `ha-original/`; the application bundles the full license.
+`ha-matcher-provenance.json` pins the exact inputs and generated projection.
+All rule conditions are preserved; no DHCP matchers or integration control code
+are incorporated.
+
+The Matter DCL snapshot contains public vendor/product facts only. See
+`matter-model-provenance.json`, `matter-original/models.json` and the bundled
+`matter_registry_notice.txt`. The ledger software's Apache license is not
+claimed as a blanket license over vendor-submitted records.
+
+The Easy Smart static stream table/transform is adapted from rgl's GPL-3.0
+Ansible collection. Its original source and GPL license are retained in
+`easysmart-original/`; `easysmart-provenance.json` records the source and
+modification date. Network Lens implements only discovery, with independent
+strict request correlation and public-field parsing.
+
+TinyTuya was consulted for public UDP discovery envelopes; its MIT notice is
+packaged in `app/src/main/res/raw/tuya_protocol_notice.txt`. No device local key
+or control client is incorporated. Other protocol modules are original code
+based on the factual wire references in `../docs/DISCOVERY-COVERAGE.md`.

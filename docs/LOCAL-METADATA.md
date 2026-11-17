@@ -29,10 +29,15 @@ IPPS uses platform TLS trust and endpoint verification, without a plaintext
 fallback. Printers with untrusted certificates or required credentials can remain
 unavailable. Successful metadata without an optional model leaves it unknown.
 
-The existing 55-second scan-work deadline remains. HTTP metadata has two workers,
-32 queued tasks, at most 32 attempts per protocol and 96 overall, with one attempt
-per peer/protocol. Changing advertised paths/ports cannot add attempts. Each
-exchange has a maximum two-second deadline within the remaining scan budget, a
+The existing 55-second scan-work deadline remains. HTTP metadata has two workers
+per existing work lane, 32 queued tasks and at most 32 endpoint plans per protocol
+and 96 overall. Each peer/protocol plan can retain two distinct validated
+advertised targets, with at most one transient transport retry per target. All
+attempts share one original two-second window within the remaining scan budget.
+Changing advertised paths/ports cannot grow the plan beyond those bounds. Queued
+metadata work rotates between endpoints, with at most eight waiting tasks per
+endpoint in a lane. See [recognition planning](RECOGNITION-PLANNING.md). Each
+exchange has a
 400 ms connection timeout and reads bounded to at most 600 ms each. A socket
 deadline also bounds TLS handshakes and writes. HTTP bodies are limited to 64 KiB;
 JSON is limited to 32 KiB with depth/token/string limits. Only selected root JSON
@@ -47,7 +52,7 @@ HomeKit/HTTP Android resolution issue or measured coverage on real hardware.
 ## Local diagnostics
 
 Each endpoint's details now include its admitted Shelly, WLED, Spotify Connect
-and IPP lookup outcomes, labelled by protocol, IPv4/IPv6 and the attempted port
+IPP, Cast and Samsung lookup outcomes, labelled by protocol, IPv4/IPv6 and the attempted port
 (with TLS for IPPS). Success without an optional model/manufacturer is explicit.
 Connection refusal and routing failures require typed platform evidence; generic
 connection failures remain generic. Read timeouts, HTTP errors, invalid metadata,
@@ -55,12 +60,13 @@ work limits, unfinished lookups and Stop remain distinct. A failed lookup does
 not revoke independently confirmed presence or change Partial reporting.
 
 The same panel identifies other current observations supplying that endpoint's
-displayed model/manufacturer. It does not borrow a grouped address's details,
-guess a brand from a MAC vendor, or issue additional fallback queries. Alternative
+displayed model/manufacturer. It does not borrow a grouped address's details or
+guess a brand from a MAC vendor. The worker may try the bounded same-peer targets
+above; the panel itself does not initiate queries. Alternative
 sources are evaluated from current observations, so a later local response can
 appear alongside an earlier HTTP failure. Unknown values remain unknown.
 
-These outcomes have four slots per endpoint, live only in session memory and are
+These outcomes have six protocol slots per endpoint, live only in session memory and are
 copied with progress/retained device snapshots. Stop/finalization seal pending
 outcomes against late worker updates. A fresh scan has no inherited outcomes.
 The explicit Copy device details action includes the source-labelled outcomes;

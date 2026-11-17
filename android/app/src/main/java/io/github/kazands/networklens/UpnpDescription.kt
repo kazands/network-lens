@@ -53,7 +53,10 @@ class UpnpDescription private constructor() {
                 "\r\nAccept: text/xml, application/xml\r\nConnection: close\r\n\r\n").toByteArray(StandardCharsets.US_ASCII)
 
         @JvmStatic @Throws(IOException::class)
-        fun readResponse(input: InputStream): ByteArray {
+        fun readResponse(input: InputStream): ByteArray = readResponse(input) { }
+
+        /** Inspect validated headers without exposing redirects, cookies or arbitrary follow-up URLs. */
+        internal fun readResponse(input: InputStream, inspectHeaders: (Map<String, String>) -> Unit): ByteArray {
             val stream = BufferedInputStream(input, 1024)
             val headerBytes = intArrayOf(0)
             val status = line(stream, headerBytes, 8192)
@@ -79,6 +82,7 @@ class UpnpDescription private constructor() {
             val transfer = headers["transfer-encoding"]
             val length = headers["content-length"]
             if (transfer != null && length != null) throw ResponseException("Ambiguous body framing")
+            inspectHeaders(headers)
             val body = ByteArrayOutputStream()
             if (transfer != null) {
                 if (!transfer.equals("chunked", true)) throw ResponseException("Unsupported transfer encoding")
@@ -188,7 +192,7 @@ class UpnpDescription private constructor() {
             val tag = if (local.isEmpty()) q else local
             if (depth == 1 && (tag != "root" || (uri.isNotEmpty() && uri != "urn:schemas-upnp-org:device-1-0"))) throw SAXException("Not a UPnP description")
             if (depth == 2) rootDevice = tag == "device"
-            if (depth == 3 && rootDevice && tag in arrayOf("friendlyName", "manufacturer", "modelName", "modelNumber", "modelDescription", "serialNumber", "UDN", "deviceType")) {
+            if (depth == 3 && rootDevice && tag in arrayOf("friendlyName", "manufacturer", "manufacturerURL", "X_MqttOnLan", "X_MqttTokenPairing", "modelName", "modelNumber", "modelDescription", "serialNumber", "UDN", "deviceType")) {
                 field = tag
                 text.setLength(0)
             }

@@ -1,0 +1,24 @@
+{
+  "source": "https://github.com/home-assistant/core/tree/dev/homeassistant/generated",
+  "files": {
+    "zeroconf.py": {
+      "gitBlob": "77c20770ebc01604354b3f1d14749b5319b8f40b",
+      "sha256": "d6121a6c9d74b90a01eb63cfdeaa73bc8cb93ae667a0e05e597428d79a4d0158"
+    },
+    "ssdp.py": {
+      "gitBlob": "ddcb214885d367bc11b621789acc0f3708844141",
+      "sha256": "eb13c910cc4ca4daf03d2b884a7496ea3ad3e49da03c988124b13bfd730003cc"
+    },
+    "LICENSE": {
+      "gitBlob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    }
+  },
+  "policy": "All conditions preserved. Family candidates only; reviewed local policy determines physical categories. HomeKit always_discover is HA routing policy, not an identity condition. No DHCP matchers. No runtime downloads.",
+  "counts": {
+    "mdnsTypes": 122,
+    "rules": 348,
+    "ssdpDomains": 44
+  },
+  "generatedSha256": "e1180cdfaa04d9dde4a12a5865bd87a8b71edd9faf8d4a8d575f37dc08fbbe54"
+}

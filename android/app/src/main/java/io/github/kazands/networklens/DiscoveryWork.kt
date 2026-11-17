@@ -21,7 +21,7 @@ class DiscoveryWork {
         add(Lane.METADATA, 2, 32)
     }
     private fun add(lane: Lane, threads: Int, queued: Int) {
-        pools[lane] = object : ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue(queued)) {
+        pools[lane] = object : ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS, if (lane == Lane.METADATA || lane == Lane.CAST) FairWorkQueue(queued) else ArrayBlockingQueue(queued)) {
             override fun terminated() {
                 // Already-admitted descriptions/probes may produce a final metadata lookup.
                 // Close that lane only when every producer has finished, without a polling task.
@@ -29,8 +29,9 @@ class DiscoveryWork {
             }
         }
     }
-    fun submit(lane: Lane, task: Runnable): Boolean = try {
-        if (stopped) false else { pools.getValue(lane).execute(task); true }
+    fun submit(lane: Lane, task: Runnable): Boolean = submit(lane, "", task)
+    fun submit(lane: Lane, owner: String, task: Runnable): Boolean = try {
+        if (stopped) false else { pools.getValue(lane).execute(if (lane == Lane.METADATA || lane == Lane.CAST) FairWorkQueue.Task(owner, task) else task); true }
     } catch (_: RejectedExecutionException) { false }
     fun shutdown() { pools.filterKeys { it != Lane.METADATA }.values.forEach { it.shutdown() } }
     fun shutdownNow() { stopped = true; pools.values.forEach { it.shutdownNow() } }

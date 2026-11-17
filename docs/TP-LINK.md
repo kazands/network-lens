@@ -101,3 +101,5 @@ fixture timed out; the final unchanged scan-efficiency fixture passed on rerun.
 Independent Deep review approved after the self-only scan-status correction.
 API 26 and a physical Android scan of this recognition change have not been run.
 Exact release checks are in [0.3.18 verification](VERIFICATION-0.3.18.md).
+
+Current release-wide checks are recorded in [0.3.19 verification](VERIFICATION-0.3.19.md).

@@ -67,8 +67,8 @@ object MdnsRetriesTest {
         var bounded: MdnsRetries = MdnsRetries()
         run {
             var i: Int = 0
-            while ((i < 48)) {
-                check(bounded.request((("_fixture" + i) + "._tcp.")), "48-type admission bound")
+            while ((i < 512)) {
+                check(bounded.request((("_fixture" + i) + "._tcp.")), "512-type safety bound")
                 i++
             }
         }
@@ -77,13 +77,13 @@ object MdnsRetriesTest {
         var count: Int = 0
         run {
             var i: Int = 0
-            while ((i < 6)) {
+            while ((i < 64)) {
                 count += (bounded.due(false, 0, 8))!!.size
                 i++
             }
         }
         check(
-            ((count == 48) && (bounded.due(false, 0, 8))!!.isEmpty()),
+            ((count == 512) && (bounded.due(false, 0, 8))!!.isEmpty()),
             "Each packet has at most eight questions",
         )
         var invalid: Boolean = false

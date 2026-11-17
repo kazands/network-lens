@@ -33,7 +33,7 @@ class MdnsRetries {
         return out
     }
     companion object {
-        private const val MAX_TYPES = 48
+        private const val MAX_TYPES = MdnsTypePlan.MAX_TYPES
         private val GAP = TimeUnit.MILLISECONDS.toNanos(1200)
     }
 }

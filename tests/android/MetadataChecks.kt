@@ -63,7 +63,7 @@ internal object MetadataChecks {
             check(d.mac.isEmpty(), "A short Gen1 device ID is not treated as a hardware MAC")
             apply.invoke(op, d, service("_shelly._tcp."))
             repeat(8) { apply.invoke(op, d, service("_shelly._tcp.").apply { port = 8100 + it }) }
-            check(plans.size() == 1, "Repeated advertisements and changing ports cannot expand metadata work")
+            check(plans.size() == 1, "Repeated advertisements cannot grow the number of protocol plans")
             apply.invoke(op, d, service("_spotify-connect._tcp.", "CPath" to "/info?action=resetUsers"))
             check(plans.size() == 1, "Unsafe advertised actions never enter the metadata queue")
             apply.invoke(op, d, service("_spotify-connect._tcp.", "CPath" to "/spotifyzc"))
@@ -72,7 +72,9 @@ internal object MetadataChecks {
             check(plans.size() == 4, "Supported protocols have independent per-peer opportunities")
             check(d.metadataLookups.snapshot().size == 4 && d.metadataLookupRows().all { it.first.contains("IPv4") && it.second == "Waiting or checking\nModel available from mDNS current _meshcop._udp. TXT\nManufacturer available from mDNS current _meshcop._udp. TXT" },
                 "Queued outcomes identify their endpoint family and current alternative sources")
-            check(listOf(LocalMetadata.Kind.SHELLY, LocalMetadata.Kind.WLED, LocalMetadata.Kind.SPOTIFY, LocalMetadata.Kind.IPP).all { op.sources()[it.source]?.startsWith("Running") == true }, "Queued metadata appears as pending source work")
+            check(listOf(LocalMetadata.Kind.WLED, LocalMetadata.Kind.SPOTIFY, LocalMetadata.Kind.IPP).all { op.sources()[it.source]?.startsWith("Running") == true }, "Queued metadata appears as pending source work")
+            check(op.sources()[LocalMetadata.Kind.SHELLY.source]?.contains("Two metadata target limit reached") == true,
+                "Changing advertised targets beyond the bounded fallback is reported explicitly")
             val outside = Device().apply { ip = "203.0.113.20" }; fresh.add(outside.ip)
             request.invoke(op, outside, service("_shelly._tcp."))
             d.self = true; request.invoke(op, d, service("_shelly._tcp.")); d.self = false
@@ -111,6 +113,7 @@ internal object MetadataChecks {
             check((get(next, "metadataRequests") as ServiceAdmission).size() == 0 && next.snapshot().isEmpty(), "A new scan inherits neither metadata requests nor device results")
             check(next.sources().values.none { it.contains("HTTP errors 1") || it.contains("packets received 1") }, "A new Android scan inherits no diagnostic counters")
         } finally { next.cancel() }
+        RecognitionPlanningChecks.run(test, check)
         endpointOutcomes(check)
         limits(test, check)
     }

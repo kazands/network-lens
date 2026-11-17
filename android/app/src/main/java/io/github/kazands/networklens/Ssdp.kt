@@ -16,11 +16,14 @@ class Ssdp private constructor() {
                 val split = lines[i].indexOf(':')
                 if (split < 1) continue
                 val key = lines[i].substring(0, split).javaTrim().lowercase(Locale.ROOT)
-                if (key == "server" || key == "st" || key == "usn") {
-                    out[key] = SafeText.label(lines[i].substring(split + 1), 160)
+                if (key == "server" || key == "st" || key == "usn" || key == "nt") {
+                    val value = SafeText.label(lines[i].substring(split + 1), 160)
+                    if (out.containsKey(key) && out[key] != value) return LinkedHashMap()
+                    out[key] = value
                 }
                 if (key == "location") {
                     val location = lines[i].substring(split + 1).javaTrim()
+                    if (out.containsKey(key) && out[key] != location) return LinkedHashMap()
                     if (location.length <= 1024) out[key] = location
                 }
             }

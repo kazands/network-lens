@@ -175,23 +175,24 @@ internal object RecogChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    check(all.any { it.text.toString() == "MacBookPro18,3" } && all.any { it.text.toString().contains("manufacturer") && it.text.toString().startsWith("Not reported:") },
-                        "Details $label retain the reported code and unknown manufacturer")
-                    layout(all.single { it.text.toString() == "Locally recognized" }, "Recognition heading $label")
+                    check(all.none { it.text.toString() == "MacBookPro18,3" || it.text.toString().startsWith("Not reported:") },
+                        "Details $label keep raw model and missing fields in technical disclosure")
+                    layout(all.single { it.text.toString() == "How this was identified" }, "Recognition heading $label")
                     all.filter { it.text.toString() == fixtures[0].identifiedProduct()!!.product.title }.forEach { layout(it, "Recognition description $label") }
-                    layout(all.single { it.text.toString() == "Interpreted from the reported model code using the offline Apple model catalogue." }, "Recognition explanation $label")
+                    layout(all.single { it.text.toString() == "Matched locally using the model code shared by this device and the offline Apple model catalogue." }, "Recognition explanation $label")
                     if (width == 320 && scale == 2f || width == 411 && scale == 1f) {
                         val scroll = get(activity, "detailScroll") as ScrollView
-                        var panel: View = all.single { it.text.toString() == "Locally recognized" }
+                        var panel: View = all.single { it.text.toString() == "How this was identified" }
                         while (panel.parent !== scroll.getChildAt(0)) panel = panel.parent as View
                         scroll.scrollTo(0, panel.top)
                         capture(activity, "details-$label")
                     }
-                    all.single { it.text.toString() == "Show discovery evidence" }.performClick()
+                    all.single { it.text.toString() == "Show technical details" }.performClick()
                 }
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
+                    check(all.any { it.text.toString() == "MacBookPro18,3" } && all.any { it.text.toString().contains("manufacturer") && it.text.toString().startsWith("Not reported:") }, "Expanded details preserve raw code and unknown manufacturer")
                     layout(all.single { it.text.toString() == fixtures[0].locallyRecognized()!!.source }, "Recognition rule $label")
                     all.single { it.text.toString() == "Copy device details" }.performClick()
                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -226,8 +227,8 @@ internal object RecogChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    check(all.any { it.text.toString() == "Device family" } && all.any { it.text.toString() == code },
-                        "Shared $code details distinguish the interpreted family from the reported code")
+                    check(all.any { it.text.toString() == "Device family" } && all.none { it.text.toString() == code },
+                        "Shared $code details label the family while raw codes remain collapsed")
                     all.filter { it.text.toString() == "Apple $description" }.forEach { layout(it, "Shared $code detail description") }
                     all.single { it.text.toString() == "Copy device details" }.performClick()
                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -235,13 +236,13 @@ internal object RecogChecks {
                     check(copied.contains("Model: $code\n") && copied.contains("Locally recognized family: Apple $description\n"),
                         "Shared $code clipboard keeps the raw model and conservative family separate")
                     val scroll = get(activity, "detailScroll") as ScrollView
-                    var panel: View = all.single { it.text.toString() == "Locally recognized" }
+                    var panel: View = all.single { it.text.toString() == "How this was identified" }
                     while (panel.parent !== scroll.getChildAt(0)) panel = panel.parent as View
                     scroll.scrollTo(0, panel.top)
                 }
                 settle(test)
                 main(test) {
-                    val heading = texts(activity.window.decorView).single { it.text.toString() == "Locally recognized" }
+                    val heading = texts(activity.window.decorView).single { it.text.toString() == "How this was identified" }
                     val visible = android.graphics.Rect()
                     check(heading.getLocalVisibleRect(visible) && visible.height() == heading.height,
                         "Shared $code family heading remains fully visible after scrolling settles")

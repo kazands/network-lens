@@ -73,7 +73,9 @@ class SmokeInstrumentation : Instrumentation() {
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "app-updates") {
+            if (mode == "home-user") {
+                HomeUserChecks.run(this, ::check)
+            } else if (mode == "app-updates") {
                 AppUpdateChecks.run(this, ::check)
             } else if (mode == "audio-zones") {
                 AudioZoneChecks.run(this, ::check)
@@ -724,6 +726,13 @@ class SmokeInstrumentation : Instrumentation() {
                 (store.report((withdrawn)!!.key))!!.reason.contains("IPv6")),
             "Withdrawal leaves an honest Partial report",
         )
+        store.retainIfCurrent(store.token(), expanded.key, listOf(v4, v6),
+            ScanReport("Fixture coverage", false, "Fixture report", 1, 2, System.currentTimeMillis(),
+                mapOf("Fixture method" to "Failed · Fixture failure"), 10))
+        onMain { setField("network", expanded) }
+        reconcileFixture(withdrawn)
+        check(store.report(withdrawn.key)?.omittedSources == 10,
+            "Scope replacement preserves omitted-method disclosure from a finished report")
         var replaced: android.net.LinkProperties = copyProperties(rotated)
         replaced.setInterfaceName((live.iface + "-fixture"))
         var other: NetworkState = networkFixture(target, (live.network)!!, replaced)
@@ -1693,7 +1702,7 @@ class SmokeInstrumentation : Instrumentation() {
             capture("routed-accessory-light")
             description("Switch to dark mode")
             assertText("Response time (ICMPv6)")
-            click("Show discovery evidence")
+            click("Show technical details")
             assertText("Network path")
             assertText("Routed IPv6 through Wi-Fi")
             capture("routed-accessory-dark")
@@ -2546,7 +2555,7 @@ class SmokeInstrumentation : Instrumentation() {
                 )
             }
         )
-        click("Show discovery evidence")
+        click("Show technical details")
         assertText("HomeKit setup (advertised)")
         assertText("Not paired")
         capture("homekit-details-dark")
@@ -2614,6 +2623,7 @@ class SmokeInstrumentation : Instrumentation() {
         setSearch("Brother")
         assertText("1 device group matching")
         click("Vendor fixture")
+        click("Show technical details")
         assertText("MAC vendor")
         assertText(vendor)
         assertText("Reported maker")
@@ -2706,13 +2716,12 @@ class SmokeInstrumentation : Instrumentation() {
             var isRetry: Field = (packet.javaClass)!!.getDeclaredField("retry")
             questions.setAccessible(true)
             isRetry.setAccessible(true)
-            check(
-                ((isRetry.getBoolean(packet) &&
-                    (questions.get(packet))!!.equals(
-                        Collections.singletonList("_devicelens-fixture._tcp.local")
-                    )) && normalAttempts.isEmpty()),
-                "A recovery packet contains only retry types and spends no normal query attempts",
-            )
+            val firstQuestions = questions.get(packet) as List<String>
+            check(isRetry.getBoolean(packet) && firstQuestions.size <= 8 &&
+                firstQuestions.contains("_devicelens-fixture._tcp.local") &&
+                firstQuestions.contains(ReverseDns.question(live.gateway)) &&
+                normalAttempts["_http._tcp."] == 1 && "_devicelens-fixture._tcp." !in normalAttempts,
+                "Recovery, reverse and ordinary type queries share a bounded batch without conflating retry attempts")
             var normal: Any =
                 batch.invoke(
                     batching,
@@ -2721,13 +2730,18 @@ class SmokeInstrumentation : Instrumentation() {
                     normalAttempts,
                     normalNext,
                 )
-            check(
-                ((!(isRetry.getBoolean(normal)) &&
-                    (((questions.get(normal) as List<String>?)))!!.contains(
-                        ReverseDns.question(live.gateway)
-                    )) && (normalAttempts.get("_http._tcp.") == 1)),
-                "Deferred normal reverse/type questions resume in the next available batch",
-            )
+            val nextQuestions = questions.get(normal) as List<String>
+            check(!isRetry.getBoolean(normal) && nextQuestions.size <= 8 &&
+                !nextQuestions.contains(ReverseDns.question(live.gateway)) && normalAttempts["_http._tcp."] == 1,
+                "Untouched types advance while reverse/type retries honor their gap")
+            val expanded = (0 until 100).map { "_coverage$it._tcp." }.toSet()
+            (types.get(batching) as MutableSet<String>).addAll(expanded)
+            repeat(200) { n ->
+                val scheduled = batch.invoke(batching, false, now + TimeUnit.MILLISECONDS.toNanos((n+1)*250L), normalAttempts, normalNext)
+                check((questions.get(scheduled) as List<String>).size <= 8, "Expanded catalogue keeps the Android query batch bounded")
+            }
+            check(expanded.all { normalAttempts[it] == 2 }, "Android scheduler reaches observed types beyond the old 48-type ceiling")
+            check(HaMatchers.types.all { normalAttempts[it] == 2 }, "Android scheduler reaches every bundled matcher type")
         } finally {
             batching.cancel()
         }
@@ -2896,15 +2910,16 @@ class SmokeInstrumentation : Instrumentation() {
         )
         check(
             ((!((texts())!!.contains("Model\n")) && !((texts())!!.contains("Manufacturer\n"))) &&
-                (texts())!!.contains("Not reported: manufacturer, model, device type.")),
-            "Unavailable identity fields have one honest summary",
+                !(texts())!!.contains("Not reported: manufacturer, model, device type.")),
+            "Missing-field summaries stay inside technical details",
         )
         check(
             !((texts())!!.contains("Network identifier (DNS)")),
             "Technical evidence is collapsed by default",
         )
         capture("details-compact-light")
-        click("Show discovery evidence")
+        click("Show technical details")
+        assertText("Not reported: manufacturer, model, device type.")
         assertText("Network identifier (DNS)")
         assertText("02:11:22:33:44:55")
         onMain(callback55@{ (detailScroll())!!.scrollTo(0, 350) })
@@ -2913,7 +2928,7 @@ class SmokeInstrumentation : Instrumentation() {
         onMain(callback56@{ oldY[0] = (detailScroll())!!.getScrollY() })
         description("Switch to dark mode")
         settle()
-        assertText("Hide discovery evidence")
+        assertText("Hide technical details")
         assertText("Network identifier (DNS)")
         onMain(
             callback57@{
@@ -2924,7 +2939,7 @@ class SmokeInstrumentation : Instrumentation() {
             }
         )
         capture("details-evidence-dark")
-        click("Hide discovery evidence")
+        click("Hide technical details")
         check(
             !((texts())!!.contains("Network identifier (DNS)")),
             "Collapsing removes technical evidence from the content tree",
@@ -2958,8 +2973,7 @@ class SmokeInstrumentation : Instrumentation() {
         activity = launch(false)
         settle()
         click("Known printer")
-        assertText("Compact 500")
-        assertText("Fixture Inc")
+        check(!texts().contains("Fixture Inc"), "Raw manufacturer starts collapsed")
         assertText("Response time (TCP)")
         assertText("27 ms")
         check(
@@ -2971,6 +2985,10 @@ class SmokeInstrumentation : Instrumentation() {
             !((texts())!!.contains("Network identifier (DNS)")),
             "A new selection resets the previous evidence disclosure",
         )
+        click("Show technical details")
+        assertText("Compact 500")
+        assertText("Fixture Inc")
+        click("Hide technical details")
         capture("details-known-dark")
         onMain(
             callback60@{
@@ -2985,6 +3003,7 @@ class SmokeInstrumentation : Instrumentation() {
             }
         )
         settle()
+        click("Show technical details")
         assertText("Compact 500")
         onMain(
             callback61@{
@@ -4648,6 +4667,7 @@ class SmokeInstrumentation : Instrumentation() {
         var token: Long = store.token()
         var inScopeUpdate: Device = v4.copy()
         inScopeUpdate.ip = live.gateway
+        check(chosen.contains(inScopeUpdate), "Terminal-update fixture address belongs to the selected Wi-Fi scope")
         onMain(
             callback91@{
                 try {
@@ -4690,12 +4710,18 @@ class SmokeInstrumentation : Instrumentation() {
                 }
             }
         )
-        SystemClock.sleep(800)
+        // Presentation runs on a separate executor; emulator load is not a correctness deadline.
+        val deliveryDeadline = SystemClock.uptimeMillis() + 5000
+        var delivered = false
+        while (!delivered && SystemClock.uptimeMillis() < deliveryDeadline) {
+            onMain { delivered = !(field("scanning") as Boolean) && (field("devices") as List<*>).size == 1 }
+            if (!delivered) SystemClock.sleep(50)
+        }
         settle()
         check(
-            (!((field("scanning") as Boolean)) &&
-                ((((field("devices") as List<Device>?)))!!.size == 1)),
-            "Obsolete operation and late progress cannot evict a newer scan's final update",
+            delivered,
+            "Obsolete operation and late progress cannot evict a newer scan's final update; " +
+                "scanning=${field("scanning")}, devices=${(field("devices") as List<*>).size}",
         )
         stale.cancel()
         active.cancel()
@@ -4847,8 +4873,8 @@ class SmokeInstrumentation : Instrumentation() {
             "Stop saves an honest partial result",
         )
         check(
-            ((texts())!!.contains("Partial scan") && !((texts())!!.contains("Stop scan"))),
-            "Stopped UI returns to Scan and Partial status",
+            ((texts())!!.contains("Scan stopped") && !((texts())!!.contains("Stop scan"))),
+            "Stopped UI returns to Scan and identifies cancellation",
         )
         tapScan()
         awaitScanIdle(65000)
@@ -4929,8 +4955,8 @@ class SmokeInstrumentation : Instrumentation() {
             "Returning brings the app to foreground",
         )
         check(
-            (!((field("scanning") as Boolean)) && (texts())!!.contains("Partial scan")),
-            "Returning shows saved Partial results without automatic scanning",
+            (!((field("scanning") as Boolean)) && (texts())!!.contains("Scan stopped")),
+            "Returning shows stopped results without automatic scanning",
         )
         tapScan()
         awaitScanIdle(65000)
@@ -5031,13 +5057,22 @@ class SmokeInstrumentation : Instrumentation() {
                     .toInt() or (PackageManager.GET_PERMISSIONS).toInt()),
             )
         check(
-            (((((pkg.activities)!!.size == 1) && (pkg.services === null)) &&
-                (pkg.receivers === null)) && (pkg.providers === null)),
-            "Only launcher Activity remains",
+            pkg.activities?.singleOrNull()?.let {
+                it.name == "io.github.kazands.networklens.MainActivity" && it.exported
+            } == true && pkg.services.isNullOrEmpty() && pkg.providers.isNullOrEmpty() &&
+                pkg.receivers?.singleOrNull()?.let {
+                    it.name == "io.github.kazands.networklens.UpdateResultReceiver" && !it.exported
+                } == true,
+            "Only the launcher and private update result receiver are installed",
         )
         check(
-            ((pkg.requestedPermissions)!!.size == 7),
-            "Exact seven-permission policy including optional foreground SSID access",
+            pkg.requestedPermissions?.toSet() == setOf(
+                "android.permission.INTERNET", "android.permission.REQUEST_INSTALL_PACKAGES",
+                "android.permission.ACCESS_NETWORK_STATE", "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+                "android.permission.ACCESS_LOCAL_NETWORK", "android.permission.ACCESS_WIFI_STATE",
+                "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION",
+            ),
+            "Exact permission policy including user-approved updates and optional foreground SSID access",
         )
         check(
             !((Arrays.asList(*pkg.requestedPermissions))!!.contains(
@@ -5070,6 +5105,8 @@ class SmokeInstrumentation : Instrumentation() {
         click("Work computer")
         assertText("Device details")
         assertText("00:11:22:33:44:55")
+        check(!texts()!!.contains("WORK-PC"), "Raw hostname starts inside technical details")
+        click("Show technical details")
         assertText("WORK-PC")
         capture("light-details")
         click("Copy device details")
@@ -5325,6 +5362,7 @@ class SmokeInstrumentation : Instrumentation() {
             activity = launch(false)
             waitForIdleSync()
             click("Office printer")
+            click("Show technical details")
             assertText("Reported hardware")
             assertText("Fixture hardware")
             capture("ws-hardware-light")
@@ -5642,6 +5680,13 @@ class SmokeInstrumentation : Instrumentation() {
                 start.setAccessible(true)
                 raw.setAccessible(true)
                 start.invoke(fixture)
+                val activeBrowses = Discovery::class.java.getDeclaredField("legacyActive").apply { isAccessible = true }
+                val queuedBrowses = Discovery::class.java.getDeclaredField("legacyBrowses").apply { isAccessible = true }
+                synchronized(fixture) {
+                    check((activeBrowses.get(fixture) as Collection<*>).size in 1..6 &&
+                        (queuedBrowses.get(fixture) as Collection<*>).isNotEmpty(),
+                        "Android browsing uses six slots and queues remaining types on this API level")
+                }
                 raw.invoke(fixture)
                 var enumeration: MdnsPacket.Result = MdnsPacket.Result()
                 enumeration.serviceTypes.add("_lanwhisp-test._tcp.")
@@ -5709,6 +5754,7 @@ class SmokeInstrumentation : Instrumentation() {
                     Device::class.java,
                     InetAddress::class.java,
                     String::class.java,
+                    Map::class.java,
                 )
         description.setAccessible(true)
         var responder: ExecutorService = Executors.newSingleThreadExecutor()
@@ -5773,12 +5819,14 @@ class SmokeInstrumentation : Instrumentation() {
                     described,
                     InetAddress.getByName(live.ip),
                     (base + "/bad.xml"),
+                    emptyMap<String, String>(),
                 )
                 description.invoke(
                     fixture,
                     described,
                     InetAddress.getByName(live.ip),
                     (base + "/good.xml"),
+                    emptyMap<String, String>(),
                 )
                 var ef: Field = Discovery::class.java.getDeclaredField("enrichment")
                 ef.setAccessible(true)
@@ -5853,7 +5901,7 @@ class SmokeInstrumentation : Instrumentation() {
         activity = launch(false)
         waitForIdleSync()
         capture("hierarchy-light")
-        assertText("Partial scan")
+        assertText("Scan finished")
         assertText("45 device groups · 45 IPs")
         check(
             (!((texts())!!.contains("Checked 254")) &&
@@ -5898,7 +5946,7 @@ class SmokeInstrumentation : Instrumentation() {
             "Full coverage is available in scan details",
         )
         check(
-            !(((dialog)!!.findAccessibilityNodeInfosByText("What may be missing"))!!.isEmpty()),
+            !(((dialog)!!.findAccessibilityNodeInfosByText("Scan notes"))!!.isEmpty()),
             "Incomplete source is explained before technical details",
         )
         dialogClick("Show method details (2)")
@@ -6169,6 +6217,7 @@ class SmokeInstrumentation : Instrumentation() {
     }
 
     private fun failureReporting(): Unit {
+        ScanReportChecks.run(::check)
         var target: Context = getTargetContext()
         var store: Store = Store(target)
         store.clear()
@@ -6209,7 +6258,7 @@ class SmokeInstrumentation : Instrumentation() {
             ScanReport(
                 "Fixture coverage",
                 false,
-                "Device details are partial: 2 discovery sources failed, 1 truncated. Tap scan status for details.",
+                "Some checks could not finish: 2 discovery sources failed, 1 truncated. Tap scan status for details.",
                 254,
                 254,
                 System.currentTimeMillis(),
@@ -6267,12 +6316,12 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         var text: String = dialogTexts()
         check(
-            text.contains("Needs attention: HomeKit accessories, Web services and 1 other method"),
+            text.contains("Checks to review: HomeKit accessories, Web services and 1 other method"),
             "Summary names affected methods and limits the list with readable singular wording",
         )
         check(
-            (text.contains("Partial scan") && !(text.contains("timeout attempts 2"))),
-            "Named summary preserves Partial status and keeps raw diagnostics collapsed",
+            (text.contains("Scan finished") && !(text.contains("timeout attempts 2"))),
+            "Finished status keeps raw diagnostics collapsed and method failures available",
         )
         assertModalFits()
         captureDialog("scan-details-failure-reporting-light")
@@ -6288,7 +6337,7 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         check(
             (dialogTexts())!!.contains(
-                "Needs attention: HomeKit accessories, Web services and 1 other method"
+                "Checks to review: HomeKit accessories, Web services and 1 other method"
             ),
             "Dark appearance retains the same failure summary",
         )
@@ -6317,6 +6366,30 @@ class SmokeInstrumentation : Instrumentation() {
             "Large text retains full diagnostics in scrollable method details",
         )
         dialogClick("Done")
+        val manyMethods = java.util.TreeMap<String, String>()
+        repeat(70) { manyMethods["mDNS _fixture%03d._tcp.".format(it)] = "OK" }
+        manyMethods["IPv4 checks"] = "Failed · Early fixture failure"
+        manyMethods["mDNS _zfixture._tcp."] = "Failed · Late fixture failure"
+        store.retainIfCurrent(store.token(), live.key, emptyList(), ScanReport("Fixture coverage", false,
+            "Some checks could not finish: 2 discovery sources failed, 0 truncated. Tap scan status for details.",
+            254, 254, System.currentTimeMillis(), manyMethods))
+        onMain { invoke("loadNetwork"); invoke("render"); invoke("scanDetails") }
+        settle()
+        dialogClick("Show method details (72)")
+        check(dialogTexts().contains("Late fixture failure") && dialogTexts().contains("Early fixture failure"),
+            "Finished scan details retain failures on both sides of the former 64-method boundary")
+        dialogClick("Done")
+        val omittedReport = ScanReport("Fixture coverage", false,
+            "Some checks could not finish: 2 discovery sources failed, 0 truncated. Tap scan status for details.",
+            254, 254, System.currentTimeMillis(), mapOf("IPv4 checks" to "Failed · Early fixture failure"), 10)
+        store.retainIfCurrent(store.token(), live.key, emptyList(), omittedReport)
+        onMain { invoke("loadNetwork"); invoke("render"); invoke("scanDetails") }
+        settle()
+        check(dialogTexts().contains("Details for 10 additional discovery methods could not be retained."),
+            "Unexpected report overflow is visible in scan details")
+        check(dialogTexts().contains("Some checks could not finish: 2 discovery sources failed"),
+            "A retained failure cannot hide aggregate failures when some methods were omitted")
+        dialogClick("Done")
         var ok: MutableMap<String, String> = LinkedHashMap()
         ok.put("IPv4 checks", "OK")
         ok.put("IPv6 service checks", "Not used · No separate IPv6 echo checks were needed")
@@ -6335,8 +6408,8 @@ class SmokeInstrumentation : Instrumentation() {
         )
         settle()
         check(
-            ((dialogTexts())!!.contains("Complete scan") &&
-                !((dialogTexts())!!.contains("Needs attention:"))),
+            ((dialogTexts())!!.contains("Scan finished") &&
+                !((dialogTexts())!!.contains("Checks to review:"))),
             "A subsequent successful current scan does not retain a previous failure summary",
         )
         dialogClick("Show method details (2)")
@@ -6369,7 +6442,7 @@ class SmokeInstrumentation : Instrumentation() {
             ScanReport(
                 "192.0.2.0/24 · IPv4 + IPv6 advertised services",
                 false,
-                "Device details are partial: 1 discovery source failed, 0 truncated. Tap scan status for details.",
+                "Some checks could not finish: 1 discovery source failed, 0 truncated. Tap scan status for details.",
                 254,
                 254,
                 System.currentTimeMillis(),
@@ -6381,12 +6454,16 @@ class SmokeInstrumentation : Instrumentation() {
         )
         activity = launch(false)
         waitForIdleSync()
+        check((texts()).contains("Scan finished") && !(texts()).contains("Some results may be missing"),
+            "The result list describes the finished scan without a blanket missing-results warning")
+        check(store.report(live.key)?.complete == false && store.report(live.key)?.sources == sources,
+            "Friendly lifecycle wording preserves failed checks and actual completeness")
         onMain(callback140@{ invoke("scanDetails") })
         settle()
         var text: String = dialogTexts()
         check(
-            (text.contains("Partial scan") && text.contains("Devices or details may be missing")),
-            "Partial status explains its practical meaning",
+            (text.contains("Scan finished") && text.contains("Results from devices that replied during this scan")),
+            "Finished status describes received results without claiming every check succeeded",
         )
         check(
             (text.contains("254 / 254 addresses checked") && text.contains("not a device count")),
@@ -6397,7 +6474,7 @@ class SmokeInstrumentation : Instrumentation() {
             "Actual range and IPv6 discovery limit remain disclosed",
         )
         check(
-            ((text.contains("What may be missing") && text.contains("Device descriptions")) &&
+            ((text.contains("Scan notes") && text.contains("Device descriptions")) &&
                 text.contains("description could not be read")),
             "Description failure has a readable explanation",
         )
@@ -6447,7 +6524,7 @@ class SmokeInstrumentation : Instrumentation() {
             ScanReport(
                 "192.0.2.0/24 · IPv4 + IPv6 advertised services",
                 true,
-                "Scan finished. Silent or isolated devices may be missing.",
+                "Scan finished.",
                 254,
                 254,
                 System.currentTimeMillis(),
@@ -6464,16 +6541,31 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         text = dialogTexts()
         check(
-            (text.contains("Complete scan") &&
-                text.contains("does not guarantee that every device was found")),
-            "Complete means planned work finished, not guaranteed device completeness",
+            (text.contains("Scan finished") &&
+                text.contains("Results from devices that replied during this scan")),
+            "Finished scan describes responses without promising every device was found",
         )
         check(
-            (!(text.contains("What may be missing")) && text.contains("2 finished")),
+            (!(text.contains("Scan notes")) && text.contains("2 finished")),
             "Successful scan omits a failure section",
         )
         captureDialog("scan-details-complete-dark")
         dialogClick("Done")
+        val stoppedReport = ScanReport(complete.scope, false, "Scan stopped. Results collected so far are shown.",
+            42, 254, System.currentTimeMillis(), mapOf("IPv4 checks" to "Truncated · Scan stopped"))
+        check(ScanReport.from(stoppedReport.json()).statusLabel == "Scan stopped",
+            "Stopped scan wording survives report round trip")
+        store.retainIfCurrent(store.token(), live.key, Collections.emptyList(), stoppedReport)
+        onMain { invoke("loadNetwork"); invoke("render"); invoke("scanDetails") }
+        settle()
+        check(dialogTexts().contains("Scan stopped") && !dialogTexts().contains("Scan finished"),
+            "Stopping a scan does not claim the run finished normally")
+        check(dialogTexts().contains("42 / 254 addresses checked"),
+            "Stopped scan retains its exact coverage")
+        dialogClick("Done")
+        check(texts().contains("Scan stopped"), "List and dialog use the same stopped status")
+        store.retainIfCurrent(store.token(), live.key, Collections.emptyList(), complete)
+        onMain { invoke("loadNetwork"); invoke("render") }
         onMain(
             callback143@{
                 setField("scanning", true)
@@ -6506,7 +6598,7 @@ class SmokeInstrumentation : Instrumentation() {
         SystemClock.sleep(1000)
         waitForIdleSync()
         check(
-            ((dialogTexts())!!.contains("Complete scan") &&
+            ((dialogTexts())!!.contains("Scan finished") &&
                 !((dialogTexts())!!.contains("Scan in progress"))),
             "An open modal follows scan completion",
         )
@@ -6609,7 +6701,7 @@ class SmokeInstrumentation : Instrumentation() {
         settle()
         check(
             ((dialogTexts())!!.contains("Ready to scan") &&
-                !((dialogTexts())!!.contains("Complete scan"))),
+                !((dialogTexts())!!.contains("Scan finished"))),
             "First-use modal does not invent scan completion",
         )
         captureDialog("scan-details-empty")
@@ -7827,7 +7919,7 @@ class SmokeInstrumentation : Instrumentation() {
             ScanReport(
                 "10.0.2.0/27 · IPv4 + IPv6 advertised services",
                 false,
-                "Scan time limit reached. Results are partial.",
+                "Scan time limit reached.",
                 12,
                 30,
                 System.currentTimeMillis(),
@@ -7848,7 +7940,7 @@ class SmokeInstrumentation : Instrumentation() {
         activity = launch(false)
         waitForIdleSync()
         assertText("1 device group · 2 IPs")
-        assertText("Partial scan")
+        assertText("Scan finished")
         onMain(callback192@{ (((field("status") as View?)))!!.performClick() })
         SystemClock.sleep(200)
         check(
@@ -7885,7 +7977,7 @@ class SmokeInstrumentation : Instrumentation() {
         waitForIdleSync()
         activity = launch(false)
         waitForIdleSync()
-        assertText("Partial scan")
+        assertText("Scan finished")
         check(
             !((texts())!!.contains("Scan time limit reached")),
             "Reopened list keeps diagnostics in scan details",
@@ -8362,7 +8454,7 @@ class SmokeInstrumentation : Instrumentation() {
         )
         activity = launch(false)
         waitForIdleSync()
-        assertText("Partial scan")
+        assertText("Scan finished")
         onMain(
             callback202@{
                 var v: View? = (field("status") as View?)
@@ -8657,7 +8749,7 @@ class SmokeInstrumentation : Instrumentation() {
             "Settings reports denied network permission without requesting a scan",
         )
         settingsBack()
-        tapScan()
+        tapPermissionScan()
         osButton("permission_deny_button")
         waitForIdleSync()
         assertText("Local-network access is needed to find devices.")
@@ -8667,7 +8759,7 @@ class SmokeInstrumentation : Instrumentation() {
         )
         check(!((field("scanning") as Boolean)), "Deny does not start discovery")
         capture("permission-denied")
-        tapScan()
+        tapPermissionScan()
         osButton("permission_allow_button")
         var grantedAt: Long = SystemClock.uptimeMillis()
         var end: Long =
@@ -8702,6 +8794,34 @@ class SmokeInstrumentation : Instrumentation() {
                 ", UI=") + texts()),
         )
         capture("permission-granted")
+    }
+
+    /** System permission UI requires a focused, visible window and a genuine input event. */
+    private fun tapPermissionScan() {
+        val end = SystemClock.uptimeMillis() + 5000
+        var ready = false
+        val point = IntArray(2)
+        while (SystemClock.uptimeMillis() < end) {
+            onMain {
+                val button = field("scanButton") as View
+                ready = activity!!.hasWindowFocus() && button.isShown && button.isEnabled
+                if (ready) {
+                    button.getLocationOnScreen(point)
+                    point[0] += button.width / 2; point[1] += button.height / 2
+                }
+            }
+            if (ready) break
+            SystemClock.sleep(50)
+        }
+        check(ready, "Permission request starts from a focused visible scan control")
+        val now = SystemClock.uptimeMillis()
+        for (action in intArrayOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP)) {
+            val event = android.view.MotionEvent.obtain(now, SystemClock.uptimeMillis(), action,
+                point[0].toFloat(), point[1].toFloat(), 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try { check(uiAutomation.injectInputEvent(event, true), "Permission scan touch delivered") }
+            finally { event.recycle() }
+        }
     }
 
     private fun osButton(id: String): Unit {

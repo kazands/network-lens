@@ -130,6 +130,11 @@ internal object TypographyChecks {
                     }
                     settle(test)
                     main(test) {
+                        texts(activity.window.decorView).filter { it.text.toString() == "Show technical details" }
+                            .forEach { it.performClick() }
+                    }
+                    settle(test)
+                    main(test) {
                         val all = texts(activity.window.decorView)
                         inspect(all.single { it.text.toString() == v6 }, v6, "Details $label")
                         check(all.single { it.text.toString() == v6 }.isTextSelectable, "Details $label allow selecting the original address")

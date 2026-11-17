@@ -1,0 +1,7 @@
+Easy Smart discovery interoperability
+Stream state/transform adapted from:
+https://github.com/rgl/ansible-collection-tp-link-easy-smart-switch
+GPL-3.0; original source and license: android/easysmart-original/.
+Modified by Network Lens contributors, 2026-11-17: discovery-only requests,
+strict bounds and correlation, public identity fields only. No configuration,
+login, credential or session negotiation API. See the bundled GPL license.

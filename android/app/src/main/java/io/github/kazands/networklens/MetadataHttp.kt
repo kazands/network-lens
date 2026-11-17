@@ -27,6 +27,7 @@ internal object MetadataHttp {
         HTTP_STATUS("HTTP response error", DiscoveryHealth.Diagnostic.HTTP_STATUS),
         INVALID_HTTP("Invalid or unsupported HTTP response", DiscoveryHealth.Diagnostic.INVALID_HTTP),
         INVALID_METADATA("No valid metadata in response", DiscoveryHealth.Diagnostic.INVALID_METADATA),
+        NOT_REPORTED("Optional information not reported by this receiver", null),
         DEADLINE("Metadata time limit reached", DiscoveryHealth.Diagnostic.DEADLINE),
         CANCELLED("Metadata request cancelled", null),
         REQUEST_FAILED("Metadata request could not complete", DiscoveryHealth.Diagnostic.REQUEST_FAILED)
@@ -40,10 +41,21 @@ internal object MetadataHttp {
         val failure = error as? Failure
         if (failure?.reason == Reason.CANCELLED && !expired) return
         val reason = if (expired) Reason.DEADLINE else failure?.reason
-        health.diagnostic(source, reason?.event ?: DiscoveryHealth.Diagnostic.REQUEST_FAILED)
+        if (reason != Reason.NOT_REPORTED) health.diagnostic(source, reason?.event ?: DiscoveryHealth.Diagnostic.REQUEST_FAILED)
         val detail = reason?.detail ?: "Metadata request could not complete"
-        if (reason == Reason.DEADLINE) health.truncated(source, detail)
+        if (reason == Reason.DEADLINE || reason == Reason.NOT_REPORTED) health.truncated(source, detail)
         else health.fail(source, detail + if (reason == Reason.HTTP_STATUS) " (${failure!!.httpStatus})" else "")
+    }
+
+    /** One fresh-connection retry for transient read-only transport failures, within the original deadline. */
+    fun <T> retryReadOnly(deadline: Long, active: () -> Boolean, exchange: () -> T): T {
+        try { return exchange() } catch (e: Failure) {
+            if (e.reason !in setOf(Reason.CONNECTION_TIMEOUT, Reason.CONNECTION_FAILED,
+                    Reason.READ_TIMEOUT, Reason.READ_FAILED, Reason.WRITE_FAILED)) throw e
+            if (!active() || Thread.currentThread().isInterrupted) throw Failure(Reason.CANCELLED)
+            if (deadline - System.nanoTime() < TimeUnit.MILLISECONDS.toNanos(400)) throw e
+            return exchange()
+        }
     }
 
     fun exchange(socket: Socket, peer: InetAddress, request: LocalMetadata.Request, deadline: Long,

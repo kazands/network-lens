@@ -23,7 +23,7 @@ POLICY = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/Network-Lens-0.3.18.apk'))
+    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/Network-Lens-0.3.19.apk'))
     parser.add_argument('--aapt')
     parser.add_argument('--output')
     args = parser.parse_args()

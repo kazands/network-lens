@@ -126,7 +126,7 @@ class DiscoveryHealth {
             if (state.startsWith("Failed")) failures++
             else if (state.startsWith("Truncated")) limits++
         }
-        return if (failures + limits == 0) "" else "Device details are partial: " + failures +
+        return if (failures + limits == 0) "" else "Some checks could not finish: " + failures +
             " discovery source" + (if (failures == 1) "" else "s") + " failed, " + limits +
             " truncated. Tap scan status for details."
     }

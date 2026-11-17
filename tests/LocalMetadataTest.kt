@@ -230,6 +230,34 @@ object LocalMetadataTest {
     }
 
     @JvmStatic fun main(args: Array<String>) {
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2)
+        var attempts = 0
+        val retried = MetadataHttp.retryReadOnly(deadline, { true }) {
+            if (++attempts == 1) throw MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED)
+            "recovered"
+        }
+        check(retried == "recovered" && attempts == 2, "Transient read-only failure retries once")
+        for (reason in MetadataHttp.Reason.entries) {
+            attempts = 0
+            var caught: MetadataHttp.Reason? = null
+            try { MetadataHttp.retryReadOnly(deadline, { true }) { attempts++; throw MetadataHttp.Failure(reason) } }
+            catch (e: MetadataHttp.Failure) { caught = e.reason }
+            val retry = reason in setOf(MetadataHttp.Reason.CONNECTION_TIMEOUT, MetadataHttp.Reason.CONNECTION_FAILED,
+                MetadataHttp.Reason.READ_TIMEOUT, MetadataHttp.Reason.READ_FAILED, MetadataHttp.Reason.WRITE_FAILED)
+            check(caught == reason && attempts == if (retry) 2 else 1, "Retry is bounded and restricted to transient transport failures: $reason")
+        }
+        for (active in listOf(true, false)) {
+            attempts = 0
+            try { MetadataHttp.retryReadOnly(System.nanoTime(), { active }) { attempts++; throw MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED) } }
+            catch (_: MetadataHttp.Failure) {}
+            check(attempts == 1, "Expired/cancelled work never starts another attempt")
+        }
+
+        val unreported = DiscoveryHealth()
+        MetadataHttp.recordFailure(unreported, "Cast group information", MetadataHttp.Failure(MetadataHttp.Reason.NOT_REPORTED), false)
+        check(unreported.sources().getValue("Cast group information").startsWith("Truncated") &&
+            !unreported.sources().getValue("Cast group information").contains("invalid metadata"),
+            "Unreported optional information remains visible without claiming a malformed response")
         diagnostics()
         lookupOutcomes()
         mdnsTraffic()
@@ -411,7 +439,7 @@ object LocalMetadataTest {
         val fresh = MetadataLookups()
         check(fresh.snapshot().isEmpty(), "A new endpoint/scan has no previous outcomes")
         for (kind in LocalMetadata.Kind.values()) fresh.queue(request.copy(kind = kind))
-        check(fresh.snapshot().size == 5, "Endpoint diagnostics remain bounded by the five allowed protocols")
+        check(fresh.snapshot().size == 6, "Endpoint diagnostics remain bounded by the six allowed protocols")
         fresh.limit(LocalMetadata.Kind.WLED)
         fresh.incomplete(LocalMetadata.Kind.SHELLY)
         fresh.failure(request.kind, MetadataHttp.Failure(MetadataHttp.Reason.HTTP_STATUS, 403, IOException("fixture-secret")))
