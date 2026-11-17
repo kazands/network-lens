@@ -1,12 +1,18 @@
 # Development status
 
-Network Lens 0.3.16 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.16.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.16).
+Network Lens 0.3.17 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.17.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.17).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
-## Recognition improvements in this preview
+## In-app updates in this preview
+
+[Check for updates](APP-UPDATES.md) finds newer public releases, including previews,
+downloads and verifies the APK, and asks Android to install it. The check is
+explicit; no background checking or scan-data upload is introduced.
+
+## Included recognition improvements
 
 [Apple service model lookup](APPLE-RECOGNITION.md) adds a bounded, read-only
 ProductType request to current eligible Apple service endpoints without pairing.
@@ -23,7 +29,7 @@ do not establish speaker membership. All lookups are bounded and local.
 Earlier physical-type corrections for Ecobee Premium, Samsung description
 compatibility and the 284-code Apple model catalogue remain. The cause of the
 original missing Samsung model was not confirmed. Fresh physical testing remains
-necessary. In-app update checking remains unimplemented.
+necessary.
 
 ## Current functionality
 
@@ -67,12 +73,15 @@ uploading device identifiers.
 
 ## Verification
 
-All 31 host suites passed, including 64 broader-audio and 70 VSSL/Sonos checks.
-The final implementation passed 710 API 37 emulator checks across audio zones,
-device identities, grouping, local metadata and scan efficiency. Independent
-Deep Kaz reviews approved the implementation after required corrections.
+All 32 host suites passed, including 67 updater checks. The updater implementation
+passed 128 native checks and 115 menu checks on each of API 26 and API 37, plus
+95 API 37 navigation/session/scan-efficiency checks. Independent Deep Kaz review
+approved the complete updater changeset with no substantive findings. The prior
+recognition release passed 710 API 37 checks across audio zones, device identities,
+grouping, local metadata and scan efficiency.
 Versioned artifacts and exact release checks are recorded in
-[0.3.16 verification](VERIFICATION-0.3.16.md). Earlier results remain in
+[0.3.17 verification](VERIFICATION-0.3.17.md). Recognition results remain in
+[0.3.16 verification](VERIFICATION-0.3.16.md) and
 [0.3.15 verification](VERIFICATION-0.3.15.md) and the verification archive.
 Synthetic fixtures do not establish household recognition accuracy.
 

@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.16.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.17.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -25,7 +25,7 @@ A new key cannot update an installation signed by another key. Do not replace or
 
 Maintainer release APKs use a separate pinned app-signing identity and verified recovery receipt. Run `bash scripts/build.sh --release`; output goes under `artifacts/release/`, preserving development outputs. Release builds never create keys. A separate upload identity is prepared for future Play enrollment. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md) for private files, backup verification, migration and remaining Play work.
 
-`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 31 application host suites below.
+`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 32 application host suites below.
 
 ## Host suites
 
@@ -33,7 +33,7 @@ Maintainer release APKs use a separate pinned app-signing identity and verified 
 bash scripts/test.sh
 ```
 
-The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 31 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
+The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 32 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -83,3 +83,14 @@ python3 scripts/check-repository.py
 This checks staged paths and content for common credentials, private keys and unintended files. It is a guardrail, not a guarantee. Review `git diff --cached` yourself. Synthetic fixtures are appropriate; personal network data is not. Never force-add ignored local tools, captures or signing material.
 
 Refresh the offline IEEE data only as an intentional maintenance change with `python3 scripts/update-ieee-vendors.py --refresh`, then review provenance, terms and tests. The installed app never performs an online vendor lookup.
+
+## In-app update checks
+
+The host suite includes `AppUpdatesTest`. Build the application and instrumentation
+companion with the direct scripts above, then run `app-updates` with
+`test-android-e2e.py` on an explicitly selected isolated emulator. The mode uses
+synthetic release states, never downloads from GitHub, and abandons the actual
+installer session after observing Android's user-approval callback. It does not
+install an update or operate a physical phone. Development signing is deliberately
+rejected by public-update admission. See [APP-UPDATES.md](APP-UPDATES.md) for the
+remaining public-release end-to-end verification boundary.

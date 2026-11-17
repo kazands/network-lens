@@ -45,7 +45,19 @@ internal object BoundedJson {
             result?.takeIf { reader.at == json.length }
         } catch (_: IllegalArgumentException) { null } catch (_: CharacterCodingException) { null }
     }
-    private class Reader(val text: String, val strings: Set<List<String>>, val numbers: Set<List<String>>, val tree: Boolean = false) {
+    /** Separate bounds for GitHub's public release list; discovery limits above remain unchanged. */
+    fun releaseArray(bytes: ByteArray): ArrayValue? {
+        if (bytes.isEmpty() || bytes.size > 2 * 1024 * 1024) return null
+        return try {
+            val json = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
+            val reader = Reader(json, emptySet(), emptySet(), true, 100000, 65536)
+            val result = reader.value(0, emptyList()) as? ArrayValue
+            reader.space()
+            result?.takeIf { reader.at == json.length && it.values.size <= 100 }
+        } catch (_: IllegalArgumentException) { null } catch (_: CharacterCodingException) { null }
+    }
+    private class Reader(val text: String, val strings: Set<List<String>>, val numbers: Set<List<String>>, val tree: Boolean = false, val maxTokens: Int = 2048, val maxString: Int = 4096) {
         var at = 0
         var tokens = 0
         val fields = LinkedHashMap<List<String>, String>()
@@ -54,7 +66,7 @@ internal object BoundedJson {
 
         fun value(depth: Int, path: List<String>?): Value? {
             space()
-            if (depth > 16 || ++tokens > 2048 || at >= text.length) throw IllegalArgumentException()
+            if (depth > 16 || ++tokens > maxTokens || at >= text.length) throw IllegalArgumentException()
             val c = text[at]
             if (c == '"') return Scalar(string(), false)
             if (c == '{') {
@@ -138,7 +150,7 @@ internal object BoundedJson {
                     }
                 }
                 out.append(c)
-                if (out.length > 4096) throw IllegalArgumentException()
+                if (out.length > maxString) throw IllegalArgumentException()
             }
             throw IllegalArgumentException()
         }

@@ -81,6 +81,9 @@ class MainActivity : Activity() {
     private var progress: ProgressBar? = null
     private var scanDetailsDialog: ScanDetailsDialog? = null
     private var optionsDialog: AppDialog? = null
+    private var updater: UpdateFlow? = null
+    private var updateDialog: AppDialog? = null
+    private var updatesOpen = false
     private var optionsMenu: PopupWindow? = null
     private var deviceScroll: ScrollView? = null
     private val deviceRows = LinkedHashMap<String, View>()
@@ -100,6 +103,7 @@ class MainActivity : Activity() {
         (getSystemService(JOB_SCHEDULER_SERVICE) as JobScheduler).cancel(7401)
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).let { it.cancelAll(); it.deleteNotificationChannel("network-changes") }
         if (!store.ready()) { render(); return }
+        updater = UpdateFlow(this) { refreshUpdateDialog() }
         demo = intent.getBooleanExtra("demo", false)
         val retained = lastNonConfigurationInstance
         if (retained is ViewState) {
@@ -141,16 +145,19 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); state.clear() }
     override fun onResume() {
         super.onResume()
+        updater?.resume()
         if (::store.isInitialized && store.ready()) { watchConnection(); wifiName?.start(); loadNetwork(); render() }
+        if (updatesOpen) showUpdates(false)
     }
     override fun onConfigurationChanged(config: Configuration) { super.onConfigurationChanged(config); render() }
     override fun onPause() { super.onPause(); leaveForeground() }
     override fun onStop() { super.onStop(); leaveForeground() }
     private fun leaveForeground() {
+        updater?.pause(); suspendUpdateDialog()
         stopWatchingConnection(); wifiName?.stop(); scanDetailsDialog?.dismiss(); optionsDialog?.dismiss(); optionsMenu?.dismiss(); discovery?.cancel()
     }
     override fun onDestroy() {
-        destroyed = true; presentation.shutdownNow()
+        destroyed = true; updater?.close(); presentation.shutdownNow()
         synchronized(updateLock) { pendingInput = null; pendingDisplay = null }
         discovery?.cancel(); main.removeCallbacksAndMessages(null)
         if (Build.VERSION.SDK_INT >= 33) detailBack?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
@@ -282,6 +289,9 @@ class MainActivity : Activity() {
         if (showingSettings) settingsPage() else if (selected != null) detailsPage() else devicesPage()
         scanDetailsDialog?.let { if (it.isShowing) it.resize() }
         optionsDialog?.let { if (it.isShowing) it.resize() }
+        if (updateDialog?.isShowing == true) {
+            suspendUpdateDialog(); showUpdates(false)
+        }
     }
     private fun backToPreviousPage() {
         if (showingSettings) { showingSettings = false; settingsScroll = null; settingsY = 0; render() }
@@ -754,6 +764,7 @@ class MainActivity : Activity() {
         val popup = PopupWindow(viewport, minOf(dp(300), resources.displayMetrics.widthPixels - dp(32)), -2, true); optionsMenu = popup
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); popup.isOutsideTouchable = true; popup.elevation = dp(12).toFloat(); popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
         option(items, popup, "Wi-Fi details", "Addresses and connection", false) { networkInfo() }
+        option(items, popup, "Check for updates", "Download the latest app preview", false) { showUpdates(true) }
         option(items, popup, "Settings", "Scanning, permissions and privacy", false) { openSettings() }
         popup.setOnDismissListener { if (optionsMenu === popup) optionsMenu = null }; popup.showAsDropDown(anchor, 0, dp(6), Gravity.END)
     }
@@ -807,6 +818,10 @@ class MainActivity : Activity() {
         if (!nameAllowed) action(permissions, "Allow Wi-Fi name") { wifiNameAccess() }
         action(permissions, "Open Android settings") { openAndroidSettings() }
         note(permissions, "Manage permission grants in Android. Scanning works without Wi-Fi name access.")
+        val updateOptions = section("App updates")
+        updateOptions.addView(text("Installed version · " + appVersion(), 16, ink, true)); space(updateOptions, 6)
+        note(updateOptions, "Check for public releases, including previews. Downloads stay in the app; Android asks before installing.")
+        action(updateOptions, "Check for updates") { showUpdates(true) }
         val privacyOptions = section("Privacy & about")
         privacyOptions.addView(text("Fresh scans. Nothing saved.", 16, ink, true)); space(privacyOptions, 6)
         note(privacyOptions, "Every scan starts empty. Results and app choices stay in memory only; a full app restart clears them.")
@@ -845,6 +860,70 @@ class MainActivity : Activity() {
         val dialog = optionsDialog("Clear current results?")
         dialog.content().addView(dialog.paragraph("Empty the current device list and stop any active scan. Your appearance and scan range will stay the same for this session. There is no saved history to delete.", 14, ink, false))
         dialog.secondary("Cancel") { true }.primary("Clear results") { resetSessionData(false); true }.show()
+    }
+    private fun suspendUpdateDialog() {
+        val dialog = updateDialog ?: return
+        updateDialog = null
+        // Android queues dismiss callbacks: an obsolete dialog must not cancel its replacement.
+        dialog.setOnDismissListener(null)
+        dialog.dismiss()
+    }
+    private fun showUpdates(check: Boolean) {
+        val flow = updater ?: return
+        updatesOpen = true
+        if (updateDialog?.isShowing != true) {
+            updateDialog = AppDialog(dialogContext(), dialogColors(), "App updates").also { dialog ->
+                dialog.setOnDismissListener {
+                    if (updateDialog === dialog) {
+                        updateDialog = null
+                        updatesOpen = false
+                        flow.dismiss()
+                    }
+                }
+                dialog.show()
+            }
+        }
+        refreshUpdateDialog()
+        if (check) flow.check()
+    }
+    private fun refreshUpdateDialog() {
+        val dialog = updateDialog ?: return; val flow = updater ?: return
+        if (!dialog.isShowing || destroyed) return
+        val content = dialog.content(); content.removeAllViews(); dialog.clearActions()
+        fun paragraph(value: String, bold: Boolean = false) {
+            content.addView(dialog.paragraph(value, if (bold) 18 else 15, if (bold) ink else muted, bold)); space(content, 12)
+        }
+        paragraph("Installed · " + flow.version())
+        val release = flow.release
+        val state = flow.view
+        val title = when (state.step) {
+            UpdateFlow.Step.IDLE -> "Ready to check"
+            UpdateFlow.Step.CHECKING -> "Checking for updates…"
+            UpdateFlow.Step.CURRENT -> "You’re up to date"
+            UpdateFlow.Step.AVAILABLE -> "Update available · " + release?.version
+            UpdateFlow.Step.DOWNLOADING -> "Downloading · " + state.percent + "%"
+            UpdateFlow.Step.READY -> "Update verified · " + release?.version
+            UpdateFlow.Step.STAGING -> "Preparing the installer…"
+            UpdateFlow.Step.INSTALLING -> "Confirm the update"
+            UpdateFlow.Step.ERROR -> "Update couldn’t finish"
+        }
+        paragraph(title, true)
+        if (release != null && state.step in setOf(UpdateFlow.Step.AVAILABLE, UpdateFlow.Step.DOWNLOADING, UpdateFlow.Step.READY))
+            paragraph((if (release.preview) "Development preview" else "Public release") + " · " + String.format(Locale.ROOT, "%.1f MB", release.bytes / 1048576.0))
+        if (state.message.isNotEmpty()) paragraph(state.message)
+        paragraph("Checks GitHub’s public releases only when you ask. No scan results are sent. Keep Network Lens open while checking or downloading.")
+        when (state.step) {
+            UpdateFlow.Step.IDLE, UpdateFlow.Step.ERROR -> dialog.primary("Check again") { flow.check(); false }.secondary("Close") { true }
+            UpdateFlow.Step.CHECKING, UpdateFlow.Step.DOWNLOADING, UpdateFlow.Step.STAGING -> dialog.primary("Cancel") { true }
+            UpdateFlow.Step.AVAILABLE -> dialog.primary("Download update") { flow.download(); false }.secondary("Later") { true }
+            UpdateFlow.Step.READY -> dialog.primary("Install update") { flow.install(); false }.secondary("Later") { true }
+            UpdateFlow.Step.INSTALLING -> {
+                if (flow.canContinue()) dialog.primary("Continue installation") { flow.install(); false }.secondary("Cancel") { true }
+                else dialog.primary("Cancel") { true }
+            }
+            UpdateFlow.Step.CURRENT -> dialog.primary("Done") { true }
+        }
+        dialog.resize()
     }
     private fun appVersion(): String = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: PackageManager.NameNotFoundException) { "" }
     private fun scanRange() {
@@ -920,6 +999,7 @@ class MainActivity : Activity() {
         infoCard(dialog, "Why some MAC addresses are unavailable", "Modern Android restricts access to other devices' MAC addresses. Some devices report one through their discovery services. Network Lens shows the source and never makes an address up. A reported MAC may belong to another interface on the device.", false)
         infoCard(dialog, "MAC vendor names", "An offline IEEE public registry maps globally assigned MAC prefixes to their registered organizations. This may identify an interface supplier rather than the product brand. Locally assigned or randomized MACs are not matched. No address is sent to a lookup service.", false)
         infoCard(dialog, "Names and grouped addresses", "Names and model details come from device responses or advertisements and may be incomplete. Router DNS names are not used. Related IP addresses are grouped using discovery evidence; a matching name alone does not merge devices.", false)
+        infoCard(dialog, "App updates", "Checking for updates contacts GitHub without sending scan results. APKs use private temporary storage, cleared after installation or when the update session ends. Android controls installation approval.", false)
         dialog.primary("Done") { true }.show()
     }
     private fun reported(value: String?): String = if (value.isNullOrEmpty()) "Not reported" else value

@@ -4,7 +4,7 @@ This checklist records the focused app agreed in the conversation. Results belon
 
 | ID | Agreed requirement | Acceptance evidence |
 | --- | --- | --- |
-| R01 | Use Network Lens in the app and Network Lens: Network Scanner for the planned Google Play title; keep a simple scan/list/details experience. | Launcher/package label; first launch; no account, dashboard, extra tools, monitoring, alerts or background components. |
+| R01 | Use Network Lens in the app and Network Lens: Network Scanner for the planned Google Play title; keep a simple scan/list/details experience. | Launcher/package label; first launch; no account, dashboard, extra tools, monitoring, alerts or background work. The private update-result receiver only handles Android installer callbacks. |
 | R02 | Find responding devices on the connected Wi-Fi. | User-triggered real self and non-self gateway discovery, incremental results, ICMP-first checks with one spaced retry, two-connection TCP fallback with a cancellable gap and port details, a physical home-Wi-Fi scan; no automatic scan on launch/reconnect. |
 | R03 | Show IP addresses, available MAC addresses and detailed information honestly. | Real device details, grouped IPv4/IPv6, MAC provenance/unavailable state, service/model/hostname fixtures and clipboard contents. Unknown values remain unknown. Router PTR/DHCP records do not supply identity or other fields in new scans. |
 | R04 | Improve recognition using available local evidence. | Real Android DNS-SD registration/resolution, dynamic service types, fresh-response admission, cached NSD identity quarantine, current same-peer service-record matching, IPv4/IPv6 multicast, deterministic identity priorities, guarded UPnP HTTP exchange, SADP and WS-Discovery transport/parser checks. Bounded independent enrichment queues and a local Cast name/model/manufacturer lookup for current receivers, including already named devices, with logical group identity kept separate. Cached advertisements alone do not establish presence. No proprietary recognition or universal inventory claim. |
@@ -20,7 +20,7 @@ This checklist records the focused app agreed in the conversation. Results belon
 | R14 | Handle Wi-Fi changes and foreground lifecycle safely. | Real virtual-Wi-Fi disconnect/reconnect without reopening; no stale connection details; Stop, Android Home, return, recreation and explicit restart. No new background jobs. |
 | R15 | Make all menu actions consistent and safe. | Connection details, name access, range validation/Cancel, session appearance changes, privacy explanation, no main-menu delete action, RAM-only Clear current results inside Privacy; privacy text explains RAM-only state. Legacy-storage cleanup and process-death cases run only in emulators. |
 | R16 | Remain usable with larger text and different orientations. | Native 200 percent text, scrolling, landscape, bounded dialogs, visible fixed actions and reachable final menu entry. This is not a formal TalkBack certification. |
-| R17 | Minimize permissions and protect local data. | Exact seven-permission allowlist; no background location/ads/analytics/storage permission; no app-written scan files, database, preferences, history or logs; legacy preferences/backups removed; no user-data Bundle restoration; backup/transfer exclusions; one exported launcher; malicious-input and session-fencing regressions. |
+| R17 | Minimize permissions and protect local data. | Exact eight-permission allowlist; no background location/ads/analytics/storage permission; no app-written scan files, database, preferences, history or logs; legacy preferences/backups removed; no user-data Bundle restoration; backup/transfer exclusions; one exported launcher; malicious-input and session-fencing regressions. |
 | R18 | Run on supported Android versions and update compatibly. | Minimum API26, modern API36/37 runtime matrices, signing/package checks, retained certificate, compatible physical-phone update preserving Android grants while removing prior app-stored data. |
 | R19 | Keep production, Play upload and test signing identities separate. | Explicit one-time generation; preserved test credentials; pinned role certificates; owner-only files; independent downloaded backup copies that open successfully; release preflight rejects missing/wrong keys and stale receipts; app payload equality; emulator install/update certificate checks. The first test-to-production transition requires an explicitly authorized reinstall. |
 
@@ -123,3 +123,14 @@ Normalize native Android service types with a single leading separator, missing 
 Audio zone mapping: run emulator-only `audio-zones` for fresh-response admission, VSSL amplifier identity and related zones, distinct Sonos players and bonded roles, conflicting UDN, Stop/late replies, themed/scaled details and source-labelled copy. See [audio protocol boundaries](../docs/AUDIO-ZONES.md). Real amplifier/player firmware checks remain separate.
 
 Broader audio: the same emulator-only `audio-zones` mode checks HEOS/MusicCast/BluOS lookup admission, distinct per-port players, AirPlay/Cast virtual-group separation, cached-advertisement rejection, selected scope, per-endpoint budgets, copy isolation, missing peers, replaced endpoints and cancellation. Host fixtures cover each wire reader and group correlation rules. No test may contact physical audio hardware.
+
+## Explicit app updates
+
+Options and Settings provide Check for updates, verified APK download and Android
+installation approval. No automatic checking or background download. GitHub
+receives no scan data. Private temporary APK storage is the only new app-written
+cache; scan data and preferences remain RAM-only. Require bounded HTTPS, release
+digest/size, package, version and pinned-signer admission. Test failure/cancellation,
+light/dark and scaled dialogs, queued dismissal, private installer callback and
+real Android pending approval in emulator mode `app-updates`. Complete public-key
+installation must be checked separately before claiming end-to-end release coverage.

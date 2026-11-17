@@ -11,7 +11,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 POLICY = {
-    'android.permission.INTERNET': 'Discover responding devices on the user-selected Wi-Fi network.',
+    'android.permission.INTERNET': 'Discover local devices and perform explicit public GitHub update checks/downloads.',
+    'android.permission.REQUEST_INSTALL_PACKAGES': 'Ask Android to install a verified Network Lens update after the user requests it.',
     'android.permission.ACCESS_WIFI_STATE': 'Read the connected Wi-Fi name on supported older Android versions.',
     'android.permission.ACCESS_COARSE_LOCATION': 'Optional foreground Wi-Fi name access; requested together with precise access as required by Android.',
     'android.permission.ACCESS_FINE_LOCATION': 'User-approved optional foreground SSID access; no coordinates or background location requested.',
@@ -22,7 +23,7 @@ POLICY = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/Network-Lens-0.3.15.apk'))
+    parser.add_argument('apk', nargs='?', default=str(ROOT / 'artifacts/Network-Lens-0.3.17.apk'))
     parser.add_argument('--aapt')
     parser.add_argument('--output')
     args = parser.parse_args()

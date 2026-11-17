@@ -94,6 +94,7 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
         actions()
         return this
     }
+    fun clearActions(): AppDialog { primary = null; secondary = null; actions(); return this }
     private fun actions() {
         footer.removeAllViews()
         secondary?.let {

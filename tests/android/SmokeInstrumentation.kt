@@ -66,14 +66,16 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "audio-zones" || mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "audio-zones") {
+            if (mode == "app-updates") {
+                AppUpdateChecks.run(this, ::check)
+            } else if (mode == "audio-zones") {
                 AudioZoneChecks.run(this, ::check)
                 BroadAudioChecks.run(this, ::check)
             } else if (mode == "device-identities") {
@@ -7395,10 +7397,11 @@ class SmokeInstrumentation : Instrumentation() {
                 var items: ViewGroup? =
                     (((((popup)!!.getContentView() as ScrollView?)))!!.getChildAt(0) as ViewGroup?)
                 check(
-                    ((((items)!!.getChildCount() == 2) &&
+                    ((((items)!!.getChildCount() == 3) &&
                         (find((items)!!, "Wi-Fi details", false) !== null)) &&
-                        (find((items)!!, "Settings", false) !== null)),
-                    "Menu contains exactly Wi-Fi details and Settings",
+                        (find((items)!!, "Settings", false) !== null) &&
+                        (find((items)!!, "Check for updates", false) !== null)),
+                    "Menu contains Wi-Fi details, Check for updates and Settings",
                 )
                 check(
                     (((find((items)!!, "Wi-Fi name", false) === null) &&
