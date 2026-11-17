@@ -180,3 +180,10 @@ actual missing-model cause has not been confirmed.
 The versioned 0.3.15 release checks and exact artifact hashes are recorded in
 [release verification](VERIFICATION-0.3.15.md). The development candidate above
 remains a historical verification record.
+
+## TP-Link plugs and switches (0.3.18)
+
+Dedicated UDP discovery now obtains model evidence from supported Kasa/Tapo
+plug and switch replies. Exact reviewed models distinguish smart plugs, light
+switches and dimmers; a generic smart-plug/switch service family does not.
+See [protocol coverage, safeguards and limitations](TP-LINK.md).

@@ -49,6 +49,7 @@ internal object DeviceIdentityChecks {
         DeviceCatalogLoader.load(test.targetContext)
         check(DeviceCatalog.extendedSize() == 256338, "The packaged global catalogue loads all pinned aliases offline")
         RecognitionEvidenceChecks.run(test, check)
+        TpLinkChecks.run(test, check)
         val broadCases = listOf(Triple("Samsung", "SM-S918B", "Samsung Galaxy S23 Ultra"),
             Triple("Google", "Pixel 8", "Google Pixel 8"), Triple("QNAP", "TS-469U", "QNAP TS-469U"),
             Triple("Sony", "PlayStation 3", "Sony PlayStation 3"))
@@ -186,7 +187,9 @@ internal object DeviceIdentityChecks {
             "An audio capability alone is labelled as a service rather than a hardware category")
         val samsung = model("SM-S918B", 12).apply { hint("Manufacturer", "Samsung", "Synthetic current manufacturer", 80) }
         val pixel = model("Pixel 8", 13).apply { hint("Manufacturer", "Google", "Synthetic current manufacturer", 80) }
-        val fixtures = listOf(recorder, shield, samsung, pixel, hostname, cast, unknown, ps5, thermostat, thermostatV6)
+        val plug = Device().apply { ip = "192.0.2.21"; hint("Model", "HS103(US)", TpLinkDiscovery.MODEL_SOURCE, 80) }
+        val dimmer = Device().apply { ip = "192.0.2.22"; hint("Model", "HS220(US)", TpLinkDiscovery.MODEL_SOURCE, 80) }
+        val fixtures = listOf(plug, dimmer, recorder, shield, samsung, pixel, hostname, cast, unknown, ps5, thermostat, thermostatV6)
         Store(test.targetContext).clear()
         val activity = test.startActivitySync(Intent(test.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo", true)) as MainActivity
         settle(test)
@@ -207,10 +210,11 @@ internal object DeviceIdentityChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    for (title in listOf("Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unidentified device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8", "ecobee Smart Thermostat Premium")) layout(all.single { it.text.toString() == title }, "List $title $label")
+                    for (title in listOf("TP-Link Kasa HS103", "TP-Link Kasa HS220", "Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unidentified device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8", "ecobee Smart Thermostat Premium")) layout(all.single { it.text.toString() == title }, "List $title $label")
                     check(all.none { it.text.toString() == "MAC not available" || it.text.toString().startsWith("Locally recognized ·") }, "List $label removes repetitive missing-MAC and interpretation lines")
                     check(all.any { it.text.toString() == "MAC   02:00:00:00:00:10" } && all.any { it.text.toString() == "Casting device" }, "List $label retains known MACs and cautious service categories")
                     val rows = get(activity, "deviceRows") as Map<String, View>
+                    check(rows[plug.ip]!!.contentDescription.contains("Smart plug") && rows[dimmer.ip]!!.contentDescription.contains("Dimmer switch"), "TP-Link accessibility $label follows physical product types")
                     check(rows[ps5.ip]!!.contentDescription.contains("Sony PlayStation 5") && !rows[unknown.ip]!!.contentDescription.contains("MAC not available"), "Accessibility $label follows the cleaned identity")
                     check(rows[thermostatGroup.ip]!!.contentDescription.contains("Thermostat") && !rows[thermostatGroup.ip]!!.contentDescription.contains("Audio device"),
                         "Thermostat accessibility $label uses the recognized primary category")
