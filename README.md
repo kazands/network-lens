@@ -6,21 +6,26 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.16 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.16/Network-Lens-0.3.16.apk)
+[![Download Android APK — Network Lens 0.3.17 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.17/Network-Lens-0.3.17.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.16) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.17) · No GitHub account required to download.
 
-**Development preview: 0.3.16.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.17.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview adds [Apple model lookup](docs/APPLE-RECOGNITION.md),
-[Android recognition and categories](docs/ANDROID-RECOGNITION.md), and
-[audio hardware, zones and group reporting](docs/AUDIO-ZONES.md).
+This preview adds **Options → Check for updates** and **Settings → App updates**.
+Download and verify newer APKs inside Network Lens, then approve installation in
+Android. No GitHub login or browser download is required. See [in-app updates](docs/APP-UPDATES.md).
+
+The earlier [Apple](docs/APPLE-RECOGNITION.md), [Android](docs/ANDROID-RECOGNITION.md)
+and [audio](docs/AUDIO-ZONES.md) recognition improvements remain included.
 
 The public APK updates existing public-signed Network Lens installations in place. It retains the application ID `io.github.kazands.networklens` and the pinned app-signing identity. See [application identity and updates](docs/APPLICATION-IDENTITY.md) for build and installation details.
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.16 verification notes](docs/VERIFICATION-0.3.16.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.17 verification notes](docs/VERIFICATION-0.3.17.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+
+Install this release once using the download link to receive the updater. Later releases can be checked and downloaded from inside the app.
 
 ## What it does
 
@@ -67,7 +72,7 @@ The maintainer's direct release build uses `bash scripts/build.sh --release`, a 
 
 ## Permissions
 
-The manifest declares Internet, network state, Wi-Fi state, multicast state, fine/coarse location and local-network permissions. Location access is optional and only used to show the connected Wi-Fi name; the app does not request coordinates. Local-network approval is required on Android versions that enforce it. There is no Bluetooth, camera, microphone, contacts, background location or storage permission.
+The manifest declares Internet, network state, Wi-Fi state, multicast state, fine/coarse location, local-network and request-package-install permissions. Location access is optional and only used to show the connected Wi-Fi name; the app does not request coordinates. Local-network approval is required on Android versions that enforce it. The install permission lets Android ask for approval when you request an app update. There is no Bluetooth, camera, microphone, contacts, background location or storage permission. Update APKs use temporary private cache; scan data and preferences remain in memory.
 
 ## Contributing
 

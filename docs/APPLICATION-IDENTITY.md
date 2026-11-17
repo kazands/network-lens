@@ -8,15 +8,19 @@ verification only.
 ## Public APK updates
 
 Public previews retain this application ID and the pinned app-signing certificate.
-Download the current signed APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.16)
+Download the current signed APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.17)
 and install it as an update. The exact current APK passed an in-place update check
 with its application UID and existing permission grants retained; see
-[release verification](VERIFICATION-0.3.16.md).
+[release verification](VERIFICATION-0.3.17.md).
 
 The public and development signing identities are separate. A locally built test
 APK cannot update an installation signed with the public key. Preserve the
 intended key; do not replace credentials or pinned fingerprints to bypass a
 signature mismatch. See [release signing](RELEASE-SIGNING.md).
+
+Version 0.3.17 includes an [in-app updater](APP-UPDATES.md). It checks
+the same public signing identity and asks Android to install a newer version;
+older previews need this release installed once to receive the feature.
 
 ## Session state
 

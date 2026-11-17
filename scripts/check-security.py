@@ -86,7 +86,9 @@ def main():
     for flag in ('debuggable', 'allowBackup', 'fullBackupContent', 'usesCleartextTraffic'):
         require(app['attributes'].get('android:' + flag) == 0, flag + ' must be explicitly false')
     components = [n for n in app['children'] if n['name'] in ('activity', 'activity-alias', 'service', 'provider', 'receiver')]
-    require(len(components) == 1, 'Only the launcher activity is allowed; background components were removed')
+    require(len(components) == 2, 'Only the launcher and private update result receiver are allowed')
+    receiver = child(app, 'receiver')
+    require(receiver['attributes'].get('android:name') == '.UpdateResultReceiver' and receiver['attributes'].get('android:exported') == 0 and not receiver['children'], 'Update result receiver must be private with no external intent filters')
     activity = child(app, 'activity')
     require(activity['attributes'].get('android:name') == '.MainActivity' and activity['attributes'].get('android:exported') == 0xffffffff, 'Unexpected activity exposure')
     intent = child(activity, 'intent-filter')
@@ -126,7 +128,7 @@ def main():
               'kotlin_stdlib_sha256': provenance['sha256'], 'kotlin_stdlib_version': provenance['version'], 'total_class_count': len(names),
               'kotlin_notices_verified': True,
               'exported_components': ['io.github.kazands.networklens.MainActivity (launcher)'],
-              'private_components': [],
+              'private_components': ['io.github.kazands.networklens.UpdateResultReceiver (installer result only)'],
               'debuggable': False, 'allow_backup': False, 'full_backup_content': False,
               'cleartext_http': False, 'cloud_backup_and_device_transfer_exclusions': sorted(domains)}
     serialized = json.dumps(report, indent=2) + '\n'
