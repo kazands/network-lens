@@ -11,7 +11,7 @@ internal object DevicePresentation {
         val networkName = reportedName(clean, hostname)
         if (product != null) {
             val custom = networkName.takeIf { IdentityHints.specificName(it) && !product.redundantName(it) }.orEmpty()
-            val category = if (product.category == DeviceCatalog.Category.UNSPECIFIED) role else product.category.label
+            val category = if (product.category == DeviceCatalog.Category.UNSPECIFIED) role else product.displayType.ifEmpty { product.category.label }
             return Labels(product.title, listOf(category, custom).filter { it.isNotEmpty() }.joinToString(" · "))
         }
         val named = networkName.takeIf(IdentityHints::specificName)

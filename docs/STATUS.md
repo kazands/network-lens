@@ -1,12 +1,19 @@
 # Development status
 
-Network Lens 0.3.17 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.17.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.17).
+Network Lens 0.3.18 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.18.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.18).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
-## In-app updates in this preview
+## New in this preview
+
+[TP-Link discovery](TP-LINK.md) adds read-only Kasa/Tapo plug and switch replies
+over UDP 9999/20002, with 32 reviewed model mappings. Smart plugs, wall switches
+and dimmers receive distinct labels and matching icons. No account or device
+control is required.
+
+## In-app updates
 
 [Check for updates](APP-UPDATES.md) finds newer public releases, including previews,
 downloads and verifies the APK, and asks Android to install it. The check is
@@ -36,7 +43,7 @@ necessary.
 - Start a fresh foreground scan on the selected Wi-Fi, search one device list,
   and inspect source-labelled observations for each IPv4/IPv6 endpoint.
 - Discover current responders through ICMP, bounded TCP checks, mDNS/DNS-SD,
-  SSDP/guarded UPnP, NetBIOS, read-only SADP, WS-Discovery and PS5 discovery.
+  SSDP/guarded UPnP, NetBIOS, read-only SADP, WS-Discovery, PS5 and TP-Link discovery.
   Cached/native advertisements are candidates, never proof of presence.
 - Display supported canonical product names first, with useful custom names
   underneath. Details and explicit copies preserve raw names, reported models,
@@ -73,16 +80,16 @@ uploading device identifiers.
 
 ## Verification
 
-All 32 host suites passed, including 67 updater checks. The updater implementation
-passed 128 native checks and 115 menu checks on each of API 26 and API 37, plus
-95 API 37 navigation/session/scan-efficiency checks. Independent Deep Kaz review
-approved the complete updater changeset with no substantive findings. The prior
-recognition release passed 710 API 37 checks across audio zones, device identities,
-grouping, local metadata and scan efficiency.
-Versioned artifacts and exact release checks are recorded in
-[0.3.17 verification](VERIFICATION-0.3.17.md). Recognition results remain in
-[0.3.16 verification](VERIFICATION-0.3.16.md) and
-[0.3.15 verification](VERIFICATION-0.3.15.md) and the verification archive.
+All 33 host suites passed, including 797 TP-Link checks. Before release versioning,
+API 37 passed 714 checks across device identities, HomeKit, scan efficiency and
+session-only/cold-start behavior. Independent Deep review approved after a
+self-only scan-status correction. The production host parser identified an
+authorized physical HS103 through both supported UDP formats; physical dimmer
+and on-phone discovery compatibility remain unverified.
+
+Exact release artifact and upgrade checks are recorded in
+[0.3.18 verification](VERIFICATION-0.3.18.md). Earlier updater and recognition
+results remain in the verification archive.
 Synthetic fixtures do not establish household recognition accuracy.
 
 ## Known limits

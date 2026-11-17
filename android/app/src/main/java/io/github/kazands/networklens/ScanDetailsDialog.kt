@@ -277,6 +277,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
             "UPnP descriptions" -> "Device descriptions"
             "Unanswered device checks" -> "Second-pass checks"
             "WS-Discovery" -> "Printer and camera discovery"
+            TpLinkDiscovery.SOURCE -> "TP-Link plugs and switches"
             "mDNS type and hostname queries" -> "Advertised services and hostnames"
             else -> if (name.startsWith("mDNS ")) when (name.substring(5)) {
                 "_googlecast._tcp." -> "Google Cast devices"

@@ -18,9 +18,10 @@ internal object DeviceCatalog {
     }
     data class Product(val id: String, val brand: String, val title: String, val category: Category,
                        val models: Set<String>, val redundantNames: Set<String> = emptySet(), val familyOnly: Boolean = false,
-                       val reference: String = "", val manufacturerRequired: Boolean = false) {
+                       val reference: String = "", val manufacturerRequired: Boolean = false, val displayType: String = "") {
         private fun modelKey(value: String) = key(value).removePrefix(key(brand) + " ")
         fun acceptsModel(value: String): Boolean = key(value) in models ||
+            id.startsWith("tplink:") && TpLinkModels.sameModel(id, value) ||
             reference.isNotEmpty() && models.any { modelKey(it) == modelKey(value) } && global.lookup(brand, value)?.title == title
         fun redundantName(value: String): Boolean = key(value) in models || key(value) in redundantNames || key(value) == key(title)
     }
@@ -79,6 +80,7 @@ internal object DeviceCatalog {
         products.singleOrNull { it.acceptsModel(model) && (!it.manufacturerRequired || manufacturer.isNotEmpty()) &&
             (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
         val maker = brand(manufacturer)
+        if (maker == "tp-link") TpLinkModels.lookup(model)?.let { return it }
         val entry = global.lookup(maker, model) ?: return null
         val type = hardware.lookup(maker, model)
         return Product("catalog:$maker:${key(entry.title)}", entry.brand, entry.title, type?.category ?: Category.UNSPECIFIED,
@@ -109,6 +111,7 @@ internal object DeviceCatalog {
         private var manufacturer = ""
         private var manufacturerSource = ""
         private var playStationResponse = false
+        private var tpLinkResponse = false
         private var conflicted = false
         fun offer(field: String, value: String, source: String) {
             if (conflicted || source.isEmpty() || !IdentityHints.specific(value)) return
@@ -121,6 +124,7 @@ internal object DeviceCatalog {
                 "Model" -> {
                     if (value.length > 160) return
                     if (value == "PS5" && source == PLAYSTATION_SOURCE) playStationResponse = true
+                    if (source == TpLinkDiscovery.MODEL_SOURCE) tpLinkResponse = true
                     val next = key(value)
                     if (next !in models) {
                         if (models.size == 8) conflicted = true
@@ -139,20 +143,23 @@ internal object DeviceCatalog {
         fun categories(): List<HardwareClassification.Fact> {
             if (conflicted) return emptyList()
             return models.mapNotNull { model ->
-                val product = lookup(model, manufacturer) ?: return@mapNotNull null
+                val product = lookup(model, qualifiedManufacturer()) ?: return@mapNotNull null
                 if (product.category == Category.UNSPECIFIED ||
                     product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) null
                 else HardwareClassification.Fact(product.category, "Local product catalogue · Model=$model · ${modelSources[model]}" +
                     (hardware.lookup(manufacturer, model)?.let { " · " + it.source } ?: ""))
             }
         }
+        private fun qualifiedManufacturer(): String = manufacturer.ifEmpty { if (tpLinkResponse) "tp-link" else "" }
         fun match(): Match? {
-            val product = lookup(firstModel, manufacturer) ?: return null
+            val product = lookup(firstModel, qualifiedManufacturer()) ?: return null
             if (!compatible(product)) return null
             // PS5 is a short, reusable code. A console response or reported Sony brand is required.
             if (product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) return null
             val corroboration = if (product.id == "sony:playstation-5" && playStationResponse && modelSource != PLAYSTATION_SOURCE)
-                " · Model=PS5: $PLAYSTATION_SOURCE" else ""
+                " · Model=PS5: $PLAYSTATION_SOURCE"
+                else if (product.id.startsWith("tplink:") && tpLinkResponse && modelSource != TpLinkDiscovery.MODEL_SOURCE)
+                    " · " + TpLinkDiscovery.MODEL_SOURCE else ""
             return if (product.reference.isEmpty()) Match(product, "Local product catalogue · ${product.id} · $modelSource$corroboration", "Model=$firstModel")
                 else Match(product, "Product model catalogue · ${product.reference} · Model: $modelSource · Manufacturer: $manufacturerSource",
                     "Normalized manufacturer=$manufacturer; Model=$firstModel")
@@ -163,12 +170,14 @@ internal object DeviceCatalog {
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
             it.playStationResponse = playStationResponse
+            it.tpLinkResponse = tpLinkResponse
         }
         fun include(other: Evidence) {
             if (other.conflicted) conflicted = true
             other.models.sorted().forEach { offer("Model", it, other.modelSources[it].orEmpty()) }
             offer("Manufacturer", other.manufacturer, other.manufacturerSource)
             playStationResponse = playStationResponse || other.playStationResponse
+            tpLinkResponse = tpLinkResponse || other.tpLinkResponse
         }
     }
 }
