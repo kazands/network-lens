@@ -5,6 +5,17 @@ Original source code, documentation and original artwork: GPL-3.0-only.
 See LICENSE for the complete GNU General Public License version 3.
 
 Third-party material is not relicensed by this notice:
+- Home Assistant Core discovery matcher tables: Apache-2.0. Exact retained
+  sources/license: android/ha-original/; bundled license: res/raw/ha_matchers_license.txt.
+  Modified projection and provenance: android/ha-matcher-provenance.json.
+- Easy Smart stream state/transform adapted from rgl's GPL-3.0 collection.
+  Retained source/license and modification provenance: android/easysmart-original/
+  and android/easysmart-provenance.json. No configuration/control code is bundled.
+- TinyTuya public announcement envelope reference: MIT, Copyright (c) 2024
+  Jason Cox; notice: android/app/src/main/res/raw/tuya_protocol_notice.txt.
+- CSA Matter DCL public vendor/product facts: attribution and limitations in
+  android/app/src/main/res/raw/matter_registry_notice.txt and
+  android/matter-model-provenance.json. No exclusive rights are claimed over facts.
 - LineageOS Wiki device-category facts and adapted category table: CC BY-SA 3.0,
   attribution to LineageOS Wiki contributors. Full attribution and terms are
   packaged in android/app/src/main/res/raw/lineage_categories_notice.txt.

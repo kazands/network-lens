@@ -1,7 +1,7 @@
 # In-app updates
 
 Available starting with Network Lens 0.3.17. If you have that version or newer,
-use Check for updates to obtain 0.3.18. Older installations need the current
+use Check for updates to obtain 0.3.19. Older installations need the current
 signed APK installed once using the download link.
 
 ## Using the updater

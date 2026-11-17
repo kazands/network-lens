@@ -7,7 +7,7 @@ copied details. Missing MAC messages appear in Details rather than every list
 row. Known MACs remain visible. IPv4 still appears above IPv6.
 
 A product-like hostname or service name alone never establishes hardware.
-Unidentified endpoints use “Unidentified device”; useful reported names remain
+Unidentified endpoints use “Unnamed device”; useful reported names remain
 visible. Cosmetic hostname formatting removes a matching `.local` suffix and
 separates hyphens, without asserting a manufacturer or model. Service categories
 such as casting and file sharing describe the observed service only. An unmatched
@@ -29,7 +29,7 @@ not infer a product from a friendly name or MAC vendor.
 | Samsung manufacturer + `SM-S918B` | Samsung Galaxy S23 Ultra | Supported product title; the broad catalogue alone does not select a phone icon |
 | QNAP manufacturer + `TS-469U` | QNAP TS-469U | Supported product family; service-based category remains separate |
 | Matching name/hostname `thinkstation-X900.local` without a known product model | ThinkStation X900 | Reported device name; no inferred manufacturer or hardware model |
-| No useful reported name or model | Unidentified device | Any supported service category remains visible |
+| No useful reported name or model | Unnamed device | Any supported service category remains visible |
 
 ## Broad, free catalogue coverage
 
@@ -88,7 +88,7 @@ removed rather than assigned to whichever row happened to appear first.
 Neither broad source supplies a reliable universal form factor. These entries
 therefore retain icons/categories justified by current reported services; the
 app does not guess a phone, router or camera category from a product name.
-The unpublished [Android category supplement](ANDROID-RECOGNITION.md) adds
+The bundled [Android category supplement](ANDROID-RECOGNITION.md) adds
 separately attributed, exact manufacturer/model physical types for 651 pairs.
 Reviewed profiles and Recog retain their more specific category icons. The
 small reviewed table below is an override layer, not the entire catalogue.

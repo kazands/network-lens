@@ -50,6 +50,8 @@ internal object DeviceIdentityChecks {
         check(DeviceCatalog.extendedSize() == 256338, "The packaged global catalogue loads all pinned aliases offline")
         RecognitionEvidenceChecks.run(test, check)
         TpLinkChecks.run(test, check)
+        OmadaChecks.run(test, check)
+        RecognitionCoverageChecks.run(test, check)
         val broadCases = listOf(Triple("Samsung", "SM-S918B", "Samsung Galaxy S23 Ultra"),
             Triple("Google", "Pixel 8", "Google Pixel 8"), Triple("QNAP", "TS-469U", "QNAP TS-469U"),
             Triple("Sony", "PlayStation 3", "Sony PlayStation 3"))
@@ -183,13 +185,15 @@ internal object DeviceIdentityChecks {
             thermostatV6.identifiedProduct()?.product?.title == "ecobee Smart Thermostat Premium" && thermostatV6.manufacturer == "ecobee Inc.",
             "Recognition preserves raw service/model values and does not fill in another endpoint's identity")
         val genericAudio = Device().apply { ip = "192.0.2.19"; service("_spotify-connect._tcp.") }
-        check(genericAudio.presentation().title == "Unidentified device" && genericAudio.presentation().subtitle == "Audio service",
+        check(genericAudio.presentation().title == "Unnamed device" && genericAudio.presentation().subtitle == "Audio service",
             "An audio capability alone is labelled as a service rather than a hardware category")
         val samsung = model("SM-S918B", 12).apply { hint("Manufacturer", "Samsung", "Synthetic current manufacturer", 80) }
         val pixel = model("Pixel 8", 13).apply { hint("Manufacturer", "Google", "Synthetic current manufacturer", 80) }
         val plug = Device().apply { ip = "192.0.2.21"; hint("Model", "HS103(US)", TpLinkDiscovery.MODEL_SOURCE, 80) }
         val dimmer = Device().apply { ip = "192.0.2.22"; hint("Model", "HS220(US)", TpLinkDiscovery.MODEL_SOURCE, 80) }
-        val fixtures = listOf(plug, dimmer, recorder, shield, samsung, pixel, hostname, cast, unknown, ps5, thermostat, thermostatV6)
+        val omada = Device().apply { ip = "192.0.2.23"; hint("Model", "EAP265 HD", EapInfo.MODEL_SOURCE, 80); hint("Device type", "TP-Link EAP access point", EapInfo.MODEL_SOURCE, 80) }
+        val networkSwitch = Device().apply { ip = "192.0.2.24"; hint("Model", "SG2008", OmadaDiscovery.MODEL_SOURCE, 80); hint("Device type", "Omada network switch", OmadaDiscovery.SOURCE, 80) }
+        val fixtures = listOf(omada, networkSwitch, plug, dimmer, recorder, shield, samsung, pixel, hostname, cast, unknown, ps5, thermostat, thermostatV6)
         Store(test.targetContext).clear()
         val activity = test.startActivitySync(Intent(test.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo", true)) as MainActivity
         settle(test)
@@ -210,10 +214,11 @@ internal object DeviceIdentityChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    for (title in listOf("TP-Link Kasa HS103", "TP-Link Kasa HS220", "Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unidentified device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8", "ecobee Smart Thermostat Premium")) layout(all.single { it.text.toString() == title }, "List $title $label")
+                    for (title in listOf("TP-Link EAP265 HD", "TP-Link SG2008", "TP-Link Kasa HS103", "TP-Link Kasa HS220", "Hikvision DS-7608NI-I2/8P", "NVIDIA SHIELD TV", "ThinkStation X900", "Fixture lounge", "Unnamed device", "Sony PlayStation 5", "Samsung Galaxy S23 Ultra", "Google Pixel 8", "ecobee Smart Thermostat Premium")) layout(all.single { it.text.toString() == title }, "List $title $label")
                     check(all.none { it.text.toString() == "MAC not available" || it.text.toString().startsWith("Locally recognized ·") }, "List $label removes repetitive missing-MAC and interpretation lines")
                     check(all.any { it.text.toString() == "MAC   02:00:00:00:00:10" } && all.any { it.text.toString() == "Casting device" }, "List $label retains known MACs and cautious service categories")
                     val rows = get(activity, "deviceRows") as Map<String, View>
+                    check(rows[omada.ip]!!.contentDescription.contains("Wi-Fi access point") && rows[networkSwitch.ip]!!.contentDescription.contains("Network switch"), "Network equipment accessibility $label follows reported hardware family")
                     check(rows[plug.ip]!!.contentDescription.contains("Smart plug") && rows[dimmer.ip]!!.contentDescription.contains("Dimmer switch"), "TP-Link accessibility $label follows physical product types")
                     check(rows[ps5.ip]!!.contentDescription.contains("Sony PlayStation 5") && !rows[unknown.ip]!!.contentDescription.contains("MAC not available"), "Accessibility $label follows the cleaned identity")
                     check(rows[thermostatGroup.ip]!!.contentDescription.contains("Thermostat") && !rows[thermostatGroup.ip]!!.contentDescription.contains("Audio device"),
@@ -239,7 +244,7 @@ internal object DeviceIdentityChecks {
                         "Console row $label remains reachable and fully visible by scrolling; row=${row.height}, visible=${visible.height()}, viewport=${scroll.height}, y=${scroll.scrollY}")
                 }
                 capture(test, activity, "list-bottom-$label")
-                for (term in listOf("Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8", "ecobee", "Smart_Thermostat_Premium", "ECB601", "AirPlay audio", "Fixture climate")) {
+                for (term in listOf("EAP265 HD", "SG2008","Hikvision", "DS-7608NI-I2/8P", "recorder", "SHIELD Android TV", "ThinkStation X900", "192.0.2.16", "Galaxy S23 Ultra", "SM-S918B", "Google Pixel 8", "ecobee", "Smart_Thermostat_Premium", "ECB601", "AirPlay audio", "Fixture climate")) {
                     main(test) { texts(activity.window.decorView).filterIsInstance<EditText>().single().setText(term) }
                     settle(test)
                     main(test) { check((get(activity, "deviceRows") as Map<*, *>).values.toSet().size == 1, "Search $label finds one device group for $term") }
@@ -270,13 +275,14 @@ internal object DeviceIdentityChecks {
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
-                    check(all.any { it.text.toString() == "Network name" } && all.any { it.text.toString() == "DS-7608NI-I2/8P" }, "Details $label retain raw network name and model")
+                    check(all.none { it.text.toString() == "Network name" || it.text.toString() == "DS-7608NI-I2/8P" }, "Details $label keep raw network name and model collapsed")
                     all.filter { it.text.toString() == "Hikvision DS-7608NI-I2/8P" }.forEach { layout(it, "Detail title $label") }
-                    all.single { it.text.toString() == "Show discovery evidence" }.performClick()
+                    all.single { it.text.toString() == "Show technical details" }.performClick()
                 }
                 settle(test)
                 main(test) {
                     val all = texts(activity.window.decorView)
+                    check(all.any { it.text.toString() == "Network name" } && all.any { it.text.toString() == "DS-7608NI-I2/8P" }, "Expanded details retain raw network name and model")
                     check(all.any { it.text.toString().contains("Local product catalogue · hikvision:") }, "Details $label expose catalogue provenance")
                     all.single { it.text.toString() == "Copy device details" }.performClick()
                     val copied = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
@@ -294,7 +300,7 @@ internal object DeviceIdentityChecks {
                 val all = texts(activity.window.decorView)
                 check(all.any { it.text.toString() == "Not available" } && all.any { it.text.toString().startsWith("Android limits MAC access.") }, "Missing-MAC explanation remains in Details")
                 val scroll = get(activity, "detailScroll") as ScrollView
-                var panel: View = all.single { it.text.toString() == "Locally recognized" }
+                var panel: View = all.single { it.text.toString() == "How this was identified" }
                 while (panel.parent !== scroll.getChildAt(0)) panel = panel.parent as View
                 scroll.scrollTo(0, panel.top)
             }

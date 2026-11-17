@@ -13,6 +13,7 @@ internal object DeviceCatalog {
         AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
         AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
         SECURITY_SYSTEM("Security system"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
+        ACCESS_POINT("Wi-Fi access point"), NETWORK_SWITCH("Network switch"),
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
         SHOWER("Shower"), REMOTE("Remote control"), UNSPECIFIED("Not classified")
     }
@@ -112,7 +113,27 @@ internal object DeviceCatalog {
         private var manufacturerSource = ""
         private var playStationResponse = false
         private var tpLinkResponse = false
+        private var omadaResponse = false
+        private var omadaModelSource = ""
+        private var protocolBrand = ""
+        private var protocolSource = ""
         private var conflicted = false
+        private var registryMatch: Match? = null
+        private var registryIdentity = ""
+        fun offerRegistryIdentity(id: String) {
+            if (registryIdentity.isNotEmpty() && registryIdentity != id) conflicted = true
+            else registryIdentity = id
+        }
+        private fun registry(): Match? {
+            registryMatch?.let { return it }
+            val p = registryIdentity.split(':')
+            if (p.size != 3 || p[0] != "matter") return null
+            return MatterInfo.index.lookup(p[1].toIntOrNull() ?: return null, p[2].toIntOrNull() ?: return null)
+        }
+        fun offerProduct(match: Match) {
+            if (registryMatch?.product?.id?.let { it != match.product.id } == true) conflicted = true
+            else registryMatch = match
+        }
         fun offer(field: String, value: String, source: String) {
             if (conflicted || source.isEmpty() || !IdentityHints.specific(value)) return
             when (field) {
@@ -125,6 +146,19 @@ internal object DeviceCatalog {
                     if (value.length > 160) return
                     if (value == "PS5" && source == PLAYSTATION_SOURCE) playStationResponse = true
                     if (source == TpLinkDiscovery.MODEL_SOURCE) tpLinkResponse = true
+                    if (source == OmadaDiscovery.MODEL_SOURCE || source == EapInfo.MODEL_SOURCE || source == EasySmartDiscovery.MODEL_SOURCE) {
+                        omadaResponse = true
+                        if (omadaModelSource.isEmpty()) omadaModelSource = source
+                    }
+                    val candidateBrand = when (source) {
+                        LocalMetadata.Kind.SAMSUNG.source + " (reported)" -> "Samsung"
+                        LanIdentity.Method.GOVEE.source + " (reported)" -> "Govee"
+                        else -> ""
+                    }
+                    if (candidateBrand.isNotEmpty()) {
+                        if (protocolBrand.isNotEmpty() && protocolBrand != candidateBrand) conflicted = true
+                        else { protocolBrand = candidateBrand; protocolSource = source }
+                    }
                     val next = key(value)
                     if (next !in models) {
                         if (models.size == 8) conflicted = true
@@ -136,30 +170,50 @@ internal object DeviceCatalog {
             }
         }
         fun compatible(product: Product): Boolean = !conflicted &&
+            // A missing registry row is not missing identity. Grouped endpoints must agree
+            // on a Matter candidate's raw vendor/product pair even before the index loads.
+            (registryIdentity.isEmpty() || !product.id.startsWith("matter:") || registryIdentity == product.id) &&
+            (registry() == null || registry()!!.product.id == product.id) &&
             models.all(product::acceptsModel) &&
-            (manufacturer.isEmpty() || manufacturer == brand(product.brand))
+            (manufacturer.isEmpty() || manufacturer == brand(product.brand)) &&
+            (protocolBrand.isEmpty() || brand(protocolBrand) == brand(product.brand))
         /** Hardware can be known when the exact product is ambiguous. Unknown model tokens
          * do not turn a known thermostat into an audio device; contradictory known types do. */
         fun categories(): List<HardwareClassification.Fact> {
             if (conflicted) return emptyList()
-            return models.mapNotNull { model ->
-                val product = lookup(model, qualifiedManufacturer()) ?: return@mapNotNull null
+            return listOfNotNull(registry()?.takeIf { compatible(it.product) && it.product.category != Category.UNSPECIFIED }?.let { HardwareClassification.Fact(it.product.category, it.source) }) + models.mapNotNull { model ->
+                val product = qualifiedProduct(model) ?: return@mapNotNull null
                 if (product.category == Category.UNSPECIFIED ||
                     product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) null
                 else HardwareClassification.Fact(product.category, "Local product catalogue · Model=$model · ${modelSources[model]}" +
                     (hardware.lookup(manufacturer, model)?.let { " · " + it.source } ?: ""))
             }
         }
-        private fun qualifiedManufacturer(): String = manufacturer.ifEmpty { if (tpLinkResponse) "tp-link" else "" }
+        private fun qualifiedManufacturer(): String = manufacturer.ifEmpty { if (tpLinkResponse || omadaResponse) "tp-link" else brand(protocolBrand) }
+        private fun qualifiedProduct(model: String): Product? =
+            lookup(model, qualifiedManufacturer()) ?: when {
+                omadaResponse && qualifiedManufacturer() == "tp-link" -> OmadaDiscovery.product(model)
+                protocolBrand.isNotEmpty() && key(model).isNotEmpty() -> Product(
+                    "protocol:${brand(protocolBrand)}:${key(model)}", protocolBrand,
+                    if (model.startsWith("$protocolBrand ", true)) model else "$protocolBrand $model",
+                    if (protocolBrand == "Samsung") Category.TV else Category.UNSPECIFIED, setOf(key(model)))
+                else -> null
+            }
         fun match(): Match? {
-            val product = lookup(firstModel, qualifiedManufacturer()) ?: return null
+            registry()?.let { return it.takeIf { compatible(it.product) } }
+            val product = qualifiedProduct(firstModel) ?: return null
             if (!compatible(product)) return null
             // PS5 is a short, reusable code. A console response or reported Sony brand is required.
             if (product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) return null
             val corroboration = if (product.id == "sony:playstation-5" && playStationResponse && modelSource != PLAYSTATION_SOURCE)
                 " · Model=PS5: $PLAYSTATION_SOURCE"
                 else if (product.id.startsWith("tplink:") && tpLinkResponse && modelSource != TpLinkDiscovery.MODEL_SOURCE)
-                    " · " + TpLinkDiscovery.MODEL_SOURCE else ""
+                    " · " + TpLinkDiscovery.MODEL_SOURCE
+                else if (omadaResponse && modelSource != omadaModelSource) " · $omadaModelSource" else ""
+            if (product.id.startsWith("protocol:"))
+                return Match(product, "Protocol-reported model · $protocolSource", "Model=$firstModel")
+            if (product.id.startsWith("omada:"))
+                return Match(product, "Protocol-reported model · $modelSource$corroboration", "Model=$firstModel")
             return if (product.reference.isEmpty()) Match(product, "Local product catalogue · ${product.id} · $modelSource$corroboration", "Model=$firstModel")
                 else Match(product, "Product model catalogue · ${product.reference} · Model: $modelSource · Manufacturer: $manufacturerSource",
                     "Normalized manufacturer=$manufacturer; Model=$firstModel")
@@ -169,15 +223,29 @@ internal object DeviceCatalog {
             it.models.addAll(models); it.modelSources.putAll(modelSources)
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
+            it.registryMatch = registryMatch; it.registryIdentity = registryIdentity
             it.playStationResponse = playStationResponse
             it.tpLinkResponse = tpLinkResponse
+            it.omadaResponse = omadaResponse
+            it.omadaModelSource = omadaModelSource
+            it.protocolBrand = protocolBrand; it.protocolSource = protocolSource
         }
         fun include(other: Evidence) {
             if (other.conflicted) conflicted = true
+            if (other.protocolBrand.isNotEmpty()) {
+                if (protocolBrand.isNotEmpty() && protocolBrand != other.protocolBrand) conflicted = true
+                else { protocolBrand = other.protocolBrand; protocolSource = other.protocolSource }
+            }
+            if (other.registryIdentity.isNotEmpty()) offerRegistryIdentity(other.registryIdentity)
+            other.registryMatch?.let(::offerProduct)
+            // Preserve the reported spelling for protocol-qualified models that have no catalogue alias.
+            offer("Model", other.firstModel, other.modelSource)
             other.models.sorted().forEach { offer("Model", it, other.modelSources[it].orEmpty()) }
             offer("Manufacturer", other.manufacturer, other.manufacturerSource)
             playStationResponse = playStationResponse || other.playStationResponse
             tpLinkResponse = tpLinkResponse || other.tpLinkResponse
+            omadaResponse = omadaResponse || other.omadaResponse
+            if (omadaModelSource.isEmpty()) omadaModelSource = other.omadaModelSource
         }
     }
 }

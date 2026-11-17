@@ -6,15 +6,23 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.18 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.18/Network-Lens-0.3.18.apk)
+[![Download Android APK — Network Lens 0.3.19 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.19/Network-Lens-0.3.19.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.18) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.19) · No GitHub account required to download.
 
-**Development preview: 0.3.18.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.19.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview adds **local TP-Link Kasa/Tapo discovery** for supported plugs and
-wall switches. Reviewed models receive plug, light-switch or dimmer labels and
-appropriate icons. See [TP-Link coverage and limits](docs/TP-LINK.md).
+This preview expands **local device recognition** with Omada/EAP and Easy Smart
+network equipment, Samsung TV identity, WiZ, Yeelight, Govee, LIFX and passive Tuya
+announcements. It includes 348 pinned Home Assistant matcher rules, 5,479 offline
+Matter vendor/product records, independent identity probes, bounded metadata
+fallback and fairer lookup scheduling. See [discovery coverage](docs/DISCOVERY-COVERAGE.md)
+and [recognition planning](docs/RECOGNITION-PLANNING.md) for exact support and limits.
+
+Device details lead with physical identity and explain recognition. Raw reports
+remain under **Show technical details**. The list uses **Unnamed device** when no
+usable name/model was received, and **Scan finished** or **Scan stopped** for the
+scan lifecycle; per-method failures and coverage remain in Scan details.
 
 Use **Options → Check for updates** or **Settings → App updates** to download and
 verify this APK inside Network Lens, then approve installation in Android.
@@ -27,7 +35,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.18 verification notes](docs/VERIFICATION-0.3.18.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.19 verification notes](docs/VERIFICATION-0.3.19.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 
@@ -38,7 +46,7 @@ If you already have 0.3.17 or newer, use Check for updates. Older installations 
 - Current responses establish presence. Cached advertisements remain candidates; router PTR/DHCP names are not used for identity.
 - Conservative grouping, IPv4 with IPv6 below it, searchable results, source-labelled device details and copy actions.
 - Dark and light appearances, accessible text scaling, Lucide device pictograms and Back navigation that preserves list position.
-- Complete/Partial scan status with per-method results and reasons. IPv6 discovery uses advertised addresses and eligible local routes; it does not enumerate the IPv6 address space.
+- Scan finished/stopped status with per-method results, coverage and failure reasons. IPv6 discovery uses advertised addresses and eligible local routes; it does not enumerate the IPv6 address space.
 - Offline IEEE prefix lookup for explicitly reported MAC addresses. An interface supplier is kept separate from a device-reported manufacturer.
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 - Canonical product names from a free offline catalogue covering 86,540 product/family titles across 5,263 worldwide brands, indexed by 256,338 exact manufacturer-qualified aliases. Useful custom names remain below the product title; raw fields and recognition sources remain in Details. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md).

@@ -1,0 +1,11 @@
+{
+  "source": "https://on.dcl.csa-iot.org",
+  "blockHeight": null,
+  "snapshot": "20261117",
+  "retrieved": "2026-11-17T05:55:47.528111+00:00",
+  "models": 5479,
+  "excluded": 121,
+  "snapshotSha256": "c1a7fb1573f26046a47ba25d3ac8bb7ce3fb48924a582e899d528ecb9d0d43a5",
+  "generatedSha256": "a570c3232e24b9978dba89a9951602a15ab781721396a14d60bd1f31f16616d8",
+  "policy": "Public vendor/product facts only; no software downloads, certification claims, credentials or runtime network lookups. Test vendor IDs excluded."
+}

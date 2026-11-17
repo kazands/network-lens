@@ -11,12 +11,13 @@ import java.util.Locale
 /** Advertised service metadata only; no web crawling, account actions or model guessing. */
 internal object LocalMetadata {
     enum class Kind(val source: String) {
-        SHELLY("Shelly device information"), WLED("WLED device information"),
+        SAMSUNG("Samsung TV device information"), SHELLY("Shelly device information"), WLED("WLED device information"),
         SPOTIFY("Spotify Connect device information"), IPP("IPP printer information"), CAST("Cast device information")
     }
     data class Report(val hints: Map<String, String> = emptyMap(), val details: Map<String, String> = emptyMap(), val mac: String = "")
     data class Request(val kind: Kind, val port: Int, val path: String, val secure: Boolean = false) {
         fun bytes(peer: InetAddress): ByteArray {
+            if (kind == Kind.SAMSUNG) require(port == 8001 && path == "/api/v2/" && !secure)
             if (kind == Kind.CAST) {
                 require(port == 8008 && path == "/setup/eureka_info" && !secure)
                 return CastInfo.request(peer)
@@ -90,6 +91,7 @@ internal object LocalMetadata {
     } catch (_: Exception) { null }
 
     fun parse(kind: Kind, body: ByteArray): Report? {
+        if (kind == Kind.SAMSUNG) return SamsungInfo.parse(body)
         if (kind == Kind.CAST) return CastInfo.parse(body)
         if (kind == Kind.IPP) return IppInfo.parse(body)?.let { Report(mapOf("Model" to it)) }
         val fields = when (kind) {

@@ -185,7 +185,7 @@ class MainActivity : Activity() {
                     if (operation == null) report?.total ?: 0 else total,
                     System.currentTimeMillis(), (operation?.sources() ?: report?.sources ?: emptyMap()).mapValues {
                         if (it.value.startsWith("Running")) "Truncated · Wi-Fi IPv6 routes or addresses changed" else it.value
-                    })
+                    }, if (operation == null) report?.omittedSources ?: 0 else 0)
                 operation?.cancel(); discovery = null; scanning = false; selected = null
                 store.replaceScope(current!!.key, kept, replacement)
                 message = ""; dismissConnectionDialogs()
@@ -267,7 +267,7 @@ class MainActivity : Activity() {
         if (showingSettings || selected != null) {
             val back = text("‹", 32, accent, true); back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 32f); back.gravity = Gravity.CENTER
             back.contentDescription = if (showingSettings && selected != null) "Back to device details" else "Back to devices"
-            back.setOnClickListener { backToPreviousPage() }; header.addView(back, lp(48, 48))
+            AccessibleActions.button(back); back.setOnClickListener { backToPreviousPage() }; header.addView(back, lp(48, 48))
         } else {
             val icon = ImageView(this); icon.setImageResource(R.drawable.network_lens_logo)
             icon.tag = "app-brand"; icon.scaleType = ImageView.ScaleType.FIT_CENTER
@@ -275,16 +275,16 @@ class MainActivity : Activity() {
         }
         val title = text(if (!store.ready()) getString(R.string.app_name) else if (showingSettings) "Settings" else if (selected == null) getString(R.string.app_name) else "Device details", 18, ink, true)
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        val theme = ModeToggle(); theme.contentDescription = if (store.dark()) "Switch to light mode" else "Switch to dark mode"
+        val theme = ModeToggle(); AccessibleActions.button(theme); theme.contentDescription = if (store.dark()) "Switch to light mode" else "Switch to dark mode"
         theme.setOnClickListener { store.dark(!store.dark()); render() }; header.addView(theme, lp(48, 48))
         val more = text("⋮", 28, accent, true); more.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 28f); more.gravity = Gravity.CENTER
-        more.contentDescription = "Options"; more.setOnClickListener { menu(it) }
+        more.contentDescription = "Options"; AccessibleActions.button(more); more.setOnClickListener { menu(it) }
         if (!showingSettings && store.ready()) header.addView(more, lp(48, 48))
         root.addView(header)
         if (!store.ready()) { cleanupPage(); return }
         if (demo && !showingSettings) {
             val banner = text("Sample devices · Tap to use your Wi-Fi", 12, accent, true); banner.setPadding(dp(23), dp(12), dp(23), dp(12)); banner.setBackgroundColor(soft)
-            banner.setOnClickListener { demo = false; selected = null; message = ""; loadNetwork(); render() }; root.addView(banner)
+            AccessibleActions.button(banner); banner.setOnClickListener { demo = false; selected = null; message = ""; loadNetwork(); render() }; root.addView(banner)
         }
         if (showingSettings) settingsPage() else if (selected != null) detailsPage() else devicesPage()
         scanDetailsDialog?.let { if (it.isShowing) it.resize() }
@@ -361,7 +361,7 @@ class MainActivity : Activity() {
         statusLabel.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         statusLabel.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; summary.addView(statusLabel, LinearLayout.LayoutParams(0, -2, 1f))
         val more = text("›", 22, muted, false); more.setPadding(dp(12), 0, dp(5), 0); more.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; summary.addView(more)
-        summary.contentDescription = statusText() + ". View scan details"; summary.setOnClickListener { scanDetails() }; statusLabel.setOnClickListener { scanDetails() }
+        AccessibleActions.button(summary); summary.contentDescription = statusText() + ". View scan details"; summary.setOnClickListener { scanDetails() }; statusLabel.setOnClickListener { scanDetails() }
         controls.addView(summary); content.addView(controls)
         val section = column(); section.setPadding(dp(23), dp(8), dp(23), dp(14))
         val heading = text("Your devices", 26, ink, true); heading.letterSpacing = -.01f
@@ -404,7 +404,7 @@ class MainActivity : Activity() {
         val report = network?.let { store.report(it.key) }
         if (message.isNotEmpty() && (report == null || message != report.reason)) return message
         if (report == null) return if (network == null) "Connect to Wi-Fi to scan for devices." else "Ready when you are · Scan your Wi-Fi"
-        return (if (report.complete) "Complete scan" else "Partial scan") + " · " + scanTime(report.finished) + "\nView scan details"
+        return report.statusLabel + " · " + scanTime(report.finished) + "\nView scan details"
     }
     private fun scanTime(value: Long): String {
         if (value <= 0) return "time not recorded"
@@ -487,6 +487,7 @@ class MainActivity : Activity() {
             ipv4 = addressLabel(accent); ipv6 = addressLabel(muted); labels.addView(ipv4); labels.addView(ipv6)
             hardware = text("", AppTypography.METADATA, muted, false); hardware.setPadding(0, dp(5), 0, 0); labels.addView(hardware)
             addView(labels, LayoutParams(0, -2, 1f)); addView(text("›", 24, muted, false))
+            AccessibleActions.button(this)
             setOnClickListener { selected = current!!.copy(); detailScroll = null; restoredDetailY = 0; expandedDetails.clear(); render() }
         }
         private fun addressLabel(color: Int): TextView = text("", AppTypography.LIST_ADDRESS, color, false).also {
@@ -535,7 +536,10 @@ class MainActivity : Activity() {
         val scroll = ScrollView(this); detailScroll = scroll
         val body = column(); body.setPadding(dp(23), dp(14), dp(23), dp(30)); scroll.addView(body); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val title = text(d.presentation().title, 26, ink, true); title.letterSpacing = -.01f; body.addView(title); space(body, 8)
-        body.addView(text(if (d.self) "This phone" else if (d.gateway) "Wi-Fi gateway" else "Details from your scan", 13, muted, false)); space(body, 21)
+        val customName = SafeText.label(d.name, 160).takeIf {
+            IdentityHints.specificName(it) && it != d.presentation().title && d.groupProduct()?.product?.redundantName(it) != true
+        }.orEmpty()
+        body.addView(text(if (d.self) "This phone" else if (d.gateway) "Wi-Fi gateway" else customName.ifEmpty { "Details from your scan" }, 13, muted, false)); space(body, 21)
         if (d.endpoints().size > 1) { body.addView(text("" + d.endpoints().size + " IP addresses grouped together. Each address keeps its own reported details.", 13, accent, true)); space(body, 16) }
         val classification = d.classification()
         val capabilities = d.capabilities()
@@ -545,7 +549,21 @@ class MainActivity : Activity() {
             if (capabilities.isNotEmpty()) detailRow(summary, "Services available", capabilities.joinToString(", "))
             body.addView(summary); space(body, 16)
         }
+        if (d.presentation().unnamed) {
+            val help = panel(); help.setPadding(dp(18), dp(16), dp(18), dp(16))
+            help.addView(text("About this device", 16, ink, true)); space(help, 8)
+            help.addView(text(RecognitionCopy.UNNAMED, 14, muted, false)); space(help, 10)
+            help.addView(text(RecognitionCopy.NEXT_SCAN, 14, muted, false))
+            body.addView(help); space(body, 16)
+        }
         for (endpoint in d.endpoints()) {
+            endpoint.identifiedProduct()?.let { match ->
+                val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
+                recognized.addView(text("How this was identified", 16, ink, true))
+                if (match.product.familyOnly) detailRow(recognized, "Identification", "Device family")
+                recognized.addView(text(RecognitionCopy.explanation(match), 14, muted, false))
+                body.addView(recognized); space(body, 8)
+            }
             val addresses = panel(); addresses.setPadding(dp(18), dp(18), dp(18), dp(12))
             field(addresses, "IP address", endpoint.ip, true); field(addresses, "MAC address", endpoint.mac.ifEmpty { "Not available" }, endpoint.mac.isNotEmpty())
             addresses.addView(text(if (endpoint.mac.isEmpty()) "Android limits MAC access. Some devices report an address through their discovery services." else "Source: " + endpoint.macSource + ". This may identify another interface on the device.", 14, muted, false))
@@ -554,29 +572,6 @@ class MainActivity : Activity() {
             if (!echo.isNullOrEmpty()) { space(addresses, 12); detailRow(addresses, if (v6echo != null) "Response time (ICMPv6)" else "Response time (ICMP)", echo) }
             else if (endpoint.latency >= 0) { space(addresses, 12); detailRow(addresses, "Response time (TCP)", "" + endpoint.latency + " ms") }
             body.addView(addresses); space(body, 16)
-            val facts = panel(); facts.setPadding(dp(18), dp(10), dp(18), dp(10)); val missing = ArrayList<String>()
-            if (endpoint.name.isNotEmpty()) detailRow(facts, "Network name", endpoint.name)
-            val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Reported type", endpoint.kind, "device type"))
-            for (item in identity) { if (item[1].isEmpty()) missing.add(item[2]) else detailRow(facts, item[0], item[1]) }
-            val vendor = MacVendors.lookup(endpoint.mac)
-            if (vendor.isNotEmpty()) { detailRow(facts, "MAC vendor", vendor); facts.addView(text("IEEE-registered organization; may identify the network interface supplier rather than the device brand.", 14, muted, false)) }
-            endpoint.details["ONVIF hardware (advertised)"]?.let { detailRow(facts, "Reported hardware", it) }
-            for (key in arrayOf("OS (advertised)", "Firmware (advertised)")) endpoint.details[key]?.let { detailRow(facts, key, it) }
-            if (endpoint.lastSeen > 0) detailRow(facts, "Last response", time(endpoint.lastSeen))
-            if (missing.isNotEmpty()) {
-                val unknown = text("Not reported: " + missing.joinToString(", ") + ".", 12, muted, false)
-                unknown.setPadding(0, dp(10), 0, dp(5)); facts.addView(unknown)
-            }
-            body.addView(facts); space(body, 8)
-            endpoint.identifiedProduct()?.let { match ->
-                val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
-                recognized.addView(text("Locally recognized", 16, ink, true))
-                detailRow(recognized, if (match.product.familyOnly) "Device family" else "Device", match.product.title)
-                if (match.product.category != DeviceCatalog.Category.UNSPECIFIED) detailRow(recognized, "Device type", match.product.category.label)
-                recognized.addView(text(if (match.recog != null) "Interpreted from the reported model code using the offline Apple model catalogue."
-                    else "Interpreted from current reported model data using the local product catalogue.", 14, muted, false))
-                body.addView(recognized); space(body, 8)
-            }
             if (endpoint.audioStatus.isNotEmpty() || endpoint.audioRows.isNotEmpty()) {
                 val audio = panel(); audio.setPadding(dp(18), dp(10), dp(18), dp(14))
                 audio.addView(text("Audio system", 16, ink, true))
@@ -584,24 +579,16 @@ class MainActivity : Activity() {
                 for ((label, value) in endpoint.audioRows) detailRow(audio, label, value)
                 body.addView(audio); space(body, 8)
             }
-            val lookups = endpoint.metadataLookupRows()
-            if (lookups.isNotEmpty()) {
-                val lookupPanel = panel(); lookupPanel.setPadding(dp(18), dp(10), dp(18), dp(14))
-                lookupPanel.addView(text("Device information lookups", 16, ink, true))
-                for ((source, result) in lookups) detailRow(lookupPanel, source, result)
-                lookupPanel.addView(text("A failed lookup does not mean this device is offline. Missing details stay unknown.", 14, muted, false))
-                body.addView(lookupPanel); space(body, 8)
-            }
             val evidence = panel(); evidence.setPadding(dp(18), dp(18), dp(18), 0); val open = expandedDetails.contains(endpoint.ip)
             if (open) populateEvidence(evidence, endpoint)
             evidence.visibility = if (open) View.VISIBLE else View.GONE
-            val more = button(if (open) "Hide discovery evidence" else "Show discovery evidence", false)
+            val more = button(if (open) "Hide technical details" else "Show technical details", false)
             more.textSize = 14f; more.contentDescription = more.text.toString() + " for " + endpoint.ip
             more.setOnClickListener {
                 val show = !expandedDetails.contains(endpoint.ip); evidence.removeAllViews()
                 if (show) { expandedDetails.add(endpoint.ip); populateEvidence(evidence, endpoint) } else expandedDetails.remove(endpoint.ip)
                 evidence.visibility = if (show) View.VISIBLE else View.GONE
-                more.text = if (show) "Hide discovery evidence" else "Show discovery evidence"
+                more.text = if (show) "Hide technical details" else "Show technical details"
                 more.contentDescription = more.text.toString() + " for " + endpoint.ip
             }
             body.addView(more); space(body, 8); body.addView(evidence); space(body, 18)
@@ -627,7 +614,30 @@ class MainActivity : Activity() {
         }
         panel.addView(row)
     }
+    private fun populateReportedFacts(panel: LinearLayout, endpoint: Device) {
+        val facts = panel; val missing = ArrayList<String>()
+        if (endpoint.name.isNotEmpty()) detailRow(facts, "Network name", endpoint.name)
+        val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Service-reported type", endpoint.kind, "device type"))
+        for (item in identity) { if (item[1].isEmpty()) missing.add(item[2]) else detailRow(facts, item[0], item[1]) }
+        val vendor = MacVendors.lookup(endpoint.mac)
+        if (vendor.isNotEmpty()) { detailRow(facts, "MAC vendor", vendor); facts.addView(text("IEEE-registered organization; may identify the network interface supplier rather than the device brand.", 14, muted, false)) }
+        endpoint.details["ONVIF hardware (advertised)"]?.let { detailRow(facts, "Reported hardware", it) }
+        for (key in arrayOf("OS (advertised)", "Firmware (advertised)")) endpoint.details[key]?.let { detailRow(facts, key, it) }
+        if (endpoint.lastSeen > 0) detailRow(facts, "Last response", time(endpoint.lastSeen))
+        if (missing.isNotEmpty()) {
+            val unknown = text("Not reported: " + missing.joinToString(", ") + ".", 12, muted, false)
+            unknown.setPadding(0, dp(10), 0, dp(5)); facts.addView(unknown)
+        }
+    }
     private fun populateEvidence(panel: LinearLayout, endpoint: Device) {
+        populateReportedFacts(panel, endpoint)
+        val lookups = endpoint.metadataLookupRows()
+        if (lookups.isNotEmpty()) {
+            space(panel, 12); panel.addView(text("Device information lookups", 16, ink, true))
+            for ((source, result) in lookups) detailRow(panel, source, result)
+            panel.addView(text("A failed lookup does not mean this device is offline. Missing details stay unknown.", 14, muted, false))
+        }
+        space(panel, 12)
         field(panel, "How this endpoint was found", if (endpoint.evidence.isEmpty()) "Session observation" else join(endpoint.evidence), false)
         field(panel, "Advertised services", if (endpoint.services.isEmpty()) "None observed" else join(endpoint.services), false)
         field(panel, "Observed / advertised ports", if (endpoint.ports.isEmpty()) "None reported" else endpoint.ports.toString(), false)
@@ -772,7 +782,7 @@ class MainActivity : Activity() {
         val item = column(); item.setPadding(dp(14), dp(12), dp(14), dp(12)); item.minimumHeight = dp(52)
         item.background = RippleDrawable(ColorStateList.valueOf(0x22336644), round(card, 13), null)
         item.addView(text(title, 15, if (destructive) dialogColors().danger else ink, true)); space(item, 4); item.addView(text(subtitle, 12, muted, false))
-        item.isFocusable = true; item.contentDescription = title + ". " + subtitle; item.setOnClickListener { popup.dismiss(); action.run() }; parent.addView(item)
+        AccessibleActions.button(item); item.contentDescription = title + ". " + subtitle; item.setOnClickListener { popup.dismiss(); action.run() }; parent.addView(item)
     }
     private fun dialogColors(): AppDialog.Colors = AppDialog.Colors(bg, card, ink, muted, line, accent, soft)
     private fun openSettings() { showingSettings = true; settingsY = 0; render() }
@@ -1023,6 +1033,7 @@ class MainActivity : Activity() {
     private fun text(value: String, size: Int, color: Int, bold: Boolean): TextView =
         AppTypography.text(this, value, size, color, bold)
     private fun button(value: String, filled: Boolean, size: Int = 14): TextView = text(value, size, if (filled) card else accent, true).also {
+        AccessibleActions.button(it)
         it.gravity = Gravity.CENTER; it.setPadding(dp(15), dp(15), dp(15), dp(15)); it.minHeight = dp(52)
         it.background = RippleDrawable(ColorStateList.valueOf(0x22336644), if (filled) round(accent, 14) else border(card, line, 14), null)
     }

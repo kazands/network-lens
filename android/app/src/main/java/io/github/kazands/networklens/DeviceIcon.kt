@@ -67,7 +67,8 @@ class DeviceIcon private constructor() {
                     DeviceCatalog.Category.HEATER, DeviceCatalog.Category.AIR_CONDITIONER,
                     DeviceCatalog.Category.HUMIDIFIER, DeviceCatalog.Category.DEHUMIDIFIER -> Spec(R.drawable.ic_device_thermostat, category.label)
                     DeviceCatalog.Category.AMPLIFIER, DeviceCatalog.Category.AUDIO_RECEIVER -> Spec(R.drawable.ic_device_speaker, category.label)
-                    DeviceCatalog.Category.ROUTER, DeviceCatalog.Category.RANGE_EXTENDER -> Spec(R.drawable.ic_device_router, category.label)
+                    DeviceCatalog.Category.ACCESS_POINT, DeviceCatalog.Category.ROUTER, DeviceCatalog.Category.RANGE_EXTENDER -> Spec(R.drawable.ic_device_router, category.label)
+                    DeviceCatalog.Category.NETWORK_SWITCH -> Spec(R.drawable.ic_device_network, category.label)
                     DeviceCatalog.Category.SECURITY_SYSTEM -> Spec(R.drawable.ic_device_lock, category.label)
                     DeviceCatalog.Category.BRIDGE, DeviceCatalog.Category.GARAGE_DOOR, DeviceCatalog.Category.DOOR,
                     DeviceCatalog.Category.WINDOW, DeviceCatalog.Category.WINDOW_COVERING, DeviceCatalog.Category.SPRINKLER,

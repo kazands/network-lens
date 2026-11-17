@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.18.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.19.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -25,7 +25,7 @@ A new key cannot update an installation signed by another key. Do not replace or
 
 Maintainer release APKs use a separate pinned app-signing identity and verified recovery receipt. Run `bash scripts/build.sh --release`; output goes under `artifacts/release/`, preserving development outputs. Release builds never create keys. A separate upload identity is prepared for future Play enrollment. See [RELEASE-SIGNING.md](RELEASE-SIGNING.md) for private files, backup verification, migration and remaining Play work.
 
-`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 33 application host suites below.
+`bash scripts/test-release-signing.sh` runs the Kotlin signing integration harness after a development APK has been built. It generates isolated fixture keys and never reads real production credentials. These build checks are separate from the 41 application host suites below.
 
 ## Host suites
 
@@ -33,7 +33,7 @@ Maintainer release APKs use a separate pinned app-signing identity and verified 
 bash scripts/test.sh
 ```
 
-The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 33 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
+The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 41 suites. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -100,3 +100,24 @@ remaining public-release end-to-end verification boundary.
 The host runner includes `TpLinkDiscoveryTest`. The `device-identities` Android
 mode includes synthetic plug/dimmer callbacks and presentation checks. See
 [TP-Link discovery](TP-LINK.md) for supported protocols and limits.
+
+## Omada and EAP checks
+
+The host runner includes `OmadaDiscoveryTest`. The `device-identities` Android
+mode includes synthetic AP/switch announcements and public EAP identity callbacks,
+including scope, cancellation, conflicts and presentation. See [coverage and
+protocol provenance](OMADA.md). These methods require separate physical
+Wi-Fi verification; no household captures belong in fixtures.
+
+## Broader discovery checks
+
+Normal host/build scripts verify the pinned HA matcher projection and Matter
+registry offline. Host suites include `DiscoveryMatchersTest`, `MatterInfoTest`,
+`LanIdentityTest`, `LifxIdentityTest` and `EasySmartDiscoveryTest`; Android
+`device-identities` also checks registry/family presentation and preservation
+of conflicting observations. See [DISCOVERY-COVERAGE.md](DISCOVERY-COVERAGE.md).
+
+The `home-user` Android mode uses synthetic devices to verify friendly unknown-device
+copy, source-specific recognition explanations, collapsed raw observations, and
+button accessibility roles at normal and enlarged text sizes. It rejects physical
+devices.

@@ -141,6 +141,16 @@ object AppleDeviceInfoTest {
                 catch(e: MetadataHttp.Failure) { cancelled = e.reason == MetadataHttp.Reason.CANCELLED }
                 check(cancelled && !socket.isConnected, "Cancellation prevents connecting")
             }
+            for (payload in listOf<ByteArray?>(null, frame(plist("Request" to "GetValue", "Key" to "ProductType", "Value" to "invalid")), byteArrayOf(0, 0, 127, 127))) {
+                withServer({ peer ->
+                    read(peer.getInputStream()); peer.getOutputStream().write(frame(service))
+                    read(peer.getInputStream()); if (payload != null) peer.getOutputStream().write(payload)
+                }) { port -> Socket().use { socket ->
+                    val r = AppleDeviceInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(2), timer, port) { true }
+                    check(r.status == AppleDeviceInfo.Status.UNAVAILABLE && r.model.isEmpty() && r.failure != null,
+                        "Verified Apple service survives missing, malformed or oversized model response with its failure")
+                } }
+            }
         } finally { timer.shutdownNow() }
         println("Apple device info checks passed: $checks")
     }

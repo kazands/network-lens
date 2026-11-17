@@ -104,6 +104,14 @@ object BroadAudioTest {
         val castAd=service("_googlecast._tcp.",32123,"ca" to "32","id" to GROUP,"fn" to "Synthetic group")
         check(BroadAudioInfo.advertisementPlan(castAd)==null,"Virtual Cast target cannot trigger physical receiver query")
         check(BroadAudioInfo.advertisement(castAd,IP)!!.groups.single().relation==Relation.HOSTED,"Cast target is descriptive only")
+        for (body in listOf("""{"name":"Synthetic receiver","build_version":"1"}""",
+                """{"name":"Synthetic receiver","device_info":{"capabilities":{"multizone_supported":true}}}""")) {
+            var reason: MetadataHttp.Reason? = null
+            try { read(Protocol.CAST, body) } catch (e: MetadataHttp.Failure) { reason = e.reason }
+            check(reason == MetadataHttp.Reason.NOT_REPORTED, "Valid identity without multizone is unavailable, not an invented empty group roster")
+        }
+        rejects { read(Protocol.CAST, """{"name":"Synthetic receiver","build_version":"1","multizone":null}""") }
+        rejects { read(Protocol.CAST, """{"unrelated":true}""") }
         val cast=read(Protocol.CAST,"""{"multizone":{"groups":[{"uuid":"$GROUP","name":"Synthetic group","elected_leader":"self","cast_port":32123}],"dynamic_groups":[]}}""")
         check(cast.hints.isEmpty() && cast.player.groups.single().role.contains("Hosted"),"Cast metadata describes hosting without supplying receiver identity")
         check(!linked(cast.player,cast.player.copy(id="other")),"Cast description does not imply physical membership")

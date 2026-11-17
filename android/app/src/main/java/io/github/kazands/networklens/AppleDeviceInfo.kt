@@ -23,9 +23,10 @@ internal object AppleDeviceInfo {
     enum class Status(val text: String) {
         MODEL("Apple service verified; model received"),
         WITHHELD("Apple service verified; model not provided"),
+        UNAVAILABLE("Apple service verified; model lookup unavailable"),
         OTHER("Service did not identify itself as an Apple device service")
     }
-    data class Report(val status: Status, val model: String = "")
+    data class Report(val status: Status, val model: String = "", val failure: MetadataHttp.Reason? = null)
 
     fun request(model: Boolean): ByteArray {
         val fields = if (model) "<key>Request</key><string>GetValue</string><key>Key</key><string>ProductType</string>"
@@ -90,6 +91,7 @@ internal object AppleDeviceInfo {
         val timeout = timer.schedule({ try { socket.close() } catch (_: IOException) {} },
             maxOf(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
         var stage = 0
+        var verified = false
         try {
             socket.connect(InetSocketAddress(peer, port), minOf(400, remaining()))
             fun roundTrip(model: Boolean): Map<String, String> {
@@ -111,10 +113,15 @@ internal object AppleDeviceInfo {
                 return parse(body)
             }
             if (!serviceResponse(roundTrip(false))) return Report(Status.OTHER)
+            verified = true
             val report = modelResponse(roundTrip(true)); remaining(); return report
         } catch (e: Exception) {
-            if (e is MetadataHttp.Failure) throw e
-            throw MetadataHttp.Failure(when {
+            if (e is MetadataHttp.Failure) {
+                if (verified && e.reason !in setOf(MetadataHttp.Reason.CANCELLED, MetadataHttp.Reason.DEADLINE))
+                    return Report(Status.UNAVAILABLE, failure = e.reason)
+                throw e
+            }
+            val reason = when {
                 !active() || Thread.currentThread().isInterrupted -> MetadataHttp.Reason.CANCELLED
                 System.nanoTime() >= deadline -> MetadataHttp.Reason.DEADLINE
                 stage == 3 -> MetadataHttp.Reason.INVALID_METADATA
@@ -125,7 +132,10 @@ internal object AppleDeviceInfo {
                 stage == 1 -> MetadataHttp.Reason.WRITE_FAILED
                 e is SocketTimeoutException -> MetadataHttp.Reason.READ_TIMEOUT
                 else -> MetadataHttp.Reason.READ_FAILED
-            }, cause = e)
+            }
+            if (verified && reason != MetadataHttp.Reason.CANCELLED && reason != MetadataHttp.Reason.DEADLINE)
+                return Report(Status.UNAVAILABLE, failure = reason)
+            throw MetadataHttp.Failure(reason, cause = e)
         } finally { timeout.cancel(false) }
     }
 

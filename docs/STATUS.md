@@ -1,12 +1,49 @@
 # Development status
 
-Network Lens 0.3.18 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.18.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.18).
+Network Lens 0.3.19 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.19.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.19).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
-## New in this preview
+## Broader discovery and recognition in 0.3.19
+
+This preview includes [Omada announcements and public EAP identity](OMADA.md),
+plus [broader local recognition](DISCOVERY-COVERAGE.md): 348 pinned Home Assistant
+rules across 122 mDNS types, 5,479 offline Matter registry entries, fair bounded
+mDNS scheduling beyond the former 48-type ceiling, Easy Smart discovery,
+Samsung TV identity, WiZ, Yeelight, Govee, LIFX and receive-only Tuya announcements.
+Generic integration matches, service capabilities and module IDs remain separate
+from verified hardware models. These features are included in the 0.3.19 APK.
+
+Physical host checks identified EAP245 and EAP265 HD through public login
+metadata; no Omada announcements were observed. The new Easy Smart path and other
+added methods still need physical Wi-Fi compatibility checks. The authenticated
+switch web page did not disclose a model; that finding does not establish whether
+its UDP discovery path works.
+
+Verification results for this source update are recorded in
+[broader recognition coverage](DISCOVERY-COVERAGE.md#verification) and the
+[subsequent pre-PR verification](PRE-PR-VERIFICATION.md), including failed full-run
+checks, successful retries and remaining physical-test boundaries.
+The [metadata and permission follow-up](METADATA-FOLLOWUP.md) records subsequent
+recovery fixes, evidence retention and fresh regression/review results.
+
+## Home-user interface improvements
+
+The device-name fallback is **Unnamed device**. Once a scan ends, the main status
+is **Scan finished**, or **Scan stopped** when cancelled. Specific failed checks,
+coverage and limits remain in Scan details. The internal completeness state and
+per-method failures are unchanged; the main label describes the scan lifecycle.
+
+Device details lead with the physical type and recognition explanation. Raw
+names, model codes, service-reported types, lookup outcomes and source evidence
+are available under **Show technical details**, and remain in copied details.
+Unidentified results and incomplete scans include practical next-step guidance.
+Main actions now expose native button accessibility roles. See
+[interface terminology](INTERFACE.md) for wording and scope.
+
+## Existing TP-Link plug and switch support
 
 [TP-Link discovery](TP-LINK.md) adds read-only Kasa/Tapo plug and switch replies
 over UDP 9999/20002, with 32 reviewed model mappings. Smart plugs, wall switches
@@ -78,19 +115,13 @@ snapshot, not a live service; an online catalogue updater is not implemented.
 An optional future public-data download can keep recognition local without
 uploading device identifiers.
 
-## Verification
+## Current release verification
 
-All 33 host suites passed, including 797 TP-Link checks. Before release versioning,
-API 37 passed 714 checks across device identities, HomeKit, scan efficiency and
-session-only/cold-start behavior. Independent Deep review approved after a
-self-only scan-status correction. The production host parser identified an
-authorized physical HS103 through both supported UDP formats; physical dimmer
-and on-phone discovery compatibility remain unverified.
-
-Exact release artifact and upgrade checks are recorded in
-[0.3.18 verification](VERIFICATION-0.3.18.md). Earlier updater and recognition
-results remain in the verification archive.
-Synthetic fixtures do not establish household recognition accuracy.
+See [0.3.19 verification](VERIFICATION-0.3.19.md) for release artifact identities,
+versioned checks, signed update verification and remaining limits. All 41 host
+suites and a fresh independent Deep code review passed on the implementation.
+Historical candidate checks are linked above and are not claims about every
+physical device or firmware version.
 
 ## Known limits
 
@@ -103,12 +134,12 @@ retail revision, edition or ownership.
 Intermittent HomeKit (`_hap._tcp`) and HTTP (`_http._tcp`) address-resolution
 failures remain unresolved. Android can register a service without supplying a
 usable address within the bounded attempts. Other methods continue and the scan
-correctly stays Partial. Longer timeouts and alternate resolver experiments have
+retains incomplete per-method coverage. Longer timeouts and alternate resolver experiments have
 not established a production fix.
 
 Some advertised Spotify Connect endpoints time out or refuse connections while
-other endpoints return valid metadata. These failures remain explicit; longer or
-repeated connections have not demonstrated recovery. Requested metadata failures
+other endpoints return valid metadata. These failures remain explicit. The new bounded retry and alternate-target paths
+do not establish recovery on every physical device. Requested metadata failures
 remain failed, and exhausted work/deadlines remain incomplete.
 
 Physical PS5 discovery, household recognition accuracy, physical TalkBack, phone
@@ -120,3 +151,9 @@ does not prove successful discovery on real hardware.
 Google Play enrollment, listing/privacy declarations and a verified App Bundle
 pipeline remain separate future work. GitHub previews gather testing feedback;
 they do not establish production readiness.
+
+## Recognition planning
+
+Independent identity probes, bounded alternate metadata targets, endpoint-fair
+metadata scheduling and a labelled synthetic benchmark are described in
+[recognition planning](RECOGNITION-PLANNING.md). These features are included in 0.3.19.

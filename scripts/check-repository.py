@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import PurePosixPath
 
-ROOT_FILES = {'.gitignore', 'README.md', 'LICENSE', 'NOTICE', 'CONTRIBUTING.md', 'SECURITY.md', 'AGENTS.md'}
+ROOT_FILES = {'.gitignore', 'README.md', 'LICENSE', 'NOTICE', 'CONTRIBUTING.md', 'SECURITY.md', 'AGENTS.md', 'PRODUCT.md'}
 ROOT_DIRS = {'android', 'scripts', 'tests', 'store-listing', 'docs', '.github'}
 PRIVATE_PARTS = {'.tools', '.codex', '.codex-attachments', 'evidence', 'artifacts', 'downloads', '__pycache__', '.gradle', '.kotlin', 'build'}
 PRIVATE_SUFFIXES = {'.jks', '.keystore', '.pem', '.key', '.p12', '.pfx', '.apk', '.aab', '.idsig', '.log'}
@@ -24,7 +24,7 @@ SECRETS = [re.compile(rb'-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----'),
 def problems(path, mode, data):
     p = PurePosixPath(path)
     reasons = []
-    if not ((len(p.parts) == 1 and path in ROOT_FILES) or (len(p.parts) > 1 and p.parts[0] in ROOT_DIRS)):
+    if not ((len(p.parts) == 1 and path in ROOT_FILES) or (len(p.parts) > 1 and p.parts[0] in ROOT_DIRS) or path == '.impeccable/config.json'):
         reasons.append('outside reviewed project areas')
     if mode not in {'100644', '100755'}:
         reasons.append('symlink or unsupported Git entry')

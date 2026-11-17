@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/rgl/ansible-collection-tp-link-easy-smart-switch/blob/master/plugins/module_utils/protocol.py",
+  "gitBlob": "927af2df4f62c582ae855c40c1162349a0dcc84c",
+  "sha256": "cab9bde7e2f6fb57d1881fac44cb4e72033d5d97db5ea368045d5ca0e105d381",
+  "license": "GPL-3.0",
+  "adapted": "2026-11-17",
+  "changes": "Public protocol state table and stream transform only; independent strict discovery-only framing and parser; no GET, login, SET, configuration, credential or session-key API."
+}
