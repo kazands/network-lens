@@ -6,16 +6,19 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.23 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.23/Network-Lens-0.3.23.apk)
+[![Download Android APK — Network Lens 0.3.24 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.24/Network-Lens-0.3.24.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.23) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.24) · No GitHub account required to download.
 
-**Development preview: 0.3.23.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.24.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-**New in 0.3.23:** wider device views, clearer dialogs, a consistent Settings menu
-and a steadier update screen. Scan progress shows the address-checking phase as
-a percentage, then switches to “Identifying devices…” while lookups continue.
-See the [interface review](docs/UI-SURFACE-REVIEW.md) for details.
+**New in 0.3.24:** Envisalink alarm interfaces can now show a useful device name
+and alarm-interface icon when their local DSC interface shares an identifying
+greeting. The check sends no login or alarm commands and does not guess the model.
+See [Envisalink recognition](docs/ENVISALINK.md) for supported responses and limits.
+
+The wider layouts, clearer dialogs, consistent Settings menu and steadier update
+screen from 0.3.23 remain included. See the [interface review](docs/UI-SURFACE-REVIEW.md).
 
 The **Amazon Fire TV recognition** improvements from 0.3.22 remain included. Current Amazon
 advertisements show useful device names instead of internal identifiers. A
@@ -55,7 +58,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.23 verification notes](docs/VERIFICATION-0.3.23.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.24 verification notes](docs/VERIFICATION-0.3.24.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 

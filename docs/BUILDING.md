@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.23.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.24.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -33,7 +33,7 @@ Maintainer release APKs use a separate pinned app-signing identity and verified 
 bash scripts/test.sh
 ```
 
-The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 44 suites and two offline Python diagnostic-tool test modules. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
+The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 45 suites and two offline Python diagnostic-tool test modules. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -134,10 +134,16 @@ devices.
 
 ## Scan ownership and performance checks
 
-The `scan-ownership` and `performance` emulator modes are included in 0.3.23.
+The `scan-ownership` and `performance` emulator modes are included in 0.3.24.
 Run them with the same emulator-only runner and exact APK hashing shown above.
 `scan-ownership` uses synthetic endpoints; `performance` records index loading,
 snapshot/grouping and sample Activity launch-to-idle without LAN discovery.
 Performance output is explicitly synthetic, not physical-phone speed or accuracy.
 See [scan architecture](SCAN-ARCHITECTURE.md) and
 [physical baselines and measurement limits](RECOGNITION-BASELINE.md).
+
+## Envisalink checks
+
+The host runner includes `EnvisalinkInfoTest`. The emulator-only `envisalink` mode
+(and `device-identities`) checks family recognition, unknown fields, conflicts,
+sources and lifecycle gates. See [Envisalink coverage and limits](ENVISALINK.md).

@@ -58,6 +58,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     @Volatile private var scanDeadline = Long.MAX_VALUE
     private val metadataPlans = MetadataPlans()
     private val appleRequests = ServiceAdmission(32)
+    private val envisalinkRequests = ServiceAdmission(1200)
     private val ssdpMatchers = SsdpMatchers()
     private val eapRequests = ServiceAdmission(32)
     private val castReceivers = ConcurrentHashMap.newKeySet<String>()
@@ -206,6 +207,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (plan.sweepOmitted) health.truncated("IPv4 checks", "Address sweep not run: network exceeds 1,024 addresses; service discovery continues. Choose a smaller range to check individual addresses.")
                 health.skipped("UPnP descriptions", "No supported description advertised")
                 health.skipped(AppleDeviceInfo.SOURCE, "No open Apple service port observed")
+                health.skipped(EnvisalinkInfo.SOURCE, "No eligible current IPv4 endpoint checked")
                 health.skipped(EapInfo.SOURCE, "No HTTP identity candidate observed")
                 for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
                 observePhoneAddresses(net.addresses)
@@ -979,6 +981,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (!enriching || cancelled.get()) return@Runnable
                     checkDetailPort(d, port, maxOf(160, connectTimeout))
                 }
+                // Receive-only identity uses its own single connection, even when HTTP answered first.
+                checkEnvisalink(d)
                 val retry = synchronized(d) { d.hostname.isEmpty() || d.mac.isEmpty() }
                 if (retry && enriching && !cancelled.get()) enrichNetBios(d.ip, d, minOf(400, nameTimeout + 180))
             } finally { health.workFinished(source) }
@@ -1056,6 +1060,60 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             d.hint("Model", model, EapInfo.MODEL_SOURCE, 80)
             d.hint("Device type", "TP-Link EAP access point", EapInfo.MODEL_SOURCE, 80)
             d.evidence("Current TP-Link EAP public identity response")
+        }
+        true
+    }
+
+    private fun currentEnvisalinkPeer(d: Device): Boolean = enriching && !cancelled.get() && !metadataFinalized.get() &&
+        !d.self && !d.ip.contains(':') && freshResponders.contains(d.ip) && found[d.ip] === d && inScope(peerAddress(d.ip))
+
+    /** Runs in the bounded DETAILS lane. Never pre-connect, retry, authenticate or send TPI data. */
+    private fun checkEnvisalink(d: Device) {
+        if (!currentEnvisalinkPeer(d)) return
+        val source = EnvisalinkInfo.SOURCE
+        when (envisalinkRequests.admit(d.ip, source)) {
+            ServiceAdmission.Result.ADMITTED -> {}
+            ServiceAdmission.Result.LIMIT -> { health.truncated(source, "Endpoint work limit reached"); return }
+            else -> return
+        }
+        synchronized(d) { d.detail(source, "Waiting or checking") }
+        health.workStarted(source)
+        val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(750))
+        try {
+            val report = metadataSocket(peerAddress(d.ip), deadline, { currentEnvisalinkPeer(d) }) { socket ->
+                health.count(source, "connections attempted")
+                EnvisalinkInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts) { currentEnvisalinkPeer(d) }
+            }
+            if (applyEnvisalinkReport(d, report)) health.count(source, when (report) {
+                EnvisalinkInfo.Report.IDENTIFIED -> "families identified"
+                EnvisalinkInfo.Report.UNAVAILABLE -> "service unavailable"
+                else -> "no identifying greeting"
+            })
+        } catch (e: Exception) {
+            blocked(e)
+            synchronized(d) {
+                if (currentEnvisalinkPeer(d) && d.details[source] == "Waiting or checking") {
+                    val failure = AndroidMetadataFailure.classify(e, System.nanoTime() >= deadline)
+                    d.detail(source, failure.reason.detail)
+                    MetadataHttp.recordFailure(health, source, failure, false)
+                }
+            }
+        } finally {
+            synchronized(d) { if (d.details[source] == "Waiting or checking") d.detail(source, "Lookup did not finish") }
+            health.workFinished(source)
+        }
+    }
+    private fun applyEnvisalinkReport(d: Device, report: EnvisalinkInfo.Report): Boolean = synchronized(d) {
+        if (!currentEnvisalinkPeer(d) || d.details[EnvisalinkInfo.SOURCE] != "Waiting or checking") return@synchronized false
+        if (report == EnvisalinkInfo.Report.UNAVAILABLE) d.details.remove(EnvisalinkInfo.SOURCE)
+        else {
+            d.port(EnvisalinkInfo.PORT)
+            d.detail(EnvisalinkInfo.SOURCE, report.text)
+        }
+        if (report == EnvisalinkInfo.Report.IDENTIFIED) {
+            d.recognizeEnvisalink()
+            d.service(EnvisalinkInfo.SERVICE)
+            d.evidence("Current Envisalink DSC TPI greeting from this address")
         }
         true
     }
@@ -1171,7 +1229,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 value.removeSuffix("Waiting or checking") + (if (stopped) "Stopped before lookup finished" else "Lookup did not finish") else value }
             if (d.audioStatus.endsWith(": Waiting or checking")) d.audioStatus = d.audioStatus.substringBefore(":") +
                 if (stopped) ": Stopped before lookup finished" else ": Lookup did not finish"
-            for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE))
+            for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE))
                 if (d.details[source] == "Waiting or checking")
                     d.detail(source, if (stopped) "Stopped before lookup finished" else "Lookup did not finish")
         }

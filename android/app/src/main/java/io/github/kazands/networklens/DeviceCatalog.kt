@@ -12,7 +12,7 @@ internal object DeviceCatalog {
         SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
         AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
         AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
-        SECURITY_SYSTEM("Security system"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
+        SECURITY_SYSTEM("Security system"), ALARM_INTERFACE("Alarm interface"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
         ACCESS_POINT("Wi-Fi access point"), NETWORK_SWITCH("Network switch"),
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
         SHOWER("Shower"), REMOTE("Remote control"), UNSPECIFIED("Not classified")
@@ -125,6 +125,9 @@ internal object DeviceCatalog {
         private var fireTvType = ""
         private var fireTvSource = ""
         private var fireTvHardwareObserved = false
+        private var envisalinkObserved = false
+        fun hasEnvisalinkIdentity(): Boolean = envisalinkObserved
+        fun offerEnvisalink() { envisalinkObserved = true; offerProduct(EnvisalinkInfo.identity()) }
         // A later conflicting code can suppress the match, but cannot erase known
         // Amazon hardware evidence when another recognition engine checks compatibility.
         fun hasFireTvHardwareIdentity(): Boolean = fireTvHardwareObserved
@@ -184,6 +187,7 @@ internal object DeviceCatalog {
             }
         }
         fun compatible(product: Product): Boolean = !conflicted &&
+            (!envisalinkObserved || product.id == EnvisalinkInfo.PRODUCT_ID) &&
             (fireTvType.isEmpty() || (FireTvInfo.product(fireTvType)?.let { it.id == product.id }
                 ?: !product.id.startsWith(FireTvInfo.PRODUCT_PREFIX))) &&
             // A missing registry row is not missing identity. Grouped endpoints must agree
@@ -203,6 +207,9 @@ internal object DeviceCatalog {
                 FireTvInfo.product(fireTvType)?.takeIf(::compatible)?.let {
                     HardwareClassification.Fact(it.category, "Amazon device-type catalogue · $fireTvSource")
                 })
+            if (envisalinkObserved) return listOfNotNull(registry()?.takeIf { compatible(it.product) }?.let {
+                HardwareClassification.Fact(it.product.category, it.source)
+            })
             return listOfNotNull(
                 registry()?.takeIf { compatible(it.product) && it.product.category != Category.UNSPECIFIED }?.let { HardwareClassification.Fact(it.product.category, it.source) }) + models.mapNotNull { model ->
                 val product = qualifiedProduct(model) ?: return@mapNotNull null
@@ -252,6 +259,7 @@ internal object DeviceCatalog {
             it.registryMatch = registryMatch; it.registryIdentity = registryIdentity
             it.fireTvType = fireTvType; it.fireTvSource = fireTvSource
             it.fireTvHardwareObserved = fireTvHardwareObserved
+            it.envisalinkObserved = envisalinkObserved
             it.playStationResponse = playStationResponse
             it.tpLinkResponse = tpLinkResponse
             it.omadaResponse = omadaResponse
@@ -260,6 +268,7 @@ internal object DeviceCatalog {
         }
         fun include(other: Evidence) {
             if (other.conflicted) conflicted = true
+            envisalinkObserved = envisalinkObserved || other.envisalinkObserved
             fireTvHardwareObserved = fireTvHardwareObserved || other.fireTvHardwareObserved
             offerFireTvType(other.fireTvType, other.fireTvSource)
             if (other.protocolBrand.isNotEmpty()) {
