@@ -15,6 +15,10 @@ import java.util.concurrent.TimeUnit
 internal object EapInfo {
     const val SOURCE = "Network equipment identity checks"
     const val MODEL_SOURCE = "TP-Link EAP public device information"
+    const val TRANSPORT = "GET /; matching EAP page only: POST /data/login.json (operation=read). No credentials or authentication. Requests may appear in device logs."
+    private val nameMarker = Regex("id\\s*=\\s*[\"']devname[\"']")
+    private val urlMarker = Regex("url\\s*:\\s*[\"'](?:\\./|/)data/login\\.json[\"']")
+    private val readMarker = Regex("[\"']operation[\"']\\s*:\\s*[\"']read[\"']")
     private class OtherService : IOException()
     fun request(peer: InetAddress, identity: Boolean): ByteArray {
         val host = peer.hostAddress!!.substringBefore('%').let { if (it.contains(':')) "[$it]" else it }
@@ -27,10 +31,20 @@ internal object EapInfo {
     fun eligiblePage(bytes: ByteArray): Boolean {
         if (bytes.size > UpnpDescription.MAX_BODY) return false
         // Markers corroborate the TP-Link HTTPD header. Never infer a model from HTML templates.
-        val page = bytes.toString(Charsets.UTF_8).replace(Regex("<!--[\\s\\S]*?-->"), "")
-        return Regex("id\\s*=\\s*[\"']devname[\"']").containsMatchIn(page) &&
-            Regex("url\\s*:\\s*[\"'](?:\\./|/)data/login\\.json[\"']").containsMatchIn(page) &&
-            Regex("[\"']operation[\"']\\s*:\\s*[\"']read[\"']").containsMatchIn(page)
+        val html = bytes.toString(Charsets.UTF_8)
+        val page = StringBuilder(html.length)
+        var offset = 0
+        while (offset < html.length) {
+            val opening = html.indexOf("<!--", offset)
+            if (opening < 0) { page.append(html, offset, html.length); break }
+            page.append(html, offset, opening)
+            // Never rescan an unterminated tail, or use its contents to authorize a POST.
+            val closing = html.indexOf("-->", opening + 4)
+            if (closing < 0) break
+            page.append(' ')
+            offset = closing + 3
+        }
+        return nameMarker.containsMatchIn(page) && urlMarker.containsMatchIn(page) && readMarker.containsMatchIn(page)
     }
     fun parse(bytes: ByteArray): String? {
         if (bytes.size > 4096) return null

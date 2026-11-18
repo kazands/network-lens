@@ -46,10 +46,9 @@ class MainActivity : Activity() {
     private val rowCache = HashMap<String, DeviceRow>()
     private var rowPanel: LinearLayout? = null
     private class ScanUpdate(val operation: Discovery, val token: Long, val sequence: Long, val done: Int, val total: Int, val snapshot: () -> List<Device>, val finished: Boolean, val message: String) {
-        var raw: List<Device> = emptyList()
-        var groups: List<Device> = emptyList()
+        var prepared: ScanPresentation? = null
         constructor(operation: Discovery, token: Long, sequence: Long, done: Int, total: Int, raw: List<Device>, finished: Boolean, message: String) :
-            this(operation, token, sequence, done, total, { raw }, finished, message) { this.raw = raw }
+            this(operation, token, sequence, done, total, { raw }, finished, message) { prepared = ScanPresentation.capture(raw) }
     }
     private var selected: Device? = null
     private val expandedDetails = HashSet<String>()
@@ -721,8 +720,7 @@ class MainActivity : Activity() {
     private fun prepareScan() {
         val next = synchronized(updateLock) { val value = pendingInput; pendingInput = null; lastPrepared = SystemClock.uptimeMillis(); value }
         if (next != null && discovery === next.operation && store.isCurrent(next.token)) {
-            next.raw = next.snapshot()
-            next.groups = Device.grouped(next.raw)
+            next.prepared = ScanPresentation.capture(next.snapshot())
             synchronized(updateLock) {
                 if (discovery === next.operation && store.isCurrent(next.token)) pendingDisplay = next
                 if (!displayPosted) { displayPosted = true; main.post { displayScan() } }
@@ -736,9 +734,11 @@ class MainActivity : Activity() {
         val next = synchronized(updateLock) { val value = pendingDisplay; pendingDisplay = null; displayPosted = false; value } ?: return
         if (destroyed || discovery !== next.operation || !store.isCurrent(next.token) || next.sequence <= displaySequence) return
         val current = network ?: return
-        val admitted = next.raw.filter(current::contains)
+        val prepared = next.prepared ?: return
+        val raw = prepared.devices()
+        val admitted = raw.filter(current::contains)
         displaySequence = next.sequence; devices = admitted
-        displayGroups = if (admitted.size == next.raw.size) next.groups else Device.grouped(admitted)
+        displayGroups = if (admitted.size == raw.size) prepared.groups() else Device.grouped(admitted)
         groupedSource = devices
         selected = selected?.let { Device.currentGroup(admitted, it) }
         if (next.finished) {

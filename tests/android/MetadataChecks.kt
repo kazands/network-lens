@@ -34,7 +34,7 @@ internal object MetadataChecks {
         val request = Discovery::class.java.getDeclaredMethod("requestMetadata", Device::class.java, MdnsPacket.Service::class.java).apply { isAccessible = true }
         val resolved = Discovery::class.java.getDeclaredMethod("resolved", NsdServiceInfo::class.java).apply { isAccessible = true }
         val fresh = get(op, "freshResponders") as MutableSet<String>
-        val plans = get(op, "metadataRequests") as ServiceAdmission
+        val plans = get(op, "metadataPlans") as MetadataPlans
         try {
             val d = Device().apply { ip = "198.18.0.2" }
             (get(op, "found") as MutableMap<String, Device>)[d.ip] = d
@@ -110,7 +110,7 @@ internal object MetadataChecks {
         } finally { op.cancel(); gate.countDown() }
         val next = operation(test)
         try {
-            check((get(next, "metadataRequests") as ServiceAdmission).size() == 0 && next.snapshot().isEmpty(), "A new scan inherits neither metadata requests nor device results")
+            check((get(next, "metadataPlans") as MetadataPlans).size() == 0 && next.snapshot().isEmpty(), "A new scan inherits neither metadata requests nor device results")
             check(next.sources().values.none { it.contains("HTTP errors 1") || it.contains("packets received 1") }, "A new Android scan inherits no diagnostic counters")
         } finally { next.cancel() }
         RecognitionPlanningChecks.run(test, check)

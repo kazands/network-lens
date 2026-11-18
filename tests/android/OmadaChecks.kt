@@ -79,6 +79,9 @@ internal object OmadaChecks {
                 }
                 Discovery::class.java.getDeclaredMethod("requestEapModel", Device::class.java).apply { isAccessible = true }.invoke(queued, pending)
                 check(pending.details[EapInfo.SOURCE] == "Waiting or checking", "EAP request is admitted behind occupied workers")
+                val explanation = pending.details["Network equipment identity request"].orEmpty()
+                check(explanation == EapInfo.TRANSPORT && explanation.endsWith("device logs."),
+                    "Stored EAP explanation preserves the complete logging notice without truncation")
                 if (stopped) queued.cancel() else {
                     set(queued, "accepting", false); set(queued, "enriching", false)
                     Discovery::class.java.getDeclaredMethod("finishMetadataLookups", Boolean::class.javaPrimitiveType).apply {

@@ -25,6 +25,10 @@ def run(arguments, timeout=60):
         raise RuntimeError(r.stdout)
     return r.stdout
 assert run(['shell', 'getprop', 'ro.kernel.qemu']).strip() == '1', 'Selected target must be an emulator'
+assert run(['shell', 'getprop', 'sys.boot_completed']).strip() == '1', 'Wait for emulator boot to complete'
+system_events = run(['shell', 'logcat', '-b', 'events', '-d', '-s', 'am_anr'])
+if any('com.android.systemui' in line and 'failed to complete startup' in line for line in system_events.splitlines()):
+    raise RuntimeError('Emulator System UI failed startup in this boot. Restart the isolated emulator before UI/permission checks; this is not an app test result.')
 api = int(run(['shell', 'getprop', 'ro.build.version.sdk']).strip())
 version = E.parse(root / 'android/app/src/main/AndroidManifest.xml').getroot().get('{http://schemas.android.com/apk/res/android}versionName')
 apk = root / ('artifacts/Network-Lens-' + version + '.apk')

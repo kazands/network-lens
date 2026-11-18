@@ -317,7 +317,10 @@ object DiscoveryUpgradeTest {
         check(empty(MdnsPacket.parse(bad, bad.size)), "Ignore nonzero mDNS transaction IDs")
         bad = packet.clone()
         bad[2] = ((bad[2]).toInt() or (2).toInt()).toByte()
-        check(empty(MdnsPacket.parse(bad, bad.size)), "Reject DNS truncation flag")
+        check(
+            MdnsPacket.parse(bad, bad.size).serviceTypes == setOf("_mieleathome._tcp."),
+            "Ignore TC on a complete multicast enumeration response (RFC 6762 section 18.5)",
+        )
         bad = packet.clone()
         bad[12] = (192).toByte()
         bad[13] = 12

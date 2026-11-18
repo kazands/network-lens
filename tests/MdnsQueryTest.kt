@@ -20,17 +20,19 @@ object MdnsQueryTest {
     private fun rr(owner: List<String>, kind: Int, data: ByteArray, ttl: Long = 120): ByteArray = ByteArrayOutputStream().apply {
         val out=DataOutputStream(this);out.write(name(owner));out.writeShort(kind);out.writeShort(1);out.writeInt(ttl.toInt());out.writeShort(data.size);out.write(data)
     }.toByteArray()
-    private fun response(vararg records: ByteArray): MdnsPacket.Result {
+    private fun responsePacket(vararg records: ByteArray): ByteArray {
         val bytes=ByteArrayOutputStream();val out=DataOutputStream(bytes)
         out.writeShort(0);out.writeShort(0x8400);out.writeShort(0);out.writeShort(records.size);out.writeInt(0)
         records.forEach(out::write)
-        val packet=bytes.toByteArray();return MdnsPacket.parse(packet,packet.size)
+        return bytes.toByteArray()
     }
+    private fun response(vararg records: ByteArray): MdnsPacket.Result = responsePacket(*records).let { MdnsPacket.parse(it,it.size) }
     private fun complete(ttl: Long = 120, address: ByteArray = peer.address): MdnsPacket.Result {
         val srv=ByteArrayOutputStream();DataOutputStream(srv).apply { writeInt(0);writeShort(8080);write(name(host)) }
         return response(rr(type,12,name(instance),ttl),rr(instance,33,srv.toByteArray()),rr(instance,16,byteArrayOf(0)),rr(host,1,address))
     }
     @JvmStatic fun main(args: Array<String>) {
+        responseTcChecks()
         val query=MdnsPacket.query(listOf("_http._tcp.local"))
         val questions=MdnsPacket.multicastQuestions(query,query.size)
         check(questions==listOf(MdnsPacket.Question(type,12)),"Parse only a complete multicast question")
@@ -96,5 +98,33 @@ object MdnsQueryTest {
         repeat(10000) { val data=ByteArray(random.nextInt(1300));random.nextBytes(data);MdnsPacket.multicastQuestions(data,data.size) }
         check(true,"Malformed observed questions remain bounded and non-authoritative")
         println("PASS · $checks current-scan mDNS question, known-answer and wire-budget checks")
+    }
+
+    private fun responseTcChecks() {
+        val srv=ByteArrayOutputStream();DataOutputStream(srv).apply {writeInt(0);writeShort(8080);write(name(host))}
+        val packet=responsePacket(rr(type,12,name(instance)),rr(instance,33,srv.toByteArray()),
+            rr(instance,16,byteArrayOf(0)),rr(host,1,peer.address))
+        val normal=MdnsPacket.parse(packet,packet.size)
+        check(normal.parsedResponse && normal.directServices(peer).size==1,"TC fixture has a complete same-peer service")
+        for(authoritative in listOf(false,true)) {
+            val tc=packet.clone().apply {this[2]=(if(authoritative)0x86 else 0x82).toByte()}
+            val parsed=MdnsPacket.parse(tc,tc.size)
+            check(parsed.parsedResponse && parsed.freshResponse,"TC is ignored on a complete multicast response, AA=$authoritative")
+            check(parsed.records==normal.records && parsed.addresses==normal.addresses,
+                "Ignoring TC preserves every decoded record and address")
+            check(parsed.directServices(peer).single().let {it.name==instance.first() && it.host==host.joinToString(".") && it.port==8080 && it.txtReceived},
+                "TC response retains current PTR/SRV/TXT identity and source address association")
+            check(parsed.directServices(InetAddress.getByName("198.18.0.3")).isEmpty(),
+                "Ignoring TC never admits another peer's service as direct identity")
+            val bad=listOf(tc.copyOf(tc.size-1),tc.clone().apply {this[7]=(this[7]+1).toByte()},
+                tc.clone().apply {this[12]=0xc0.toByte();this[13]=12},
+                tc.clone().apply {this[2]=(this[2].toInt() or 8).toByte()},
+                tc.clone().apply {this[3]=1},tc.clone().apply {this[2]=2},tc.copyOf(MdnsPacket.MAX_PACKET+1))
+            for(bytes in bad) {
+                val rejected=MdnsPacket.parse(bytes,bytes.size)
+                check(!rejected.parsedResponse && !rejected.freshResponse && rejected.records.isEmpty(),
+                    "TC cannot bypass truncated framing, record counts, compression loops, opcode, RCODE, QR or size guards")
+            }
+        }
     }
 }
