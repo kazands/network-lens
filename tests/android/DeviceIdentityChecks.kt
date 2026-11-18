@@ -257,6 +257,14 @@ internal object DeviceIdentityChecks {
                         "Thermostat details $label lead with physical type")
                     check(all.any { it.text.toString() == "Services available" } && all.any { it.text.toString() == "AirPlay, AirPlay audio (RAOP), Spotify Connect" },
                         "Thermostat details $label keep all media capabilities separate")
+                    check(all.count { it.text.toString() == "How this was identified" } == 1,
+                        "Matching grouped products $label share one identification explanation")
+                    check(all.count { it.text.toString().startsWith("Android limits MAC access.") } == 1 &&
+                        all.count { it.text.toString() == "Not available" } == 2,
+                        "Grouped details $label explain missing MAC access once while retaining both unknown values")
+                    check(all.count { it.text.toString() == "Show technical details" } == 2 &&
+                        all.any { it.text.toString() == thermostat.ip } && all.any { it.text.toString().replace("\u200b", "") == thermostatV6.ip },
+                        "Grouped details $label retain both addresses and independent evidence controls")
                     for (view in all.filter { it.text.toString() in listOf("Primary device type", "Services available", "AirPlay, AirPlay audio (RAOP), Spotify Connect") })
                         layout(view, "Recognition summary $label")
                 }

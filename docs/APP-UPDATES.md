@@ -1,7 +1,7 @@
 # In-app updates
 
 Available starting with Network Lens 0.3.17. If you have that version or newer,
-use Check for updates to obtain 0.3.22. Older installations need the current
+use Check for updates to obtain 0.3.23. Older installations need the current
 signed APK installed once using the download link.
 
 ## Using the updater
@@ -20,6 +20,19 @@ background download or silent installation. Android controls approval and can
 block installation under device-management policy. The check uses the phone's
 normal internet connection, which may use mobile data. Recognition still uses
 bundled offline catalogues and local discovery.
+
+## Presentation improvements in 0.3.23
+
+The update screen prepares update content before showing the dialog and retains
+the same text and action views during download progress. An unrelated refresh of
+the page behind it no longer dismisses and recreates the update window. Appearance
+or configuration changes still rebuild it with the correct theme and text size.
+Actions change when the update step or installer-confirmation availability
+changes. Transfer, verification, cancellation and installation rules are unchanged.
+
+All in-app dialogs now use a distinct surface and a stronger dimmed backdrop.
+These presentation improvements are included in 0.3.23. Release notes are not
+yet shown inside the app; the GitHub release page lists what changed.
 
 ## Verification and privacy
 
@@ -65,7 +78,7 @@ The 0.3.20 regression checks also exercise installer-session opening failures on
 the main thread. Storage, permission and installer errors leave a recoverable
 message, abandon the session and cancel its pending callback.
 
-See [current release verification](VERIFICATION-0.3.22.md) for artifact-specific
+See [current release verification](VERIFICATION-0.3.23.md) for artifact-specific
 checks and [BUILDING.md](BUILDING.md) for commands. Earlier live in-app update
 journeys are recorded with the corresponding release notes and assets, including
 [the original updater release](VERIFICATION-0.3.17.md). A signed in-place emulator

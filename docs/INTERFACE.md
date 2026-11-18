@@ -6,6 +6,8 @@ Network Lens branding, appearances, icons and native Android navigation.
 
 | State | User-facing wording | Meaning |
 |---|---|---|
+| First address pass running | Checking addresses · N% | Percentage of the planned IPv4 addresses checked in the first pass, not percentage of the entire scan or devices found. |
+| Address pass ended or omitted | Identifying devices… | Animated indicator while discovery, retries and device lookups continue; no invented percentage. |
 | No usable reported name/model or supported product/family title | Unnamed device | Identity remains unknown; the address distinguishes the result. |
 | Scan attempt has ended | Scan finished | Describes the scan lifecycle, not guaranteed discovery or success of every method. Failures, coverage and limits remain in Scan details. |
 | Scan was cancelled | Scan stopped | Shows the responses collected before stopping and the actual coverage. |
@@ -39,6 +41,59 @@ Main buttons, toolbar actions and device-row actions share native Button
 accessibility semantics while retaining their existing appearance. Dialog actions
 use the same helper. Labels continue to describe the current action.
 
+## Layout refinement in 0.3.23
+
+The Options menu remains available on Settings, with only Wi-Fi details and
+Check for updates there; it omits the redundant Settings entry. All in-app
+dialogs use the elevated card surface and a 65% dimmed backdrop. This includes
+scan details, Wi-Fi information, Wi-Fi-name explanations, custom range, privacy,
+clear-results confirmation and updates. Dialog dimensions are reapplied only
+when they change. The update dialog preserves its views during progress and its
+window during unrelated page refreshes; see [updater details](APP-UPDATES.md).
+The [surface review](UI-SURFACE-REVIEW.md) records the broader screen audit,
+regressions and remaining physical-device verification.
+
+List, detail and settings content use 16dp horizontal margins. The list has
+less space above the results and between each icon and its labels; text sizes
+and address wrapping are preserved. Settings actions are left-aligned rows
+with at least 48dp touch targets instead of nested outlined buttons.
+
+Grouped details show one identification explanation only when every endpoint
+independently resolves to the same product and explanation, and the group has
+no product conflict. Otherwise explanations stay with their individual
+addresses. The missing-MAC explanation appears once, while each unknown MAC
+value, address, source, technical disclosure and copied observation remains
+separate. This changes presentation only, not recognition or grouping.
+
+Scan progress measures the first address pass only. The indicator becomes
+animated when that pass ends, including while retries or lookups remain. Scans
+without an IPv4 sweep use the animated indicator throughout. Final status and
+scan diagnostics retain their existing completion, failure and Stop semantics.
+
+### Refinement verification — 2026-11-18
+
+The direct application and instrumentation builds passed. API 37 passed 2,088
+checks across `options`, `navigation`, `device-identities`, `typography`,
+`scan-details`, `failure-reporting` and `grouping`. The first runner ended with
+signal 15 before recording the grouping result; that mode passed separately.
+Both runs verified the installed application and test APK hashes.
+API 26 also passed `options` (113), `navigation` (38) and `typography` (829),
+with the same installed hashes: 3,068 passed checks across both platforms.
+The full host suite was not rerun for these Android presentation changes.
+
+The earlier settings reachability failure did not reproduce with the compact
+layout. The existing strict visibility check passed after returning from Android
+settings, changing appearance and scrolling from the top, including large-text
+and landscape paths. Failure messages now include control and viewport bounds;
+no scroll assertion was weakened or delay increased. This does not establish
+the cause of the earlier intermittent failure.
+
+Synthetic layouts were inspected in both appearances, at normal and 200% text,
+with 320dp and 411dp checks. Fresh native light/dark captures verified system-bar
+contrast; fixture screenshots with a clipboard overlay were not used as clean
+previews. Physical TalkBack and phone testing remain unverified. No release,
+version bump or phone installation was performed for this refinement.
+
 These changes do not alter device discovery, scan success criteria, saved-state
 policy or APK release version. The separate result-list recycling proposal is
 not implemented in this interface pass. Physical TalkBack and hardware
@@ -69,7 +124,7 @@ Synthetic renders were inspected in light/dark mode and at 200% text size.
 Repository diff and working-tree hygiene checks passed. Test evidence remains
 local and ignored. No household scan or physical phone was accessed.
 
-These interface changes remain included in 0.3.22. Physical
+These interface changes remain included in 0.3.23. Physical
 TalkBack, hardware performance and real-device recognition changes are not
 validated by these interface checks. No release or phone installation was performed.
 
@@ -94,4 +149,4 @@ full host suite were not rerun for these Android reporting/cleanup corrections.
 No version change, publication or phone installation was performed.
 
 The candidate verification history above predates release versioning. See
-[current release verification](VERIFICATION-0.3.22.md) for the final artifact and checks.
+[current release verification](VERIFICATION-0.3.23.md) for the final artifact and checks.

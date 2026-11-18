@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.22.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.23.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -134,7 +134,7 @@ devices.
 
 ## Scan ownership and performance checks
 
-The `scan-ownership` and `performance` emulator modes are included in 0.3.22.
+The `scan-ownership` and `performance` emulator modes are included in 0.3.23.
 Run them with the same emulator-only runner and exact APK hashing shown above.
 `scan-ownership` uses synthetic endpoints; `performance` records index loading,
 snapshot/grouping and sample Activity launch-to-idle without LAN discovery.

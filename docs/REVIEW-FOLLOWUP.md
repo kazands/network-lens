@@ -2,7 +2,7 @@
 
 These changes are included in Network Lens 0.3.20. Version labels, hashes and
 publication status below describe earlier candidates. See
-[release verification](VERIFICATION-0.3.22.md) for the versioned release artifact.
+[release verification](VERIFICATION-0.3.23.md) for the versioned release artifact.
 
 This working-tree candidate follows published 0.3.19, retaining its version label
 until release preparation. It is not the APK currently offered on GitHub. No CI

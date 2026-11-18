@@ -18,7 +18,7 @@ import android.widget.TextView
 
 /** Native branded dialog with independent body scrolling and fixed actions. */
 open class AppDialog(context: Context, @JvmField protected val colors: Colors, title: String) : Dialog(context) {
-    class Colors(
+    data class Colors(
         @JvmField val background: Int, @JvmField val surface: Int, @JvmField val text: Int,
         @JvmField val muted: Int, @JvmField val border: Int, @JvmField val accent: Int, @JvmField val soft: Int
     ) {
@@ -45,7 +45,7 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
             }
         }
         shell.orientation = LinearLayout.VERTICAL
-        shell.background = rounded(colors.background, colors.border, 24)
+        shell.background = rounded(colors.surface, colors.border, 24)
         shell.clipToOutline = true
         shell.isFocusableInTouchMode = true
         shell.requestFocus()
@@ -72,7 +72,7 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
         window?.let {
             it.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             it.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            it.setDimAmount(.42f)
+            it.setDimAmount(.65f)
             it.setTitle(title)
             it.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         }
@@ -106,9 +106,10 @@ open class AppDialog(context: Context, @JvmField protected val colors: Colors, t
     fun resize() {
         val window = window ?: return
         val width = minOf(px(560), context.resources.displayMetrics.widthPixels - px(32))
-        window.setLayout(maxOf(px(200), width), WindowManager.LayoutParams.WRAP_CONTENT)
+        val targetWidth = maxOf(px(200), width)
+        if (window.attributes.width != targetWidth || window.attributes.height != WindowManager.LayoutParams.WRAP_CONTENT)
+            window.setLayout(targetWidth, WindowManager.LayoutParams.WRAP_CONTENT)
         window.setGravity(Gravity.CENTER)
-        shell.requestLayout()
     }
     fun content(): LinearLayout = body
     fun paragraph(value: String, size: Int, color: Int, bold: Boolean): TextView =

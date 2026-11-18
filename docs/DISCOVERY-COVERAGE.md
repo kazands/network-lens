@@ -1,6 +1,6 @@
 # Broader local recognition
 
-Included in Network Lens 0.3.22. See [release verification](VERIFICATION-0.3.22.md).
+Included in Network Lens 0.3.23. See [release verification](VERIFICATION-0.3.23.md).
 Recognition still uses current responses on the selected Wi-Fi. Results remain
 in memory, and no scan data or household identifiers are sent to a recognition
 service. Missing models remain unknown.
@@ -183,4 +183,4 @@ clipboard/identity checks after a fresh emulator boot, broader matrix results,
 test corrections, and the remaining permission-dialog and physical-test limits.
 
 The candidate verification history above predates release versioning. See
-[current release verification](VERIFICATION-0.3.22.md) for the final artifact and checks.
+[current release verification](VERIFICATION-0.3.23.md) for the final artifact and checks.
