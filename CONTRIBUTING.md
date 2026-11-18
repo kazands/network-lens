@@ -14,6 +14,10 @@ Follow [BUILDING.md](docs/BUILDING.md). Run relevant host suites and Android che
 
 Describe the problem, the resulting behavior, validation and remaining risks. Use small changes and preserve existing navigation, appearance, accessibility and cancellation behavior.
 
+See [scan ownership and evidence flow](docs/SCAN-ARCHITECTURE.md) before changing
+discovery lifetimes, and [recognition/performance baselines](docs/RECOGNITION-BASELINE.md)
+for the distinction between synthetic regressions and physical compatibility.
+
 ## Protect private data
 
 Use synthetic device names and addresses in fixtures. Do not commit signing keys, credentials, device serials, household inventories, SSIDs, packet captures, APKs from other applications or personal screenshots. Check the staged diff before committing. Local tools and evidence are ignored; do not force-add them.

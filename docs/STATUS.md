@@ -1,20 +1,42 @@
 # Development status
 
-Network Lens 0.3.19 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.19.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.19).
+Network Lens 0.3.20 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.20.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.20).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
 
-## Broader discovery and recognition in 0.3.19
+## Scan reliability in 0.3.20
 
-This preview includes [Omada announcements and public EAP identity](OMADA.md),
+Stopping a scan or leaving the app closes discovery resources safely, including
+when cancellation happens during startup. Multicast reception cannot remain held
+because a cancelled scan starts late. Device-list updates use detached snapshots
+and retain the existing session and ordering checks.
+
+Automatic Wi-Fi ranges above 1,024 addresses continue service discovery without
+an individual address sweep or a hidden change to a smaller subnet. Scan details
+record the omitted checks. A custom smaller range still supports an address sweep.
+
+The EAP page parser handles HTML comments in linear time, and technical details
+show the complete explanation of its credential-free identity request. Complete
+multicast DNS responses remain usable when the sender sets the TC flag; malformed
+packet checks are preserved. Installer-session opening failures produce a
+recoverable update error.
+
+Scan resource ownership, selected protocol adapters, metadata plans and UI
+snapshots have clearer boundaries and dedicated regressions. See
+[scan architecture](SCAN-ARCHITECTURE.md) and
+[recognition and performance baselines](RECOGNITION-BASELINE.md).
+
+## Included discovery and recognition
+
+Network Lens includes [Omada announcements and public EAP identity](OMADA.md),
 plus [broader local recognition](DISCOVERY-COVERAGE.md): 348 pinned Home Assistant
 rules across 122 mDNS types, 5,479 offline Matter registry entries, fair bounded
 mDNS scheduling beyond the former 48-type ceiling, Easy Smart discovery,
 Samsung TV identity, WiZ, Yeelight, Govee, LIFX and receive-only Tuya announcements.
 Generic integration matches, service capabilities and module IDs remain separate
-from verified hardware models. These features are included in the 0.3.19 APK.
+from verified hardware models. These capabilities remain included in 0.3.20.
 
 Physical host checks identified EAP245 and EAP265 HD through public login
 metadata; no Omada announcements were observed. The new Easy Smart path and other
@@ -117,9 +139,10 @@ uploading device identifiers.
 
 ## Current release verification
 
-See [0.3.19 verification](VERIFICATION-0.3.19.md) for release artifact identities,
-versioned checks, signed update verification and remaining limits. All 41 host
-suites and a fresh independent Deep code review passed on the implementation.
+See [0.3.20 verification](VERIFICATION-0.3.20.md) for release artifact identities,
+versioned checks, signed update verification and remaining limits. All 42 host
+suites, seven offline Python tests and a fresh independent Deep code review passed
+on the implementation.
 Historical candidate checks are linked above and are not claims about every
 physical device or firmware version.
 
@@ -156,4 +179,11 @@ they do not establish production readiness.
 
 Independent identity probes, bounded alternate metadata targets, endpoint-fair
 metadata scheduling and a labelled synthetic benchmark are described in
-[recognition planning](RECOGNITION-PLANNING.md). These features are included in 0.3.19.
+[recognition planning](RECOGNITION-PLANNING.md). These features remain included in 0.3.20.
+
+## Implementation history
+
+The [review follow-up](REVIEW-FOLLOWUP.md) records pre-versioning candidates,
+regressions and corrections included in 0.3.20. Its older APK hashes and test
+counts remain historical evidence; use the current release verification for the
+published artifact. Automated CI was excluded from this release work.
