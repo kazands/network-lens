@@ -10,7 +10,7 @@ internal object DevicePresentation {
         if (gateway) return Labels(clean.ifEmpty { "Router" }, "Wi-Fi gateway")
         val networkName = reportedName(clean, hostname)
         if (product != null) {
-            val custom = networkName.takeIf { IdentityHints.specificName(it) && !product.redundantName(it) }.orEmpty()
+            val custom = networkName.takeIf { IdentityHints.specificName(it) && !product.redundantName(clean) && !product.redundantName(it) }.orEmpty()
             val category = if (product.category == DeviceCatalog.Category.UNSPECIFIED) role else product.displayType.ifEmpty { product.category.label }
             return Labels(product.title, listOf(category, custom).filter { it.isNotEmpty() }.joinToString(" · "))
         }

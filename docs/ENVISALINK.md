@@ -1,6 +1,6 @@
 # Envisalink recognition
 
-Included in Network Lens 0.3.24. See [release verification](VERIFICATION-0.3.24.md)
+Included in Network Lens 0.3.24. See [release verification](VERIFICATION-0.3.25.md)
 for the versioned APK and remaining physical-test limits.
 
 Network Lens can identify the Envisalink family from the DSC Third Party

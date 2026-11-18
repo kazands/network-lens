@@ -1,6 +1,6 @@
 # Scan ownership and evidence flow
 
-Included in Network Lens 0.3.23. See [release verification](VERIFICATION-0.3.24.md)
+Included in Network Lens 0.3.23. See [release verification](VERIFICATION-0.3.25.md)
 for the exact artifacts, completed checks and remaining physical-test limits.
 
 ```mermaid

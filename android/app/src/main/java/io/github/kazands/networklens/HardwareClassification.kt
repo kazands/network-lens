@@ -12,6 +12,7 @@ internal object HardwareClassification {
             "_spotify-connect._tcp." -> "Spotify Connect"
             "_googlecast._tcp." -> "Google Cast"
             FireTvInfo.TYPE -> "Amazon WhisperPlay"
+            SmartThingsInfo.TYPE, SmartThingsInfo.HEDGE_TYPE -> "SmartThings"
             "_androidtvremote2._tcp." -> "Android TV remote service"
             "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.", "_pdl-datastream._tcp." -> "Printing"
             "_smb._tcp." -> "File sharing"
@@ -87,6 +88,8 @@ internal object HardwareClassification {
         val types = facts.map { it.category }.filter { it != DeviceCatalog.Category.UNSPECIFIED }.toMutableSet()
         // A recorder or doorbell is a refinement of the broad camera/surveillance role.
         if (DeviceCatalog.Category.RECORDER in types || DeviceCatalog.Category.DOORBELL in types) types.remove(DeviceCatalog.Category.CAMERA)
+        // A hub can also advertise a bridge role.
+        if (DeviceCatalog.Category.HUB in types) types.remove(DeviceCatalog.Category.BRIDGE)
         val ordered = facts.distinct().sortedWith(compareBy({ it.category.name }, { it.source }))
         return Result(types.singleOrNull(), ordered, types.size > 1)
     }

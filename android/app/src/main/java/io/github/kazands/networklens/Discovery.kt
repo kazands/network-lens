@@ -2024,6 +2024,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 d.detail("Amazon discovery", "Fire TV family from a WhisperPlay advertisement; model and generation require additional evidence")
                 d.detail("Amazon device type code (advertised)", fire.typeCode)
             }
+            if (!d.self && SmartThingsInfo.matches(service)) d.recognizeSmartThings(source)
             val id = attribute(attrs, "id")
             if (id.isNotEmpty()) { d.identify(type + "|" + id, 80); val key = explicitId(type, attrs["id"]); if (key.isNotEmpty()) d.link(key) }
             else d.identify(type + "|" + name, 20)

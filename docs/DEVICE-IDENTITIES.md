@@ -260,3 +260,10 @@ capabilities remain separate from the primary device type. Missing or withheld m
 is not supplied by a large catalogue or inferred from a personal device name.
 
 Audio zones: exact VSSL manufacturer/model aliases now classify A.1/A.3/A.6 and their x variants as streaming amplifiers. Sonos group membership and VSSL chassis relationships remain separate from physical endpoint identity; see [AUDIO-ZONES.md](AUDIO-ZONES.md).
+
+## SmartThings hub interpretation in 0.3.25
+
+Current SmartThings records with a matching hub hostname and instance identifier
+can supply a SmartThings Hub family name and Smart-home hub type. Exact generation
+and radio capabilities remain unverified; raw missing fields stay unknown.
+See [SmartThings recognition](SMARTTHINGS.md) for the evidence and exclusions.
