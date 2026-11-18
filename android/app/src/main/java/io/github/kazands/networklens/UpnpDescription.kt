@@ -18,6 +18,8 @@ class UpnpDescription private constructor() {
 
     companion object {
         const val MAX_BODY = 65536
+        // Amazon's documented DIAL LOCATION. Never guess the UUID or widen this to arbitrary /desc paths.
+        private val fireTvPath = Regex("/upnp/dev/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/desc")
 
         @JvmStatic fun target(location: String?, responder: InetAddress?): URI? {
             try {
@@ -41,7 +43,7 @@ class UpnpDescription private constructor() {
                     query.matches(Regex("content=uuid:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
                 val ordinary = query == null &&
                     (path == "/" || path == "/description" || path.lowercase(Locale.ROOT).endsWith(".xml") ||
-                        path.matches(Regex("/smp_[0-9]{1,5}_")))
+                        path.matches(Regex("/smp_[0-9]{1,5}_")) || fireTvPath.matches(path))
                 return if (windows || ordinary) uri else null
             } catch (_: URISyntaxException) { return null }
             catch (_: IllegalArgumentException) { return null }

@@ -15,7 +15,7 @@ bash scripts/build.sh
 
 `setup-kotlin-toolchain.py` obtains and verifies the Kotlin compiler 2.3.21, standard library and R8/D8 against `scripts/kotlin-toolchain.json`. They are cached under `.tools/kotlin-0300`. The build uses D8; it does not currently enable R8 code shrinking. Tool archives and outputs are ignored by Git.
 
-The current source builds `artifacts/Network-Lens-0.3.21.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
+The current source builds `artifacts/Network-Lens-0.3.22.apk`, with a checksum and permission/security audit outputs. It retains `io.github.kazands.networklens` and the pinned public signing identity; see [application identity](APPLICATION-IDENTITY.md). Recheck the version in the manifest/build scripts when preparing a future release. Gradle metadata is provided under `android/`; no Gradle wrapper is included. The direct scripts are the verified build path.
 
 ## Signing
 
@@ -33,7 +33,7 @@ Maintainer release APKs use a separate pinned app-signing identity and verified 
 bash scripts/test.sh
 ```
 
-The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 43 suites and two offline Python diagnostic-tool test modules. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
+The script checks the reproducible Recog and global product tables, compiles the shared Kotlin logic and Kotlin behavior tests, then runs 44 suites and two offline Python diagnostic-tool test modules. Some checks use bounded loopback fixtures. It does not scan a household network or require a phone. Both test build scripts reject stale Java test sources; generated Android resource code remains part of the normal application build.
 
 ## Android integration tests
 
@@ -75,6 +75,10 @@ in `device-identities`. It exercises current model admission without a reported
 manufacturer, physical categories/icons, useful room names, name-only HTTP
 responses, grouped endpoints, cached/group exclusions, conflicts and Stop.
 Fixtures use synthetic addresses without an Android Network and reject phones.
+
+Amazon discovery has a focused `fire-tv` mode, also
+included in `device-identities`. See [Fire TV recognition](FIRE-TV-RECOGNITION.md)
+for behavior, evidence, regression coverage and physical-verification limits.
 
 Physical Wi-Fi checks are separate, explicitly authorized manual journeys. Never automate arbitrary connected devices or publish household results. See `tests/E2E-REQUIREMENTS.md`.
 
@@ -130,7 +134,7 @@ devices.
 
 ## Scan ownership and performance checks
 
-The `scan-ownership` and `performance` emulator modes are included in 0.3.21.
+The `scan-ownership` and `performance` emulator modes are included in 0.3.22.
 Run them with the same emulator-only runner and exact APK hashing shown above.
 `scan-ownership` uses synthetic endpoints; `performance` records index loading,
 snapshot/grouping and sample Activity launch-to-idle without LAN discovery.

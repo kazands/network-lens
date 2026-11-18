@@ -78,15 +78,18 @@ object ScanLifecycleTest {
         val peer=java.net.InetAddress.getByName("198.18.0.2")
         val bytes="HTTP/1.1 200 OK\r\nST: upnp:rootdevice\r\nUSN: uuid:synthetic-ssdp\r\n\r\n".toByteArray()
         var now=0L;var sends=0;var emissions=0;var receives=0
+        val searches=mutableListOf<String>()
         val channel=object:SsdpDiscovery.Channel {
-            override fun send(bytes:ByteArray){sends++}
+            override fun send(bytes:ByteArray){sends++;searches.add(String(bytes))}
             override fun receive(timeoutMillis:Int):SsdpDiscovery.Packet? {
                 now+=TimeUnit.MILLISECONDS.toNanos(timeoutMillis.toLong());receives++
                 return if(receives<=2)SsdpDiscovery.Packet(peer,bytes,bytes.size) else null
             }
         }
         val ssdp=SsdpDiscovery.discover(channel,TimeUnit.SECONDS.toNanos(55),{true},{it==peer},{now}){_,_->emissions++}
-        check(sends==2 && emissions==1 && ssdp.unique==1 && !ssdp.interrupted,"SSDP retries and deduplication survive extraction")
+        check(sends==4 && ssdp.sent==4 && emissions==1 && ssdp.unique==1 && !ssdp.interrupted,"SSDP retries and deduplication retain the fixed receive window")
+        check(searches.count { "ST: ssdp:all\r\n" in it }==2 && searches.count { "ST: urn:dial-multiscreen-org:service:dial:1\r\n" in it }==2,
+            "Broad and DIAL searches each receive two attempts without launching applications")
         now=0;sends=0;receives=0;emissions=0
         SsdpDiscovery.discover(channel,TimeUnit.SECONDS.toNanos(55),{true},{false},{now}){_,_->emissions++}
         check(emissions==0,"Out-of-scope SSDP responses cannot publish evidence")
@@ -95,6 +98,20 @@ object ScanLifecycleTest {
         now=0;sends=0;receives=0;emissions=0
         val short=SsdpDiscovery.discover(channel,1,{true},{true},{now}){_,_->emissions++}
         check(short.interrupted && emissions==0,"SSDP cannot publish a response received beyond its deadline")
+        now=0;var dialRequested=false;emissions=0
+        val dialBytes="HTTP/1.1 200 OK\r\nST: urn:dial-multiscreen-org:service:dial:1\r\nLOCATION: http://198.18.0.2:60000/upnp/dev/00000000-0000-0000-0000-000000000001/desc\r\n\r\n".toByteArray()
+        val dialOnly=object:SsdpDiscovery.Channel {
+            override fun send(bytes:ByteArray) {if("ST: urn:dial-multiscreen-org:service:dial:1\r\n" in String(bytes))dialRequested=true}
+            override fun receive(timeoutMillis:Int):SsdpDiscovery.Packet? {
+                now+=TimeUnit.MILLISECONDS.toNanos(timeoutMillis.toLong())
+                return if(dialRequested)SsdpDiscovery.Packet(peer,dialBytes,dialBytes.size) else null
+            }
+        }
+        val dialResult=SsdpDiscovery.discover(dialOnly,TimeUnit.SECONDS.toNanos(55),{true},{it==peer},{now}){sender,headers->
+            emissions++;check(UpnpDescription.target(headers["location"],sender)!=null,"DIAL-only receiver can reach the guarded description reader")
+        }
+        check(dialRequested && emissions==1 && dialResult.sent==4 && now<=TimeUnit.SECONDS.toNanos(5),
+            "A DIAL-only receiver is discovered and deduplicated within the original five seconds")
         println("PASS · $checks scope, resource ownership, cancellation and metadata scheduling checks")
     }
 }

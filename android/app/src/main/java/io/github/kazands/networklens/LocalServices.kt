@@ -7,7 +7,7 @@ import java.util.Locale
 class LocalServices private constructor() {
     companion object {
         @JvmField val INITIAL: List<String> = Collections.unmodifiableList(listOf(
-            "_http._tcp.", "_https._tcp.", "_googlecast._tcp.", "_airplay._tcp.",
+            "_http._tcp.", "_https._tcp.", "_googlecast._tcp.", FireTvInfo.TYPE, "_airplay._tcp.",
             "_raop._tcp.", "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.",
             "_smb._tcp.", "_workstation._tcp.", "_ssh._tcp.", "_device-info._tcp.",
             "_hap._tcp.", "_spotify-connect._tcp.", "_pdl-datastream._tcp.",

@@ -122,3 +122,12 @@ TinyTuya was consulted for public UDP discovery envelopes; its MIT notice is
 packaged in `app/src/main/res/raw/tuya_protocol_notice.txt`. No device local key
 or control client is incorporated. Other protocol modules are original code
 based on the factual wire references in `../docs/DISCOVERY-COVERAGE.md`.
+
+## Amazon device-type fact
+
+One public Amazon device-type mapping is adapted from ioBroker.alexa2's MIT
+table at commit `6471cf116653e50b6cbc6c4dd54c2d52bfea4190`. The display title is
+normalized to Amazon Fire TV Stick 4K, without a generation claim. Exact source
+blob, retained fact and modifications are in `fire-tv-provenance.json`; the full
+MIT attribution and license are bundled as `res/raw/fire_tv_type_notice.txt`.
+No upstream network, cloud-account or control code is included.

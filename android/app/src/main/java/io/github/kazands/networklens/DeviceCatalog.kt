@@ -55,6 +55,7 @@ internal object DeviceCatalog {
         "ecobee", "ecobee inc.", "ecobee inc" -> "ecobee"
         "apple", "apple inc.", "apple inc", "apple computer, inc." -> "apple"
         "google", "google llc", "google inc.", "google inc" -> "google"
+        "amazon", "amazon.com", "amazon.com, inc.", "amazon.com inc." -> "amazon"
         "dlink", "d-link", "d-link corporation" -> "d-link"
         "hp", "hp inc.", "hewlett-packard", "hewlett packard", "hewlett-packard company" -> "hp"
         "qnap", "qnap systems, inc." -> "qnap"
@@ -121,6 +122,18 @@ internal object DeviceCatalog {
         private var conflicted = false
         private var registryMatch: Match? = null
         private var registryIdentity = ""
+        private var fireTvType = ""
+        private var fireTvSource = ""
+        private var fireTvHardwareObserved = false
+        // A later conflicting code can suppress the match, but cannot erase known
+        // Amazon hardware evidence when another recognition engine checks compatibility.
+        fun hasFireTvHardwareIdentity(): Boolean = fireTvHardwareObserved
+        fun offerFireTvType(code: String, source: String) {
+            if (code.isEmpty() || source.isEmpty()) return
+            fireTvHardwareObserved = fireTvHardwareObserved || FireTvInfo.product(code) != null
+            if (fireTvType.isNotEmpty() && fireTvType != code) conflicted = true
+            else { fireTvType = code; fireTvSource = source }
+        }
         fun offerRegistryIdentity(id: String) {
             if (registryIdentity.isNotEmpty() && registryIdentity != id) conflicted = true
             else registryIdentity = id
@@ -171,6 +184,8 @@ internal object DeviceCatalog {
             }
         }
         fun compatible(product: Product): Boolean = !conflicted &&
+            (fireTvType.isEmpty() || (FireTvInfo.product(fireTvType)?.let { it.id == product.id }
+                ?: !product.id.startsWith(FireTvInfo.PRODUCT_PREFIX))) &&
             // A missing registry row is not missing identity. Grouped endpoints must agree
             // on a Matter candidate's raw vendor/product pair even before the index loads.
             (registryIdentity.isEmpty() || !product.id.startsWith("matter:") || registryIdentity == product.id) &&
@@ -182,7 +197,14 @@ internal object DeviceCatalog {
          * do not turn a known thermostat into an audio device; contradictory known types do. */
         fun categories(): List<HardwareClassification.Fact> {
             if (conflicted) return emptyList()
-            return listOfNotNull(registry()?.takeIf { compatible(it.product) && it.product.category != Category.UNSPECIFIED }?.let { HardwareClassification.Fact(it.product.category, it.source) }) + models.mapNotNull { model ->
+            // A reviewed hardware identity constrains every catalogue category,
+            // not just the product title. Do not fall back to a rejected model.
+            if (fireTvHardwareObserved) return listOfNotNull(
+                FireTvInfo.product(fireTvType)?.takeIf(::compatible)?.let {
+                    HardwareClassification.Fact(it.category, "Amazon device-type catalogue · $fireTvSource")
+                })
+            return listOfNotNull(
+                registry()?.takeIf { compatible(it.product) && it.product.category != Category.UNSPECIFIED }?.let { HardwareClassification.Fact(it.product.category, it.source) }) + models.mapNotNull { model ->
                 val product = qualifiedProduct(model) ?: return@mapNotNull null
                 if (product.category == Category.UNSPECIFIED ||
                     product.id == "sony:playstation-5" && manufacturer.isEmpty() && !playStationResponse) null
@@ -202,6 +224,9 @@ internal object DeviceCatalog {
             }
         fun match(): Match? {
             registry()?.let { return it.takeIf { compatible(it.product) } }
+            FireTvInfo.product(fireTvType)?.let { product ->
+                return if (compatible(product)) Match(product, "Amazon device-type catalogue · ${product.reference} · $fireTvSource", "TXT ad=$fireTvType") else null
+            }
             val product = qualifiedProduct(firstModel) ?: return null
             if (!compatible(product)) return null
             // PS5 is a short, reusable code. A console response or reported Sony brand is required.
@@ -225,6 +250,8 @@ internal object DeviceCatalog {
             it.manufacturer = manufacturer; it.conflicted = conflicted
             it.manufacturerSource = manufacturerSource
             it.registryMatch = registryMatch; it.registryIdentity = registryIdentity
+            it.fireTvType = fireTvType; it.fireTvSource = fireTvSource
+            it.fireTvHardwareObserved = fireTvHardwareObserved
             it.playStationResponse = playStationResponse
             it.tpLinkResponse = tpLinkResponse
             it.omadaResponse = omadaResponse
@@ -233,6 +260,8 @@ internal object DeviceCatalog {
         }
         fun include(other: Evidence) {
             if (other.conflicted) conflicted = true
+            fireTvHardwareObserved = fireTvHardwareObserved || other.fireTvHardwareObserved
+            offerFireTvType(other.fireTvType, other.fireTvSource)
             if (other.protocolBrand.isNotEmpty()) {
                 if (protocolBrand.isNotEmpty() && protocolBrand != other.protocolBrand) conflicted = true
                 else { protocolBrand = other.protocolBrand; protocolSource = other.protocolSource }

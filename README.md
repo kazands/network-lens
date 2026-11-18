@@ -6,18 +6,23 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.21 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.21/Network-Lens-0.3.21.apk)
+[![Download Android APK — Network Lens 0.3.22 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.22/Network-Lens-0.3.22.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.21) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.22) · No GitHub account required to download.
 
-**Development preview: 0.3.21.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.22.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview improves **Google device recognition**. Supported Home, Nest and
+This preview improves **Amazon Fire TV recognition**. Supported current Amazon
+advertisements show useful device names instead of internal identifiers. A
+reviewed public device-type code identifies **Amazon Fire TV Stick 4K**; other
+qualifying advertisements retain the broader **Amazon Fire TV** label. Generation
+is not inferred. Conflicting reports cannot override the physical identity with
+an unrelated Apple or Google model. See [Fire TV coverage](docs/FIRE-TV-RECOGNITION.md).
+
+The Google recognition improvements remain included: supported Home, Nest and
 Chromecast receivers show a clear product name and physical device type, with
-useful room names underneath. Exact reported models can identify a supported
-Google product even when its manufacturer field is missing. Shared model names
-retain their family label; a generic Chromecast response does not establish a
-Google TV, generation or HD/4K variant. See [Google model coverage](docs/DEVICE-IDENTITIES.md#google-cast-models).
+useful room names underneath. Shared model strings retain their family label.
+See [Google model coverage](docs/DEVICE-IDENTITIES.md#google-cast-models).
 
 The scan reliability improvements from 0.3.20 remain included: safe resource
 cleanup, service discovery on larger Wi-Fi networks, bounded metadata parsing
@@ -45,7 +50,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.21 verification notes](docs/VERIFICATION-0.3.21.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.22 verification notes](docs/VERIFICATION-0.3.22.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 

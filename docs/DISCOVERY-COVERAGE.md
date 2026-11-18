@@ -1,6 +1,6 @@
 # Broader local recognition
 
-Included in Network Lens 0.3.21. See [release verification](VERIFICATION-0.3.21.md).
+Included in Network Lens 0.3.22. See [release verification](VERIFICATION-0.3.22.md).
 Recognition still uses current responses on the selected Wi-Fi. Results remain
 in memory, and no scan data or household identifiers are sent to a recognition
 service. Missing models remain unknown.
@@ -88,6 +88,7 @@ vendor's supplied data.
 
 | Path | Requests and interpretation | Limitations |
 |---|---|---|
+| Amazon Fire TV | Explicit WhisperPlay mDNS queries, TXT friendly names and one reviewed public Fire TV Stick 4K type code; SSDP includes bounded DIAL searches | Unknown codes retain a service-family label. Generation is unspecified; raw missing fields remain unknown. See [Fire TV recognition](FIRE-TV-RECOGNITION.md). |
 | TP-Link Easy Smart | UDP 29809 → 29808, discovery opcode 0 only; validate reply opcode, client correlation, sequence, length, MAC and sender IP; retain public model/name/version fields | Legacy discovery envelope only. No GET, login, session negotiation, credentials, port configuration or SET. Physical switch compatibility still requires testing. |
 | Samsung TV | Fixed `GET :8001/api/v2/` after an observed TCP/service candidate; require the Samsung SmartTV identity marker | Newer compatible TV firmware only; older TVs still rely on SSDP/UPnP. No pairing or remote-control WebSocket. |
 | WiZ | UDP 38899 `getSystemConfig` | Module code is electronics evidence, not a retail model or automatic light category. No registration request. |
@@ -182,4 +183,4 @@ clipboard/identity checks after a fresh emulator boot, broader matrix results,
 test corrections, and the remaining permission-dialog and physical-test limits.
 
 The candidate verification history above predates release versioning. See
-[current release verification](VERIFICATION-0.3.21.md) for the final artifact and checks.
+[current release verification](VERIFICATION-0.3.22.md) for the final artifact and checks.

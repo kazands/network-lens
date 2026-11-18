@@ -5,6 +5,9 @@ Original source code, documentation and original artwork: GPL-3.0-only.
 See LICENSE for the complete GNU General Public License version 3.
 
 Third-party material is not relicensed by this notice:
+- Reviewed Amazon device-type fact adapted from ioBroker.alexa2: MIT.
+  Exact source/modifications: android/fire-tv-provenance.json; bundled credit
+  and license: android/app/src/main/res/raw/fire_tv_type_notice.txt.
 - Home Assistant Core discovery matcher tables: Apache-2.0. Exact retained
   sources/license: android/ha-original/; bundled license: res/raw/ha_matchers_license.txt.
   Modified projection and provenance: android/ha-matcher-provenance.json.

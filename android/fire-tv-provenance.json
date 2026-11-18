@@ -1,0 +1,24 @@
+{
+  "reviewed": "2026-11-18",
+  "source": "https://github.com/Apollon77/ioBroker.alexa2",
+  "commit": "6471cf116653e50b6cbc6c4dd54c2d52bfea4190",
+  "path": "main.js",
+  "git_blob_sha1": "4e2f2eb37c4eb8572b8a18b1c5f5f1e122c90798",
+  "license": "MIT",
+  "license_git_blob_sha1": "e211aea8dc2c517d6511f2c5b59425cde104189a",
+  "retained_facts": {"AKPGW064GI9HE": "Fire Stick 4K"},
+  "modifications": [
+    "Retain one reviewed public device-type mapping; no upstream networking or account code imported.",
+    "Normalize display title to Amazon Fire TV Stick 4K.",
+    "Require a current same-peer WhisperPlay manager advertisement and exact ad code.",
+    "Keep generation unspecified and reported Model, Manufacturer and MAC unchanged.",
+    "Reject conflicting type codes, reported models and manufacturers."
+  ],
+  "corroborating_source": {
+    "repository": "https://github.com/alandtse/alexa_media_player",
+    "path": "custom_components/alexa_media/const.py",
+    "git_blob_sha1": "00fdbc8fc6f9c18eca38143d4ce8c904938f5bd4",
+    "license": "Apache-2.0",
+    "note": "Inspected for corroboration only; no code or table imported. Its Gen3 suffix is not used."
+  }
+}

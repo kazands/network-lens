@@ -11,6 +11,7 @@ internal object DiscoveryMatchers {
     data class Rule(val kind: String, val domain: String, val conditions: List<Condition>)
     data class Family(val label: String, val hardware: String = "")
     private val families = mapOf(
+        FireTvInfo.FAMILY to Family("Amazon Fire TV"),
         "wiz" to Family("WiZ-compatible device"), "yeelight" to Family("Yeelight light"),
         "govee" to Family("Govee device"), "tuya" to Family("Tuya-compatible device"),
         "hue" to Family("Philips Hue bridge", "Discovery smart-home bridge"),

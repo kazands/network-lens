@@ -1,10 +1,24 @@
 # Development status
 
-Network Lens 0.3.21 is the current Android development preview. Download its
-signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.21.md)
-from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.21).
+Network Lens 0.3.22 is the current Android development preview. Download its
+signed APK, matching source, checksums and [verification notes](VERIFICATION-0.3.22.md)
+from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.22).
 Android 8.0+ is supported; the application targets API 37. It remains a focused,
 user-started Wi-Fi device finder with all scan state held in memory.
+
+## Amazon Fire TV recognition in 0.3.22
+
+Network Lens reads WhisperPlay friendly names and recognizes a
+reviewed Fire TV Stick 4K device-type code offline. It adds explicit Amazon
+service queries, targeted DIAL searches and the documented Fire TV description
+URL format. Generation remains unspecified; missing reported fields stay unknown.
+Known Amazon hardware evidence also prevents conflicting Apple service models
+from taking over the product identification, including across grouped addresses.
+Conflicting model evidence cannot restore a definite physical device type through
+another model catalogue or a neighboring grouped address.
+See [Fire TV recognition](FIRE-TV-RECOGNITION.md) for research, attribution,
+passed tests and remaining physical-phone verification. These changes are
+included in 0.3.22; see the [release verification](VERIFICATION-0.3.22.md).
 
 ## Scan reliability retained from 0.3.20
 
@@ -36,7 +50,7 @@ rules across 122 mDNS types, 5,479 offline Matter registry entries, fair bounded
 mDNS scheduling beyond the former 48-type ceiling, Easy Smart discovery,
 Samsung TV identity, WiZ, Yeelight, Govee, LIFX and receive-only Tuya announcements.
 Generic integration matches, service capabilities and module IDs remain separate
-from verified hardware models. These capabilities remain included in 0.3.21.
+from verified hardware models. These capabilities remain included in 0.3.22.
 
 Physical host checks identified EAP245 and EAP265 HD through public login
 metadata; no Omada announcements were observed. The new Easy Smart path and other
@@ -139,8 +153,8 @@ uploading device identifiers.
 
 ## Current release verification
 
-See [0.3.21 verification](VERIFICATION-0.3.21.md) for release artifact identities,
-versioned checks, signed update verification and remaining limits. All 43 host
+See [0.3.22 verification](VERIFICATION-0.3.22.md) for release artifact identities,
+versioned checks, signed update verification and remaining limits. All 44 host
 suites, seven offline Python tests and a fresh independent Deep code review passed
 on the implementation.
 Historical candidate checks are linked above and are not claims about every
@@ -179,7 +193,7 @@ they do not establish production readiness.
 
 Independent identity probes, bounded alternate metadata targets, endpoint-fair
 metadata scheduling and a labelled synthetic benchmark are described in
-[recognition planning](RECOGNITION-PLANNING.md). These features remain included in 0.3.21.
+[recognition planning](RECOGNITION-PLANNING.md). These features remain included in 0.3.22.
 
 ## Google device recognition in 0.3.21
 
@@ -192,7 +206,7 @@ distinct physical category, and Cast capability does not make every receiver a
 speaker or a Google product. Missing reported manufacturer/MAC fields remain
 unknown. See [Google model rules and sources](DEVICE-IDENTITIES.md#google-cast-models).
 
-These changes are included in 0.3.21. See [release verification](VERIFICATION-0.3.21.md)
+These changes are included in 0.3.22. See [release verification](VERIFICATION-0.3.22.md)
 for the versioned artifacts, update checks and remaining physical-test limits.
 
 Before release versioning, all 43 Kotlin host suites and seven offline Python tests passed,
