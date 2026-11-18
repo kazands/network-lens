@@ -1,7 +1,7 @@
 # In-app updates
 
 Available starting with Network Lens 0.3.17. If you have that version or newer,
-use Check for updates to obtain 0.3.20. Older installations need the current
+use Check for updates to obtain 0.3.21. Older installations need the current
 signed APK installed once using the download link.
 
 ## Using the updater
@@ -65,7 +65,7 @@ The 0.3.20 regression checks also exercise installer-session opening failures on
 the main thread. Storage, permission and installer errors leave a recoverable
 message, abandon the session and cancel its pending callback.
 
-See [current release verification](VERIFICATION-0.3.20.md) for artifact-specific
+See [current release verification](VERIFICATION-0.3.21.md) for artifact-specific
 checks and [BUILDING.md](BUILDING.md) for commands. Earlier live in-app update
 journeys are recorded with the corresponding release notes and assets, including
 [the original updater release](VERIFICATION-0.3.17.md). A signed in-place emulator

@@ -66,14 +66,16 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "scan-ownership") {
+            if (mode == "google-cast") {
+                GoogleCastIdentityChecks.run(this, ::check)
+            } else if (mode == "scan-ownership") {
                 ScanOwnershipChecks.run(this, ::check)
             } else if (mode == "performance") {
                 PerformanceChecks.run(this, ::check)
@@ -87,6 +89,7 @@ class SmokeInstrumentation : Instrumentation() {
             } else if (mode == "device-identities") {
                 AppleRecognitionChecks.run(this, ::check)
                 AndroidRecognitionChecks.run(this, ::check)
+                GoogleCastIdentityChecks.run(this, ::check)
                 DeviceIdentityChecks.run(this, ::check)
             } else if (mode == "recog") {
                 RecogChecks.run(this, ::check)

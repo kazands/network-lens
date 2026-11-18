@@ -55,7 +55,7 @@ class DeviceIcon private constructor() {
                     DeviceCatalog.Category.RECORDER -> RECORDER
                     DeviceCatalog.Category.CONSOLE -> CONSOLE
                     DeviceCatalog.Category.THERMOSTAT -> RECOGNIZED_THERMOSTAT
-                    DeviceCatalog.Category.TV -> Spec(R.drawable.ic_device_monitor, category.label)
+                    DeviceCatalog.Category.TV, DeviceCatalog.Category.SMART_DISPLAY -> Spec(R.drawable.ic_device_monitor, category.label)
                     DeviceCatalog.Category.CAMERA -> Spec(R.drawable.ic_device_cctv, category.label)
                     DeviceCatalog.Category.DOORBELL -> Spec(R.drawable.ic_device_doorbell, category.label)
                     DeviceCatalog.Category.LIGHT -> Spec(R.drawable.ic_device_lightbulb, category.label)

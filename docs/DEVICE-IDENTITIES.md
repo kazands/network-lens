@@ -31,6 +31,47 @@ not infer a product from a friendly name or MAC vendor.
 | Matching name/hostname `thinkstation-X900.local` without a known product model | ThinkStation X900 | Reported device name; no inferred manufacturer or hardware model |
 | No useful reported name or model | Unnamed device | Any supported service category remains visible |
 
+## Google Cast models
+
+Network Lens 0.3.21 adds 15 reviewed first-party Google product
+profiles. It addresses receivers that report a useful current Model but omit
+Manufacturer, including Google Nest Mini, Google Home and Google Home Mini.
+These profiles are separate from the broad manufacturer-qualified index below.
+
+| Exact reported model examples | Product title | Physical type |
+| --- | --- | --- |
+| `Google Nest Mini`, `Nest Mini` | Google Nest Mini | Speaker |
+| `Google Home`, `Google Home Mini`, `Google Home Max` | Corresponding Google Home product | Speaker |
+| `Nest Audio`, `Google Home Speaker` | Google Nest Audio / Google Home Speaker | Speaker |
+| `Google Home Hub`, `Nest Hub` | Google Nest Hub | Smart display; generation remains unspecified |
+| `Nest Hub Max` | Google Nest Hub Max | Smart display |
+| `Chromecast`, `Chromecast Ultra` | Google Chromecast / Google Chromecast Ultra | Streaming device |
+| `Chromecast with Google TV`, `Google TV Streamer` | Corresponding Google streaming product | Streaming device; unspecified variants remain unspecified |
+| `Chromecast Audio` | Google Chromecast Audio | Audio receiver, not a built-in speaker |
+| `Nest Wifi Point` | Google Nest Wifi Point | Wi-Fi access point, with Cast as a separate capability |
+| `Pixel Tablet` | Google Pixel Tablet | Tablet, including when it advertises Cast |
+
+Only exact reviewed Model values authorize these profiles. A friendly room name,
+hostname, Google manufacturer alone, generic Cast service or unknown suffix does
+not identify hardware. Contradictory manufacturer/model evidence still suppresses
+product recognition. Virtual Cast groups remain excluded before model admission.
+The recognized Google brand is an interpretation; the reported Manufacturer and
+MAC fields remain unknown unless supplied by a supported current response.
+
+A recognized product leads the list, with the useful room name underneath. A
+name-only Cast HTTP reply cannot erase a model already received through current
+mDNS. HTTP lookup outcomes describe that reply; the separate model-source row
+still identifies the current mDNS evidence. Shared model names do not establish
+a generation, year, HD/4K edition or another endpoint's raw fields.
+
+Product names and physical roles were checked against Google's primary
+[speaker/display specifications](https://support.google.com/googlehome/answer/7072284?hl=en),
+[Cast-capable device families](https://support.google.com/googlehome/answer/10012636?hl=en-CA),
+[Chromecast Audio connections](https://support.google.com/chromecast/answer/6279371?hl=en)
+and [Nest Wifi specifications](https://support.google.com/googlehome/answer/6280668?hl=en).
+This is an independently authored exact-name table, not an imported fingerprint
+database or a claim that every firmware advertises these names.
+
 ## Broad, free catalogue coverage
 
 The bundled global table contains **256,338 exact manufacturer/model aliases**,

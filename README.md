@@ -6,17 +6,22 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.20 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.20/Network-Lens-0.3.20.apk)
+[![Download Android APK — Network Lens 0.3.21 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.21/Network-Lens-0.3.21.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.20) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.21) · No GitHub account required to download.
 
-**Development preview: 0.3.20.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.21.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview improves **scan reliability**. Stopping a scan or leaving the app
-releases discovery resources safely, including when cancellation happens during
-startup. On larger Wi-Fi networks, service discovery continues when the address
-range is too large to check individually. Scan details explain that coverage.
-Device-information parsing and update-installer error handling are more resilient.
+This preview improves **Google device recognition**. Supported Home, Nest and
+Chromecast receivers show a clear product name and physical device type, with
+useful room names underneath. Exact reported models can identify a supported
+Google product even when its manufacturer field is missing. Shared model names
+retain their family label; a generic Chromecast response does not establish a
+Google TV, generation or HD/4K variant. See [Google model coverage](docs/DEVICE-IDENTITIES.md#google-cast-models).
+
+The scan reliability improvements from 0.3.20 remain included: safe resource
+cleanup, service discovery on larger Wi-Fi networks, bounded metadata parsing
+and recoverable update-installer errors.
 
 Local recognition includes Omada/EAP and Easy Smart network equipment, Samsung TV
 identity, WiZ, Yeelight, Govee, LIFX and passive Tuya announcements. The bundled
@@ -40,7 +45,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.20 verification notes](docs/VERIFICATION-0.3.20.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.21 verification notes](docs/VERIFICATION-0.3.21.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 
@@ -57,6 +62,7 @@ If you already have 0.3.17 or newer, use Check for updates. Older installations 
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 - Canonical product names from a free offline catalogue covering 86,540 product/family titles across 5,263 worldwide brands, indexed by 256,338 exact manufacturer-qualified aliases. Useful custom names remain below the product title; raw fields and recognition sources remain in Details. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md).
 - Offline Apple model interpretations for 156 Recog codes and 128 supplemental AppleDB iPad/iPhone codes, plus reviewed recorder, streaming, console, thermostat and television profiles. Supported identities select more specific Lucide icons; unknown categories remain based on observed services. See [Recog coverage](docs/RECOG.md) and [physical type versus service evidence](docs/RECOGNITION-EVIDENCE.md).
+- Fifteen reviewed Google product profiles distinguish speakers, smart displays, streaming devices, audio receivers, a Wi-Fi point and a tablet. Product interpretation preserves raw reported fields and rejects contradictory evidence.
 - Read-only Apple service model lookup, nested Cast receiver metadata and 651 manufacturer-qualified Android hardware categories. Playback services do not override a known physical device type.
 - Source-labelled VSSL/Sonos, HEOS, MusicCast, BluOS and AirPlay/Cast audio relationships. BluOS players retain their advertised ports; playback groups never become physical hardware identity. Cast group descriptions do not establish speaker membership.
 - Read-only TP-Link discovery on UDP 9999/20002 with 32 reviewed plug, switch and dimmer model mappings. Raw observations remain available; unknown models are not assigned a guessed physical category.
