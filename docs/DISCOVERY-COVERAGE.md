@@ -1,6 +1,6 @@
 # Broader local recognition
 
-Included in Network Lens 0.3.23. See [release verification](VERIFICATION-0.3.24.md).
+Included in Network Lens 0.3.25. See [release verification](VERIFICATION-0.3.25.md).
 Recognition still uses current responses on the selected Wi-Fi. Results remain
 in memory, and no scan data or household identifiers are sent to a recognition
 service. Missing models remain unknown.
@@ -183,7 +183,7 @@ clipboard/identity checks after a fresh emulator boot, broader matrix results,
 test corrections, and the remaining permission-dialog and physical-test limits.
 
 The candidate verification history above predates release versioning. See
-[current release verification](VERIFICATION-0.3.24.md) for the final artifact and checks.
+[current release verification](VERIFICATION-0.3.25.md) for the final artifact and checks.
 
 ## Envisalink support in 0.3.24
 
@@ -191,3 +191,12 @@ A bounded, receive-only TCP 4025 check recognizes the Envisalink DSC TPI family.
 It is independent of the first open general port and does not authenticate or
 send alarm commands. It cannot distinguish the EVL generation or identify a
 generic Honeywell-mode login prompt. See [Envisalink details](ENVISALINK.md).
+
+## SmartThings support in 0.3.25
+
+Explicit SmartThings mDNS queries complement service enumeration. A current
+SmartThings record with a matching hub hostname and instance identifier can
+identify the SmartThings Hub family and Smart-home hub type. A service alone
+does not classify TVs or appliances as hubs. Matter remains a capability.
+Generation, Zigbee and Z-Wave support are not inferred from these records.
+See [SmartThings evidence and limits](SMARTTHINGS.md).

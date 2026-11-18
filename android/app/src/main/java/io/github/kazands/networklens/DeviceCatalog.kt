@@ -11,7 +11,7 @@ internal object DeviceCatalog {
         CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
         SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
         AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
-        AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), GARAGE_DOOR("Garage door opener"),
+        AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), HUB("Smart-home hub"), GARAGE_DOOR("Garage door opener"),
         SECURITY_SYSTEM("Security system"), ALARM_INTERFACE("Alarm interface"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
         ACCESS_POINT("Wi-Fi access point"), NETWORK_SWITCH("Network switch"),
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
@@ -24,7 +24,8 @@ internal object DeviceCatalog {
         fun acceptsModel(value: String): Boolean = key(value) in models ||
             id.startsWith("tplink:") && TpLinkModels.sameModel(id, value) ||
             reference.isNotEmpty() && models.any { modelKey(it) == modelKey(value) } && global.lookup(brand, value)?.title == title
-        fun redundantName(value: String): Boolean = key(value) in models || key(value) in redundantNames || key(value) == key(title)
+        fun redundantName(value: String): Boolean =
+            id == SmartThingsInfo.PRODUCT_ID && SmartThingsInfo.technicalName(value) || key(value) in models || key(value) in redundantNames || key(value) == key(title)
     }
     data class Match(val product: Product, val source: String, val input: String, val recog: Recog.Model? = null)
 
@@ -126,6 +127,9 @@ internal object DeviceCatalog {
         private var fireTvSource = ""
         private var fireTvHardwareObserved = false
         private var envisalinkObserved = false
+        private var smartThingsObserved = false
+        fun hasSmartThingsIdentity(): Boolean = smartThingsObserved
+        fun offerSmartThings(source: String) { smartThingsObserved = true; offerProduct(SmartThingsInfo.identity(source)) }
         fun hasEnvisalinkIdentity(): Boolean = envisalinkObserved
         fun offerEnvisalink() { envisalinkObserved = true; offerProduct(EnvisalinkInfo.identity()) }
         // A later conflicting code can suppress the match, but cannot erase known
@@ -188,6 +192,7 @@ internal object DeviceCatalog {
         }
         fun compatible(product: Product): Boolean = !conflicted &&
             (!envisalinkObserved || product.id == EnvisalinkInfo.PRODUCT_ID) &&
+            (!smartThingsObserved || product.id == SmartThingsInfo.PRODUCT_ID) &&
             (fireTvType.isEmpty() || (FireTvInfo.product(fireTvType)?.let { it.id == product.id }
                 ?: !product.id.startsWith(FireTvInfo.PRODUCT_PREFIX))) &&
             // A missing registry row is not missing identity. Grouped endpoints must agree
@@ -195,7 +200,8 @@ internal object DeviceCatalog {
             (registryIdentity.isEmpty() || !product.id.startsWith("matter:") || registryIdentity == product.id) &&
             (registry() == null || registry()!!.product.id == product.id) &&
             models.all(product::acceptsModel) &&
-            (manufacturer.isEmpty() || manufacturer == brand(product.brand)) &&
+            (manufacturer.isEmpty() || manufacturer == brand(product.brand) ||
+                product.id == SmartThingsInfo.PRODUCT_ID && SmartThingsInfo.acceptsManufacturer(manufacturer)) &&
             (protocolBrand.isEmpty() || brand(protocolBrand) == brand(product.brand))
         /** Hardware can be known when the exact product is ambiguous. Unknown model tokens
          * do not turn a known thermostat into an audio device; contradictory known types do. */
@@ -207,7 +213,7 @@ internal object DeviceCatalog {
                 FireTvInfo.product(fireTvType)?.takeIf(::compatible)?.let {
                     HardwareClassification.Fact(it.category, "Amazon device-type catalogue · $fireTvSource")
                 })
-            if (envisalinkObserved) return listOfNotNull(registry()?.takeIf { compatible(it.product) }?.let {
+            if (envisalinkObserved || smartThingsObserved) return listOfNotNull(registry()?.takeIf { compatible(it.product) }?.let {
                 HardwareClassification.Fact(it.product.category, it.source)
             })
             return listOfNotNull(
@@ -260,6 +266,7 @@ internal object DeviceCatalog {
             it.fireTvType = fireTvType; it.fireTvSource = fireTvSource
             it.fireTvHardwareObserved = fireTvHardwareObserved
             it.envisalinkObserved = envisalinkObserved
+            it.smartThingsObserved = smartThingsObserved
             it.playStationResponse = playStationResponse
             it.tpLinkResponse = tpLinkResponse
             it.omadaResponse = omadaResponse
@@ -269,6 +276,7 @@ internal object DeviceCatalog {
         fun include(other: Evidence) {
             if (other.conflicted) conflicted = true
             envisalinkObserved = envisalinkObserved || other.envisalinkObserved
+            smartThingsObserved = smartThingsObserved || other.smartThingsObserved
             fireTvHardwareObserved = fireTvHardwareObserved || other.fireTvHardwareObserved
             offerFireTvType(other.fireTvType, other.fireTvSource)
             if (other.protocolBrand.isNotEmpty()) {

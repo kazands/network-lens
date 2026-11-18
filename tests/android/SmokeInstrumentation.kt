@@ -66,14 +66,16 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast" || mode == "fire-tv" || mode == "envisalink") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast" || mode == "fire-tv" || mode == "envisalink" || mode == "smartthings") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "envisalink") {
+            if (mode == "smartthings") {
+                SmartThingsChecks.run(this, ::check)
+            } else if (mode == "envisalink") {
                 EnvisalinkChecks.run(this, ::check)
             } else if (mode == "fire-tv") {
                 FireTvIdentityChecks.run(this, ::check)
@@ -91,6 +93,7 @@ class SmokeInstrumentation : Instrumentation() {
                 AudioZoneChecks.run(this, ::check)
                 BroadAudioChecks.run(this, ::check)
             } else if (mode == "device-identities") {
+                SmartThingsChecks.run(this, ::check)
                 EnvisalinkChecks.run(this, ::check)
                 AppleRecognitionChecks.run(this, ::check)
                 AndroidRecognitionChecks.run(this, ::check)

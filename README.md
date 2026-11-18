@@ -6,13 +6,19 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.24 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.24/Network-Lens-0.3.24.apk)
+[![Download Android APK — Network Lens 0.3.25 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.25/Network-Lens-0.3.25.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.24) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.25) · No GitHub account required to download.
 
-**Development preview: 0.3.24.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.25.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-**New in 0.3.24:** Envisalink alarm interfaces can now show a useful device name
+**New in 0.3.25:** Supported SmartThings hub advertisements now show
+**SmartThings Hub** and **Smart-home hub**, with useful friendly names beneath
+the product name. Matter remains a separate capability, and technical identifiers
+stay in device details. Exact generation and Zigbee/Z-Wave support are not inferred
+from these records. See [SmartThings recognition](docs/SMARTTHINGS.md).
+
+Envisalink support from 0.3.24 remains included. Compatible alarm interfaces show a useful device name
 and alarm-interface icon when their local DSC interface shares an identifying
 greeting. The check sends no login or alarm commands and does not guess the model.
 See [Envisalink recognition](docs/ENVISALINK.md) for supported responses and limits.
@@ -58,7 +64,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.24 verification notes](docs/VERIFICATION-0.3.24.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.25 verification notes](docs/VERIFICATION-0.3.25.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 

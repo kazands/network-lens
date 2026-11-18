@@ -85,11 +85,12 @@ class Device : Grouping.Endpoint {
     @Synchronized internal fun recognizeModel(attributes: Map<String, ByteArray>) = recognition.offer(attributes)
     @Synchronized internal fun recognizeServiceModel(type: String, attributes: Map<String, ByteArray>) = recognition.offerService(type, attributes)
     @Synchronized internal fun recognizeAppleModel(code: String) = recognition.offerAppleModel(code)
+    @Synchronized internal fun recognizeSmartThings(source: String) = catalogue.offerSmartThings(source)
     @Synchronized internal fun recognizeEnvisalink() = catalogue.offerEnvisalink()
     @Synchronized internal fun recognizeFireTvType(code: String, source: String) = catalogue.offerFireTvType(code, source)
 
     @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
-        !catalogue.hasFireTvHardwareIdentity() && !catalogue.hasEnvisalinkIdentity() && recognition.compatible(candidate) &&
+        !catalogue.hasFireTvHardwareIdentity() && !catalogue.hasEnvisalinkIdentity() && !catalogue.hasSmartThingsIdentity() && recognition.compatible(candidate) &&
             (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || Recog.appleMaker(manufacturer)) &&
             (model.isEmpty() || !IdentityHints.specific(model) || model == candidate.code || model == candidate.description) &&
             hints.observations().none { hint -> IdentityHints.specific(hint.value) && when (hint.field) {
@@ -152,7 +153,7 @@ class Device : Grouping.Endpoint {
         val result = HardwareClassification.resolve(endpoints.flatMap { it.hardwareFacts() } + catalogueFacts)
         // Apply the identity constraint after combining addresses. Otherwise a
         // neighbor's category can restore a hardware interpretation rejected here.
-        return if ((combined.hasFireTvHardwareIdentity() || combined.hasEnvisalinkIdentity()) && catalogueFacts.isEmpty())
+        return if ((combined.hasFireTvHardwareIdentity() || combined.hasEnvisalinkIdentity() || combined.hasSmartThingsIdentity()) && catalogueFacts.isEmpty())
             result.copy(category = null, conflicted = true) else result
     }
     internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
