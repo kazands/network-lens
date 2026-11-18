@@ -81,7 +81,7 @@ class DeviceIcon private constructor() {
             val services = endpoints.flatMap { it.services }.map { it.lowercase(Locale.ROOT) }
             if (kinds.any { it.contains("printer") } || services.any { it in listOf("_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.") }) return PRINTER
             if (kinds.any { it.contains("audio") } || services.any { it in listOf("_raop._tcp.", "_spotify-connect._tcp.") }) return AUDIO
-            if (kinds.any { it.contains("cast") || it.contains("airplay") } || services.any { it in listOf("_googlecast._tcp.", "_airplay._tcp.") }) return CAST
+            if (kinds.any { it.contains("cast") || it.contains("airplay") } || services.any { it in listOf("_googlecast._tcp.", "_airplay._tcp.", FireTvInfo.TYPE) }) return CAST
             if (kinds.any { it.contains("file-sharing") } || "_smb._tcp." in services) return FILES
             if ("_companion-link._tcp." in services) return Spec(R.drawable.ic_device_network, "Apple companion service")
             if (AppleDeviceInfo.SERVICE.lowercase(Locale.ROOT) in services) return Spec(R.drawable.ic_device_network, AppleDeviceInfo.SERVICE)

@@ -5,6 +5,11 @@ observations, with source labels and per-endpoint lookup outcomes. Supported exa
 manufacturer/model reports can feed the [offline product catalogue](DEVICE-IDENTITIES.md).
 Every scan starts fresh and all metadata remains in memory.
 
+[Amazon Fire TV recognition](FIRE-TV-RECOGNITION.md) additionally reads current
+WhisperPlay friendly-name/type-code fields and permits the documented same-peer
+`/upnp/dev/<UUID>/desc` description path. A reviewed type-code interpretation is
+shown separately from reported Model; no login, pairing or control is performed.
+
 | Service | Additional observations |
 | --- | --- |
 | Thread `_meshcop._udp` | `mn` model and `vn` reported vendor. Other Thread addresses and network identifiers are not interpreted as a hardware MAC. |

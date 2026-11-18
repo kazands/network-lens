@@ -55,6 +55,9 @@ class IdentityHints {
             val opaque = n.replace("-", "").replace("_", "").length >= 16 &&
                 n.matches(Regex("[0-9a-f]+(?:[-_][0-9a-f]+)+"))
             return specific(n) && !opaque &&
+                !n.startsWith("amzn.dmgr:") &&
+                !n.matches(Regex("amazon-[0-9a-f]{8,32}(?:\\.local)?")) &&
+                !(n.endsWith(".local") && !specific(n.removeSuffix(".local"))) &&
                 !n.matches(Regex("(?:google[ -]?)?cast(?: device)?|chromecast(?:[-_ ][a-z0-9-]{8,})?|android tv"))
         }
 

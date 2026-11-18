@@ -1959,6 +1959,13 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             d.hint("Model", model, source + " TXT", if (type.contains("device-info")) 20 else 80)
             d.hint("Manufacturer", manufacturer, source + " TXT", 80)
             if (!d.self) d.hint("Name", attribute(attrs, "fn", "friendlyname"), source + " friendly name", 90)
+            if (!d.self) FireTvInfo.parse(service)?.let { fire ->
+                d.hint("Name", fire.name, source + " TXT n (friendly name)", 90)
+                d.recognizeFireTvType(fire.typeCode, source + " TXT ad")
+                d.discoveryFamilies(setOf(FireTvInfo.FAMILY), source)
+                d.detail("Amazon discovery", "Fire TV family from a WhisperPlay advertisement; model and generation require additional evidence")
+                d.detail("Amazon device type code (advertised)", fire.typeCode)
+            }
             val id = attribute(attrs, "id")
             if (id.isNotEmpty()) { d.identify(type + "|" + id, 80); val key = explicitId(type, attrs["id"]); if (key.isNotEmpty()) d.link(key) }
             else d.identify(type + "|" + name, 20)

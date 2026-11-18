@@ -11,6 +11,7 @@ internal object HardwareClassification {
             "_raop._tcp." -> "AirPlay audio (RAOP)"
             "_spotify-connect._tcp." -> "Spotify Connect"
             "_googlecast._tcp." -> "Google Cast"
+            FireTvInfo.TYPE -> "Amazon WhisperPlay"
             "_androidtvremote2._tcp." -> "Android TV remote service"
             "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.", "_pdl-datastream._tcp." -> "Printing"
             "_smb._tcp." -> "File sharing"

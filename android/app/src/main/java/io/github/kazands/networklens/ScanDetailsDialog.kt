@@ -295,6 +295,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
             "mDNS type and hostname queries" -> "Advertised services and hostnames"
             else -> if (name.startsWith("mDNS ")) when (name.substring(5)) {
                 "_googlecast._tcp." -> "Google Cast devices"
+                FireTvInfo.TYPE -> "Amazon Fire TV services"
                 "_airplay._tcp." -> "AirPlay devices"
                 "_raop._tcp." -> "AirPlay audio"
                 "_spotify-connect._tcp." -> "Spotify Connect devices"

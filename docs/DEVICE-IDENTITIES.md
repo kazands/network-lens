@@ -31,6 +31,10 @@ not infer a product from a friendly name or MAC vendor.
 | Matching name/hostname `thinkstation-X900.local` without a known product model | ThinkStation X900 | Reported device name; no inferred manufacturer or hardware model |
 | No useful reported name or model | Unnamed device | Any supported service category remains visible |
 
+For Amazon service-name and DIAL compatibility changes included in 0.3.22,
+see [Fire TV recognition](FIRE-TV-RECOGNITION.md). Service-family recognition does
+not establish an exact Fire TV model or generation.
+
 ## Google Cast models
 
 Network Lens 0.3.21 adds 15 reviewed first-party Google product

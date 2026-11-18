@@ -66,14 +66,16 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast" || mode == "fire-tv") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "google-cast") {
+            if (mode == "fire-tv") {
+                FireTvIdentityChecks.run(this, ::check)
+            } else if (mode == "google-cast") {
                 GoogleCastIdentityChecks.run(this, ::check)
             } else if (mode == "scan-ownership") {
                 ScanOwnershipChecks.run(this, ::check)
@@ -90,6 +92,7 @@ class SmokeInstrumentation : Instrumentation() {
                 AppleRecognitionChecks.run(this, ::check)
                 AndroidRecognitionChecks.run(this, ::check)
                 GoogleCastIdentityChecks.run(this, ::check)
+                FireTvIdentityChecks.run(this, ::check)
                 DeviceIdentityChecks.run(this, ::check)
             } else if (mode == "recog") {
                 RecogChecks.run(this, ::check)
