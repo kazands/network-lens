@@ -7,6 +7,8 @@ import android.content.res.Configuration
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kazands.networklens.*
 import java.io.File
@@ -17,6 +19,7 @@ internal object AppUpdateChecks {
     private fun get(o: Any,n: String): Any? = o.javaClass.getDeclaredField(n).let{it.isAccessible=true;it.get(o)}
     private fun set(o: Any,n: String,v: Any?) {o.javaClass.getDeclaredField(n).let{it.isAccessible=true;it.set(o,v)}}
     private fun texts(v: View): List<TextView> = buildList {if(v is TextView)add(v);if(v is ViewGroup)repeat(v.childCount){addAll(texts(v.getChildAt(it)))}}
+    private fun views(v: View): List<View> = buildList { add(v);if(v is ViewGroup)repeat(v.childCount){addAll(views(v.getChildAt(it)))}}
     fun run(test: Instrumentation,check:(Boolean,String)->Unit) {
         val a=test.startActivitySync(Intent(test.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo",true)) as MainActivity
         val original=Configuration(a.resources.configuration)
@@ -48,7 +51,64 @@ internal object AppUpdateChecks {
                         check(rows.any{it.text.toString()==label},"Update state $step readable at scale $scale, dark=$dark")
                         check(rows.any{it.text.toString().startsWith("Installed · ")},"Installed version visible")
                         check(rows.none{it.text.toString().contains("null")},"No missing release text exposed")
+                        val window = dialog().window!!
+                        check(window.attributes.dimAmount >= .6f && window.attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND != 0,
+                            "Update $step separates its surface from the underlying page")
+                        for (row in rows.filter { it.visibility == View.VISIBLE && it.text.isNotEmpty() }) {
+                            val layout = row.layout!!
+                            check(layout.getLineEnd(layout.lineCount - 1) == row.text.length &&
+                                row.height - row.compoundPaddingTop - row.compoundPaddingBottom >= layout.height &&
+                                (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 && layout.getLineMax(it) <= row.width - row.compoundPaddingLeft - row.compoundPaddingRight + 1 },
+                                "Update $step text fits without clipping at scale $scale, dark=$dark")
+                            if(row.isClickable) {
+                                val position=IntArray(2);row.getLocationInWindow(position)
+                                check(row.height>=48*a.resources.displayMetrics.density && position[1]>=0 &&
+                                    position[1]+row.height<=window.decorView.height,"Update $step action remains visible and touchable")
+                            }
+                        }
                     }
+                    // Layout assertions above run on the current view tree. Let its frame
+                    // reach the compositor before capturing; otherwise a capture can show
+                    // the preceding synthetic state even though the assertions passed.
+                    android.os.SystemClock.sleep(250)
+                    test.waitForIdleSync()
+                    val folder=File(a.getExternalFilesDir(null),"update-surfaces-api${Build.VERSION.SDK_INT}").apply{mkdirs()}
+                    val image=test.uiAutomation.takeScreenshot()
+                    File(folder,"${step.name.lowercase()}-${scale}x-${if(dark) "dark" else "light"}.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+                    image.recycle()
+                }
+                lateinit var before: List<TextView>
+                lateinit var scroll: ScrollView
+                lateinit var cancel: TextView
+                var y=0
+                main { state(UpdateFlow.Step.DOWNLOADING);show() }
+                test.waitForIdleSync()
+                main {
+                    before=texts(dialog().window!!.decorView)
+                    scroll=views(dialog().window!!.decorView).filterIsInstance<ScrollView>().single()
+                    cancel=before.single{it.text.toString()=="Cancel"}
+                    cancel.isFocusableInTouchMode=true;cancel.requestFocus()
+                    scroll.scrollTo(0,scroll.getChildAt(0).height)
+                    y=scroll.scrollY
+                    for(percent in listOf(48,48,49,50)) {
+                        set(flow,"view",UpdateFlow.View(UpdateFlow.Step.DOWNLOADING,"Synthetic update status",percent));refresh()
+                    }
+                }
+                test.waitForIdleSync()
+                main {
+                    check(texts(dialog().window!!.decorView)==before,"Repeated progress retains every text and action view, scale=$scale dark=$dark")
+                    check(scroll.scrollY==y && cancel.hasFocus(),"Download progress preserves scroll and action focus, scale=$scale dark=$dark")
+                    check(before.any{it.text.toString()=="Downloading · 50%"},"Stable progress still displays the latest percentage")
+                    val shown=dialog()
+                    MainActivity::class.java.getDeclaredMethod("render").apply{isAccessible=true}.invoke(a)
+                    check(dialog()===shown,"Unrelated page refresh retains the update window")
+                    state(UpdateFlow.Step.INSTALLING);refresh()
+                    set(flow,"pendingConfirmation",Intent("synthetic.confirmation"));refresh()
+                    check(texts(dialog().window!!.decorView).any{it.text.toString()=="Continue installation"},
+                        "New installer confirmation replaces actions even when the step is unchanged")
+                    set(flow,"pendingConfirmation",null);refresh()
+                    check(texts(dialog().window!!.decorView).none{it.text.toString()=="Continue installation"},
+                        "Withdrawn confirmation removes the obsolete installer action")
                 }
             }
             main {
@@ -59,6 +119,7 @@ internal object AppUpdateChecks {
             main {
                 check(flow.view.step==UpdateFlow.Step.AVAILABLE && !(get(a,"updatesOpen") as Boolean),"Cancel returns to retryable state and dismisses dialog")
                 state(UpdateFlow.Step.DOWNLOADING);show()
+                Store(a).dark(!Store(a).dark())
                 MainActivity::class.java.getDeclaredMethod("render").apply{isAccessible=true}.invoke(a)
             }
             test.waitForIdleSync()

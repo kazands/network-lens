@@ -81,7 +81,7 @@ class MainActivity : Activity() {
     private var scanDetailsDialog: ScanDetailsDialog? = null
     private var optionsDialog: AppDialog? = null
     private var updater: UpdateFlow? = null
-    private var updateDialog: AppDialog? = null
+    private var updateDialog: AppUpdateDialog? = null
     private var updatesOpen = false
     private var optionsMenu: PopupWindow? = null
     private var deviceScroll: ScrollView? = null
@@ -278,7 +278,7 @@ class MainActivity : Activity() {
         theme.setOnClickListener { store.dark(!store.dark()); render() }; header.addView(theme, lp(48, 48))
         val more = text("⋮", 28, accent, true); more.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 28f); more.gravity = Gravity.CENTER
         more.contentDescription = "Options"; AccessibleActions.button(more); more.setOnClickListener { menu(it) }
-        if (!showingSettings && store.ready()) header.addView(more, lp(48, 48))
+        if (store.ready()) header.addView(more, lp(48, 48))
         root.addView(header)
         if (!store.ready()) { cleanupPage(); return }
         if (demo && !showingSettings) {
@@ -288,8 +288,9 @@ class MainActivity : Activity() {
         if (showingSettings) settingsPage() else if (selected != null) detailsPage() else devicesPage()
         scanDetailsDialog?.let { if (it.isShowing) it.resize() }
         optionsDialog?.let { if (it.isShowing) it.resize() }
-        if (updateDialog?.isShowing == true) {
-            suspendUpdateDialog(); showUpdates(false)
+        updateDialog?.takeIf { it.isShowing }?.let {
+            if (!it.matchesAppearance(this, dialogColors())) { suspendUpdateDialog(); showUpdates(false) }
+            else it.resize()
         }
     }
     private fun backToPreviousPage() {
@@ -345,16 +346,16 @@ class MainActivity : Activity() {
         val page = ScrollView(this); deviceScroll = page; displayedListContext = listContext()
         page.isFillViewport = true; page.isVerticalScrollBarEnabled = false
         val content = column(); page.addView(content); root.addView(page, LinearLayout.LayoutParams(-1, 0, 1f))
-        val controls = column(); controls.setPadding(dp(23), dp(12), dp(23), dp(8))
+        val controls = column(); controls.setPadding(dp(16), dp(8), dp(16), 0)
         val scan = button("", true, 16); scanButton = scan; scan.maxLines = 2; scan.ellipsize = TextUtils.TruncateAt.END; updateScanButton()
         scan.setOnClickListener { val operation = discovery; if (scanning && operation != null) operation.cancel() else beginScan() }
         controls.addView(scan, LinearLayout.LayoutParams(-1, -2))
         val bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); progress = bar
-        bar.progressTintList = ColorStateList.valueOf(accent); bar.isIndeterminate = scanning && total == 0; bar.max = maxOf(1, total); bar.progress = done
-        bar.visibility = if (scanning) View.VISIBLE else View.GONE
+        bar.progressTintList = ColorStateList.valueOf(accent); bar.indeterminateTintList = ColorStateList.valueOf(accent)
+        updateProgress()
         val progressParams = lp(-1, 5); progressParams.topMargin = dp(if (scanning) 8 else 0); controls.addView(bar, progressParams)
         val summary = row(); summary.gravity = Gravity.CENTER_VERTICAL; summary.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-        summary.minimumHeight = dp(56); summary.setPadding(dp(2), dp(12), dp(2), dp(12))
+        summary.minimumHeight = dp(48); summary.setPadding(dp(2), dp(8), dp(2), dp(8))
         summary.background = RippleDrawable(ColorStateList.valueOf(0x22336644), round(bg, 10), null)
         val statusLabel = text(statusText(), 13, muted, false); status = statusLabel
         statusLabel.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -362,10 +363,10 @@ class MainActivity : Activity() {
         val more = text("›", 22, muted, false); more.setPadding(dp(12), 0, dp(5), 0); more.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; summary.addView(more)
         AccessibleActions.button(summary); summary.contentDescription = statusText() + ". View scan details"; summary.setOnClickListener { scanDetails() }; statusLabel.setOnClickListener { scanDetails() }
         controls.addView(summary); content.addView(controls)
-        val section = column(); section.setPadding(dp(23), dp(8), dp(23), dp(14))
+        val section = column(); section.setPadding(dp(16), dp(8), dp(16), dp(12))
         val heading = text("Your devices", 26, ink, true); heading.letterSpacing = -.01f
         if (Build.VERSION.SDK_INT >= 28) heading.isAccessibilityHeading = true
-        section.addView(heading); space(section, 6); count = text("", 13, muted, false); section.addView(count); space(section, 14)
+        section.addView(heading); space(section, 4); count = text("", 13, muted, false); section.addView(count); space(section, 10)
         val search = EditText(this); search.isSaveEnabled = false
         search.imeOptions = search.imeOptions or android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
         search.setSingleLine(true); search.textSize = 14f; search.setTextColor(ink); search.setHintTextColor(muted)
@@ -381,7 +382,7 @@ class MainActivity : Activity() {
             override fun afterTextChanged(e: Editable) {}
         })
         content.addView(section)
-        val rows = column(); list = rows; rows.setPadding(dp(23), 0, dp(23), dp(24)); content.addView(rows)
+        val rows = column(); list = rows; rows.setPadding(dp(16), 0, dp(16), dp(24)); content.addView(rows)
         fillDevices(); root.requestFocus(); restoreListPosition()
     }
     private fun updateScanButton() {
@@ -395,10 +396,21 @@ class MainActivity : Activity() {
         label.setSpan(android.text.style.RelativeSizeSpan(14f / 16f), start, label.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         button.text = label; button.contentDescription = action + ", connected network " + ssid
     }
+    // Only the first address pass has a fixed denominator. Discovery and identification
+    // continue after it, so a full address bar must never suggest the scan is finished.
+    private fun checkingAddresses(): Boolean = total > 0 && done < total
+    private fun updateProgress() {
+        progress?.let {
+            it.visibility = if (scanning) View.VISIBLE else View.GONE
+            it.isIndeterminate = !checkingAddresses()
+            it.max = maxOf(1, total); it.progress = done.coerceAtLeast(0)
+            it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO // The adjacent status announces the phase.
+        }
+    }
     private fun statusText(): String {
-        if (scanning) return (if (total > 0) {
-            if (done >= total) discovery?.phase() ?: "Finishing device details…" else "Scanning · " + done + " / " + total + " addresses"
-        } else "Listening for devices…") + "\n" + groupsForDisplay().size + " device groups found · View scan details"
+        if (scanning) return (if (checkingAddresses()) {
+            "Checking addresses · " + (done.coerceAtLeast(0).toLong() * 100 / total) + "%"
+        } else "Identifying devices…") + "\n" + groupsForDisplay().size + " device groups found · View scan details"
         if (demo) return "Sample results · not your network"
         val report = network?.let { store.report(it.key) }
         if (message.isNotEmpty() && (report == null || message != report.reason)) return message
@@ -477,10 +489,10 @@ class MainActivity : Activity() {
         private var separator = false
         private val separatorPaint = Paint()
         init {
-            orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(14), dp(17), dp(13), dp(17)); setWillNotDraw(false); isFocusable = true
+            orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(14), dp(12), dp(14)); setWillNotDraw(false); isFocusable = true
             icon = ImageView(this@MainActivity); icon.imageTintList = ColorStateList.valueOf(ink); icon.scaleType = ImageView.ScaleType.FIT_CENTER
             icon.setPadding(dp(6), dp(6), dp(6), dp(6)); icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; addView(icon, lp(40, 40))
-            val labels = column(); labels.setPadding(dp(12), 0, dp(7), 0)
+            val labels = column(); labels.setPadding(dp(8), 0, dp(7), 0)
             name = text("", 16, ink, true); labels.addView(name)
             role = text("", AppTypography.METADATA, muted, false); role.setPadding(0, dp(5), 0, 0); labels.addView(role)
             ipv4 = addressLabel(accent); ipv6 = addressLabel(muted); labels.addView(ipv4); labels.addView(ipv6)
@@ -533,13 +545,13 @@ class MainActivity : Activity() {
         val d = selected!!
         val previousY = detailScroll?.scrollY ?: restoredDetailY
         val scroll = ScrollView(this); detailScroll = scroll
-        val body = column(); body.setPadding(dp(23), dp(14), dp(23), dp(30)); scroll.addView(body); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        val body = column(); body.setPadding(dp(16), dp(12), dp(16), dp(24)); scroll.addView(body); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val title = text(d.presentation().title, 26, ink, true); title.letterSpacing = -.01f; body.addView(title); space(body, 8)
         val customName = SafeText.label(d.name, 160).takeIf {
             IdentityHints.specificName(it) && it != d.presentation().title && d.groupProduct()?.product?.redundantName(it) != true
         }.orEmpty()
         body.addView(text(if (d.self) "This phone" else if (d.gateway) "Wi-Fi gateway" else customName.ifEmpty { "Details from your scan" }, 13, muted, false)); space(body, 21)
-        if (d.endpoints().size > 1) { body.addView(text("" + d.endpoints().size + " IP addresses grouped together. Each address keeps its own reported details.", 13, accent, true)); space(body, 16) }
+        if (d.endpoints().size > 1) { body.addView(text("" + d.endpoints().size + " IP addresses grouped together", 13, accent, true)); space(body, 12) }
         val classification = d.classification()
         val capabilities = d.capabilities()
         if (classification.category != null || classification.conflicted || capabilities.isNotEmpty()) {
@@ -555,17 +567,32 @@ class MainActivity : Activity() {
             help.addView(text(RecognitionCopy.NEXT_SCAN, 14, muted, false))
             body.addView(help); space(body, 16)
         }
-        for (endpoint in d.endpoints()) {
-            endpoint.identifiedProduct()?.let { match ->
-                val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
-                recognized.addView(text("How this was identified", 16, ink, true))
-                if (match.product.familyOnly) detailRow(recognized, "Identification", "Device family")
-                recognized.addView(text(RecognitionCopy.explanation(match), 14, muted, false))
-                body.addView(recognized); space(body, 8)
+        val endpoints = d.endpoints()
+        val matches = endpoints.map { it.identifiedProduct() }
+        val sharedMatch = matches.firstOrNull()?.takeIf { first ->
+            d.groupProduct()?.product == first.product && matches.all {
+                it != null && it.product == first.product && RecognitionCopy.explanation(it) == RecognitionCopy.explanation(first)
             }
+        }
+        fun recognition(match: DeviceCatalog.Match) {
+            val recognized = panel(); recognized.setPadding(dp(18), dp(10), dp(18), dp(14))
+            recognized.addView(text("How this was identified", 16, ink, true))
+            if (match.product.familyOnly) detailRow(recognized, "Identification", "Device family")
+            recognized.addView(text(RecognitionCopy.explanation(match), 14, muted, false))
+            body.addView(recognized); space(body, 8)
+        }
+        sharedMatch?.let { recognition(it) }
+        var missingMacExplained = false
+        for (endpoint in endpoints) {
+            if (sharedMatch == null) endpoint.identifiedProduct()?.let { recognition(it) }
             val addresses = panel(); addresses.setPadding(dp(18), dp(18), dp(18), dp(12))
             field(addresses, "IP address", endpoint.ip, true); field(addresses, "MAC address", endpoint.mac.ifEmpty { "Not available" }, endpoint.mac.isNotEmpty())
-            addresses.addView(text(if (endpoint.mac.isEmpty()) "Android limits MAC access. Some devices report an address through their discovery services." else "Source: " + endpoint.macSource + ". This may identify another interface on the device.", 14, muted, false))
+            if (endpoint.mac.isNotEmpty()) {
+                addresses.addView(text("Source: " + endpoint.macSource + ". This may identify another interface on the device.", 14, muted, false))
+            } else if (!missingMacExplained) {
+                addresses.addView(text("Android limits MAC access. Some devices report an address through their discovery services.", 14, muted, false))
+                missingMacExplained = true
+            }
             val v6echo = endpoint.details["ICMPv6 response time"]
             val echo = v6echo ?: endpoint.details["ICMP response time"]
             if (!echo.isNullOrEmpty()) { space(addresses, 12); detailRow(addresses, if (v6echo != null) "Response time (ICMPv6)" else "Response time (ICMP)", echo) }
@@ -748,7 +775,7 @@ class MainActivity : Activity() {
         }
         done = next.done; total = next.total
         status?.let { val label = statusText(); it.text = label; (it.parent as View).contentDescription = label + ". View scan details" }
-        progress?.let { it.isIndeterminate = false; it.max = maxOf(1, total); it.progress = done }
+        updateProgress()
         fillDevices()
     }
     override fun onRequestPermissionsResult(request: Int, permissions: Array<String>, grants: IntArray) {
@@ -775,7 +802,7 @@ class MainActivity : Activity() {
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); popup.isOutsideTouchable = true; popup.elevation = dp(12).toFloat(); popup.inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
         option(items, popup, "Wi-Fi details", "Addresses and connection", false) { networkInfo() }
         option(items, popup, "Check for updates", "Download the latest app preview", false) { showUpdates(true) }
-        option(items, popup, "Settings", "Scanning, permissions and privacy", false) { openSettings() }
+        if (!showingSettings) option(items, popup, "Settings", "Scanning, permissions and privacy", false) { openSettings() }
         popup.setOnDismissListener { if (optionsMenu === popup) optionsMenu = null }; popup.showAsDropDown(anchor, 0, dp(6), Gravity.END)
     }
     private fun option(parent: LinearLayout, popup: PopupWindow, title: String, subtitle: String, destructive: Boolean, action: Runnable) {
@@ -793,19 +820,22 @@ class MainActivity : Activity() {
     private fun settingsPage() {
         val page = ScrollView(this); settingsScroll = page
         page.isFillViewport = true; page.isVerticalScrollBarEnabled = false
-        val body = column(); body.setPadding(dp(23), dp(12), dp(23), dp(30)); page.addView(body)
+        val body = column(); body.setPadding(dp(16), dp(8), dp(16), dp(24)); page.addView(body)
         root.addView(page, LinearLayout.LayoutParams(-1, 0, 1f))
         fun section(title: String): LinearLayout {
             val heading = text(title, 14, ink, true); heading.setPadding(0, dp(12), 0, dp(10))
             if (Build.VERSION.SDK_INT >= 28) heading.isAccessibilityHeading = true
             body.addView(heading)
-            val block = panel(); block.setPadding(dp(16), dp(16), dp(16), dp(16)); body.addView(block); space(body, 14)
+            val block = panel(); block.setPadding(dp(16), dp(12), dp(16), dp(8)); body.addView(block); space(body, 10)
             return block
         }
-        fun note(parent: LinearLayout, value: String) { parent.addView(text(value, 14, muted, false)); space(parent, 12) }
+        fun note(parent: LinearLayout, value: String) { parent.addView(text(value, 14, muted, false)); space(parent, 8) }
         fun action(parent: LinearLayout, title: String, run: () -> Unit) {
             val control = button(title, false); control.isFocusable = true; control.setOnClickListener { run() }
-            parent.addView(control, LinearLayout.LayoutParams(-1, -2)); space(parent, 8)
+            control.gravity = Gravity.START or Gravity.CENTER_VERTICAL; control.minHeight = dp(48)
+            control.setPadding(0, dp(10), 0, dp(10))
+            control.background = RippleDrawable(ColorStateList.valueOf(0x22336644), round(card, 8), null)
+            parent.addView(control, LinearLayout.LayoutParams(-1, -2))
         }
         fun permission(parent: LinearLayout, title: String, state: String, explanation: String) {
             parent.addView(text(title, 16, ink, true)); space(parent, 5)
@@ -827,10 +857,10 @@ class MainActivity : Activity() {
             "Android requires precise location access to share the Wi-Fi name. Network Lens does not request GPS coordinates.")
         if (!nameAllowed) action(permissions, "Allow Wi-Fi name") { wifiNameAccess() }
         action(permissions, "Open Android settings") { openAndroidSettings() }
-        note(permissions, "Manage permission grants in Android. Scanning works without Wi-Fi name access.")
+        note(permissions, "Scanning works without Wi-Fi name access.")
         val updateOptions = section("App updates")
         updateOptions.addView(text("Installed version · " + appVersion(), 16, ink, true)); space(updateOptions, 6)
-        note(updateOptions, "Check for public releases, including previews. Downloads stay in the app; Android asks before installing.")
+        note(updateOptions, "Find new releases, including previews. Android asks before installing.")
         action(updateOptions, "Check for updates") { showUpdates(true) }
         val privacyOptions = section("Privacy & about")
         privacyOptions.addView(text("Fresh scans. Nothing saved.", 16, ink, true)); space(privacyOptions, 6)
@@ -882,7 +912,7 @@ class MainActivity : Activity() {
         val flow = updater ?: return
         updatesOpen = true
         if (updateDialog?.isShowing != true) {
-            updateDialog = AppDialog(dialogContext(), dialogColors(), "App updates").also { dialog ->
+            updateDialog = AppUpdateDialog(dialogContext(), dialogColors(), flow).also { dialog ->
                 dialog.setOnDismissListener {
                     if (updateDialog === dialog) {
                         updateDialog = null
@@ -890,6 +920,7 @@ class MainActivity : Activity() {
                         flow.dismiss()
                     }
                 }
+                dialog.refresh()
                 dialog.show()
             }
         }
@@ -897,43 +928,9 @@ class MainActivity : Activity() {
         if (check) flow.check()
     }
     private fun refreshUpdateDialog() {
-        val dialog = updateDialog ?: return; val flow = updater ?: return
+        val dialog = updateDialog ?: return
         if (!dialog.isShowing || destroyed) return
-        val content = dialog.content(); content.removeAllViews(); dialog.clearActions()
-        fun paragraph(value: String, bold: Boolean = false) {
-            content.addView(dialog.paragraph(value, if (bold) 18 else 15, if (bold) ink else muted, bold)); space(content, 12)
-        }
-        paragraph("Installed · " + flow.version())
-        val release = flow.release
-        val state = flow.view
-        val title = when (state.step) {
-            UpdateFlow.Step.IDLE -> "Ready to check"
-            UpdateFlow.Step.CHECKING -> "Checking for updates…"
-            UpdateFlow.Step.CURRENT -> "You’re up to date"
-            UpdateFlow.Step.AVAILABLE -> "Update available · " + release?.version
-            UpdateFlow.Step.DOWNLOADING -> "Downloading · " + state.percent + "%"
-            UpdateFlow.Step.READY -> "Update verified · " + release?.version
-            UpdateFlow.Step.STAGING -> "Preparing the installer…"
-            UpdateFlow.Step.INSTALLING -> "Confirm the update"
-            UpdateFlow.Step.ERROR -> "Update couldn’t finish"
-        }
-        paragraph(title, true)
-        if (release != null && state.step in setOf(UpdateFlow.Step.AVAILABLE, UpdateFlow.Step.DOWNLOADING, UpdateFlow.Step.READY))
-            paragraph((if (release.preview) "Development preview" else "Public release") + " · " + String.format(Locale.ROOT, "%.1f MB", release.bytes / 1048576.0))
-        if (state.message.isNotEmpty()) paragraph(state.message)
-        paragraph("Checks GitHub’s public releases only when you ask. No scan results are sent. Keep Network Lens open while checking or downloading.")
-        when (state.step) {
-            UpdateFlow.Step.IDLE, UpdateFlow.Step.ERROR -> dialog.primary("Check again") { flow.check(); false }.secondary("Close") { true }
-            UpdateFlow.Step.CHECKING, UpdateFlow.Step.DOWNLOADING, UpdateFlow.Step.STAGING -> dialog.primary("Cancel") { true }
-            UpdateFlow.Step.AVAILABLE -> dialog.primary("Download update") { flow.download(); false }.secondary("Later") { true }
-            UpdateFlow.Step.READY -> dialog.primary("Install update") { flow.install(); false }.secondary("Later") { true }
-            UpdateFlow.Step.INSTALLING -> {
-                if (flow.canContinue()) dialog.primary("Continue installation") { flow.install(); false }.secondary("Cancel") { true }
-                else dialog.primary("Cancel") { true }
-            }
-            UpdateFlow.Step.CURRENT -> dialog.primary("Done") { true }
-        }
-        dialog.resize()
+        dialog.refresh()
     }
     private fun appVersion(): String = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: PackageManager.NameNotFoundException) { "" }
     private fun scanRange() {

@@ -6113,8 +6113,33 @@ class SmokeInstrumentation : Instrumentation() {
             }
         )
         settle()
-        assertText("Scanning · 100 / 254 addresses")
+        assertText("Checking addresses · 39%")
+        onMain {
+            val bar = field("progress") as android.widget.ProgressBar
+            check(!bar.isIndeterminate && bar.progress == 100 && bar.max == 254, "Address progress uses checked addresses, not elapsed time")
+        }
         capture("hierarchy-scanning")
+        onMain {
+            setField("done", 254)
+            invoke("updateProgress")
+            check((field("progress") as android.widget.ProgressBar).isIndeterminate, "Live updates switch to indeterminate after the address pass")
+            invoke("render")
+        }
+        settle()
+        assertText("Identifying devices…")
+        capture("hierarchy-identifying")
+        onMain {
+            check((field("progress") as android.widget.ProgressBar).isIndeterminate, "Rendering preserves the identification phase")
+            setField("done", 0); setField("total", 0); invoke("render")
+        }
+        settle()
+        assertText("Identifying devices…")
+        onMain {
+            check((field("progress") as android.widget.ProgressBar).isIndeterminate, "Discovery without an address sweep never displays a percentage")
+            setField("total", 254); invoke("updateProgress")
+            check(!(field("progress") as android.widget.ProgressBar).isIndeterminate && (field("progress") as android.widget.ProgressBar).progress == 0,
+                "A fresh address pass resets the indicator")
+        }
         onMain(
             callback130@{
                 setField("scanning", false)
@@ -6199,6 +6224,7 @@ class SmokeInstrumentation : Instrumentation() {
     private fun assertModalFits(): Unit {
         onMain(
             callback134@{
+                check(scanDialog()!!.window!!.attributes.dimAmount >= .6f, "Scan details strongly dims the underlying page")
                 var decor: View = ((scanDialog())!!.window)!!.getDecorView()
                 var done: View? = find(decor, "Done", false)
                 check(
@@ -6784,6 +6810,7 @@ class SmokeInstrumentation : Instrumentation() {
     private fun optionFits(): Unit {
         onMain(
             callback160@{
+                check(optionDialog()!!.window!!.attributes.dimAmount >= .6f, "Options dialog strongly dims the underlying page")
                 var decor: View = ((optionDialog())!!.window)!!.getDecorView()
                 var done: View? = find(decor, "Done", false)
                 check(
@@ -7452,7 +7479,8 @@ class SmokeInstrumentation : Instrumentation() {
                     ((top((v)!!) >= top((page)!!)) &&
                         ((top((v)!!) + (v)!!.getHeight()) <=
                             (top((page)!!) + (page)!!.getHeight()))),
-                    ("Settings action is reachable: " + label),
+                    ("Settings action is reachable: " + label + " control=" + top(v!!) + ".." + (top(v!!) + v!!.height) +
+                        " viewport=" + top(page!!) + ".." + (top(page!!) + page!!.height) + " scroll=" + page!!.scrollY),
                 )
                 check((v)!!.performClick(), ("Settings action: " + label))
             }
@@ -7543,6 +7571,18 @@ class SmokeInstrumentation : Instrumentation() {
         assertText("Scanning")
         assertText("Permissions")
         assertText("Privacy & about")
+        description("Options")
+        onMain {
+            val popup = field("optionsMenu") as PopupWindow
+            check(find(popup.contentView, "Wi-Fi details", false) != null &&
+                find(popup.contentView, "Check for updates", false) != null &&
+                find(popup.contentView, "Settings", false) == null,
+                "Settings retains the global menu without a redundant Settings entry")
+        }
+        menuChoose("Wi-Fi details")
+        optionFits()
+        optionClick("Done")
+        check(field("showingSettings") as Boolean, "Closing Wi-Fi details returns to Settings")
         check(!((field("scanning") as Boolean)), "Opening settings never starts discovery")
         check(
             (texts())!!.contains(
