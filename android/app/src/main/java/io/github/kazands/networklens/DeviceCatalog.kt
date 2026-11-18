@@ -6,7 +6,7 @@ import java.util.Locale
 internal object DeviceCatalog {
     enum class Category(val label: String) {
         LAPTOP("Laptop"), DESKTOP("Desktop computer"), TABLET("Tablet"), PHONE("Smartphone"),
-        SPEAKER("Speaker"), TV_PLAYER("Streaming device"), HANDHELD("Portable media player"),
+        SPEAKER("Speaker"), TV_PLAYER("Streaming device"), SMART_DISPLAY("Smart display"), HANDHELD("Portable media player"),
         RECORDER("Network video recorder"), CONSOLE("Game console"), THERMOSTAT("Thermostat"), TV("Television"),
         CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
         SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
@@ -81,6 +81,7 @@ internal object DeviceCatalog {
         products.singleOrNull { it.acceptsModel(model) && (!it.manufacturerRequired || manufacturer.isNotEmpty()) &&
             (manufacturer.isEmpty() || brand(manufacturer) == brand(it.brand)) }?.let { return it }
         val maker = brand(manufacturer)
+        if (maker.isEmpty() || maker == "google") GoogleCastModels.lookup(model)?.let { return it }
         if (maker == "tp-link") TpLinkModels.lookup(model)?.let { return it }
         val entry = global.lookup(maker, model) ?: return null
         val type = hardware.lookup(maker, model)
