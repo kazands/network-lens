@@ -1,7 +1,7 @@
 # In-app updates
 
 Available starting with Network Lens 0.3.17. If you have that version or newer,
-use Check for updates to obtain 0.3.19. Older installations need the current
+use Check for updates to obtain 0.3.20. Older installations need the current
 signed APK installed once using the download link.
 
 ## Using the updater
@@ -33,6 +33,8 @@ asset hosts. Downloads have size, redirect and time limits. The app checks the
 GitHub-provided SHA-256 digest and declared size, application ID, version name,
 increasing Android version code, minimum Android version and the pinned public
 signing certificate. Android's installer performs final signature verification.
+The download digest checks that the received bytes match GitHub's asset; the
+pinned signing certificate establishes the expected publisher identity.
 A locally development-signed build cannot update to the public signing key; the
 app reports the mismatch and never uninstalls the existing app.
 
@@ -59,23 +61,17 @@ rate limiting, deadlines and cleanup. Emulator mode `app-updates` covers themed
 and scaled dialogs, foreground cancellation, queued dialog replacement, private
 callback/session checks, invalid APK rejection and a real PackageInstaller
 pending-user-approval callback. It does not approve or complete an installation.
-Verification for this source change: all 32 host suites passed, with the final
-updater-specific suite passing 67 checks. The direct APK build and packaged
-permission/security audits passed. Native `app-updates` passed 128 checks each on
-API 26 and API 37; `options` passed 115 checks each. API 37 navigation, session-only,
-cold-session and scan-efficiency checks added 95 passes. The actual public GitHub
-feed was accepted as version 0.3.16 with its preview flag, size and digest. A live
-API 37 emulator check through Options contacted GitHub and displayed the installed
-0.3.16 build as up to date.
-See [BUILDING.md](BUILDING.md) for the direct test commands.
+The 0.3.20 regression checks also exercise installer-session opening failures on
+the main thread. Storage, permission and installer errors leave a recoverable
+message, abandon the session and cancel its pending callback.
 
-Versioned release and in-place upgrade checks are recorded in
-[0.3.17 verification](VERIFICATION-0.3.17.md). The post-publication live in-app
-installation result is recorded with the GitHub release assets/notes, because that
-check requires the new public release to be available. An older-version private
-test build includes the updater for this check; the original 0.3.16 release does
-not have it. These checks do not establish compatibility with every Android/OEM
-version.
+See [current release verification](VERIFICATION-0.3.20.md) for artifact-specific
+checks and [BUILDING.md](BUILDING.md) for commands. Earlier live in-app update
+journeys are recorded with the corresponding release notes and assets, including
+[the original updater release](VERIFICATION-0.3.17.md). A signed in-place emulator
+upgrade and a live GitHub download through the app are separate checks; the release
+notes identify which was performed. These results do not establish compatibility
+with every Android version or device-management policy.
 
 Protocol references: [GitHub releases API](https://docs.github.com/en/rest/releases/releases),
 [Android PackageInstaller](https://developer.android.com/reference/android/content/pm/PackageInstaller),

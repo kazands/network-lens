@@ -14,7 +14,10 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Activity-owned explicit updater. Only public APK bytes touch private temporary storage. */
-internal class UpdateFlow(private val activity: Activity, private val changed: ()->Unit) {
+internal class UpdateFlow(private val activity: Activity, private val changed: ()->Unit,
+    private val openCommitSession: (PackageInstaller, Int)->PackageInstaller.Session) {
+    constructor(activity: Activity, changed: ()->Unit) :
+        this(activity, changed, { installer, id -> installer.openSession(id) })
     enum class Step { IDLE, CHECKING, CURRENT, AVAILABLE, DOWNLOADING, READY, STAGING, INSTALLING, ERROR }
     data class View(val step: Step=Step.IDLE, val message: String="", val percent: Int=0)
     var view=View(); private set
@@ -116,13 +119,15 @@ internal class UpdateFlow(private val activity: Activity, private val changed: (
                 }
                 ensureActive();id
             } catch(e:Exception) {try{installer.abandonSession(id)}catch(_:RuntimeException){};throw e}
-        }) { id ->
-            try {
-                callback=UpdateInstaller.callback(activity,id,callbackToken)
-                set(View(Step.INSTALLING,"Opening Android’s update installer…"))
-                activity.packageManager.packageInstaller.openSession(id).use {it.commit(callback!!.intentSender)}
-            } catch(_:RuntimeException) {abandon();set(View(Step.ERROR,"Android couldn’t prepare the update. Please try again."))}
-        }
+        }) { id -> commitInstall(id) }
+    }
+    private fun commitInstall(id: Int) {
+        try {
+            callback=UpdateInstaller.callback(activity,id,callbackToken)
+            set(View(Step.INSTALLING,"Opening Android’s update installer…"))
+            openCommitSession(activity.packageManager.packageInstaller,id).use {it.commit(callback!!.intentSender)}
+        // openSession can throw IOException as well as RuntimeException, on the main-thread handoff.
+        } catch(_:Exception) {abandon();set(View(Step.ERROR,"Android couldn’t prepare the update. Please try again."))}
     }
     private fun result(intent: Intent) {
         if(closed || intent.action!=callbackToken || intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID,-2)!=sessionId) return

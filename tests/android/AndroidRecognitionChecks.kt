@@ -16,7 +16,7 @@ internal object AndroidRecognitionChecks {
         val op=Discovery(test.targetContext,NetworkState().apply { ip="198.18.0.1";prefix=24;key="synthetic-android";prefixes[ip]=prefix;addresses.add(ip) })
         set(op,"accepting",true);set(op,"enriching",true)
         val found=get(op,"found") as MutableMap<String,Device>;val fresh=get(op,"freshResponders") as MutableSet<String>
-        val plans=get(op,"metadataRequests") as ServiceAdmission
+        val plans=get(op,"metadataPlans") as MetadataPlans
         val current=Discovery::class.java.getDeclaredMethod("applyCurrentService",Device::class.java,MdnsPacket.Service::class.java).apply { isAccessible=true }
         val apply=Discovery::class.java.getDeclaredMethod("applyCurrentMetadata",Device::class.java,LocalMetadata.Request::class.java,LocalMetadata.Report::class.java).apply { isAccessible=true }
         val work=get(op,"enrichment") as DiscoveryWork; val gate=CountDownLatch(1);val started=CountDownLatch(2)

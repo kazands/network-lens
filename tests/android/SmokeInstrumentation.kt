@@ -66,14 +66,18 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "home-user") {
+            if (mode == "scan-ownership") {
+                ScanOwnershipChecks.run(this, ::check)
+            } else if (mode == "performance") {
+                PerformanceChecks.run(this, ::check)
+            } else if (mode == "home-user") {
                 HomeUserChecks.run(this, ::check)
             } else if (mode == "app-updates") {
                 AppUpdateChecks.run(this, ::check)
@@ -838,8 +842,6 @@ class SmokeInstrumentation : Instrumentation() {
                 String::class.java,
             )
         update.setAccessible(true)
-        var groups: Field? = updateType.getDeclaredField("groups")
-        groups!!.setAccessible(true)
         for (terminal in booleanArrayOf(false, true)) {
             var pendingBefore: NetworkState = networkFixture(target, (live.network)!!, base)
             var pendingAfter: NetworkState = networkFixture(target, (live.network)!!, rotated)
@@ -857,7 +859,6 @@ class SmokeInstrumentation : Instrumentation() {
                     terminal,
                     "",
                 )
-            groups!!.set(publication, Device.grouped(oldPhone))
             onMain(
                 callback16@{
                     setField("selected", null)
@@ -4114,48 +4115,40 @@ class SmokeInstrumentation : Instrumentation() {
                 server.setSoTimeout(4000)
                 var line: java.util.concurrent.atomic.AtomicReference<String>? =
                     java.util.concurrent.atomic.AtomicReference()
-                var serving: Future<*>? =
-                    serverWorker.submit(
-                        callback81@{
-                            try {
-                                server.accept().use { socket ->
-                                    var `in`: BufferedReader =
-                                        BufferedReader(
-                                            InputStreamReader(
-                                                socket.getInputStream(),
-                                                java.nio.charset.StandardCharsets.US_ASCII,
-                                            )
-                                        )
-                                    line!!.set(`in`.readLine())
-                                    var header: String? = null
-                                    while (
-                                        ((run {
-                                            header = `in`.readLine()
-                                            header
-                                        } !== null) && !(header!!.isEmpty()))
-                                    ) {}
-                                    var body: ByteArray =
-                                        "{\"name\":\"Fixture Cast speaker\",\"ssid\":\"PRIVATE_SSID\",\"location\":{\"latitude\":123},\"mac_address\":\"00:00:00:00:00:00\",\"ip_address\":\"203.0.113.9\"}"
-                                            .toByteArray(java.nio.charset.StandardCharsets.UTF_8)
-                                    (socket.getOutputStream())!!.write(
-                                        (((("HTTP/1.1 200 OK\r\nContent-Length: " + body.size) +
-                                                "\r\nConnection: close\r\n\r\n")))!!
-                                            .toByteArray(java.nio.charset.StandardCharsets.US_ASCII)
-                                    )
-                                    (socket.getOutputStream())!!.write(body)
+                val groupServed = java.util.concurrent.atomic.AtomicBoolean()
+                val serving = serverWorker.submit {
+                    // Identity and group discovery are independent and may arrive in either order.
+                    // Serve both real request paths instead of racing for one fixture response.
+                    repeat(2) {
+                        server.accept().use { socket ->
+                            val input = socket.getInputStream().bufferedReader(java.nio.charset.StandardCharsets.US_ASCII)
+                            val requestLine = input.readLine()
+                            while (!input.readLine().isNullOrEmpty()) {}
+                            val body = when (requestLine) {
+                                "GET /setup/eureka_info?params=device_info,name HTTP/1.1" -> {
+                                    line!!.set(requestLine)
+                                    "{\"name\":\"Fixture Cast speaker\",\"ssid\":\"PRIVATE_SSID\",\"location\":{\"latitude\":123},\"mac_address\":\"00:00:00:00:00:00\",\"ip_address\":\"203.0.113.9\"}"
                                 }
-                            } catch (e: IOException) {
-                                throw RuntimeException(e)
-                            }
+                                "GET /setup/eureka_info?params=multizone HTTP/1.1" -> {
+                                    groupServed.set(true)
+                                    "{\"multizone\":{\"groups\":[],\"dynamic_groups\":[]}}"
+                                }
+                                else -> throw AssertionError("Unexpected synthetic Cast request")
+                            }.toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+                            socket.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Length: " + body.size +
+                                "\r\nConnection: close\r\n\r\n").toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+                            socket.getOutputStream().write(body)
                         }
-                    )
+                    }
+                }
                 var device: Device? =
                     (observe.invoke(names, live.ip, "Explicit test responder") as Device?)
                 device!!.hint("Name", "Chromecast", "Fixture TXT friendly name", 90)
                 Discovery::class.java.getDeclaredMethod("applyCurrentService", Device::class.java, MdnsPacket.Service::class.java)
                     .apply { isAccessible = true }.invoke(names, device, MdnsPacket.Service("Chromecast", "_googlecast._tcp.").apply { port = 8009 })
                 cast.invoke(names, device)
-                serving!!.get(5, TimeUnit.SECONDS)
+                serving.get(5, TimeUnit.SECONDS)
+                check(groupServed.get(), "Cast identity and group fixture handles both request orders")
                 var end: Long = (SystemClock.uptimeMillis() + 3000)
                 while (
                     (!(device!!.name.equals("Fixture Cast speaker")) &&
@@ -4166,7 +4159,8 @@ class SmokeInstrumentation : Instrumentation() {
                 check(
                     (device!!.name.equals("Fixture Cast speaker") &&
                         "GET /setup/eureka_info?params=device_info,name HTTP/1.1".equals(line!!.get())),
-                    "Bound local Cast fallback supplies a missing friendly name",
+                    "Bound local Cast fallback supplies a missing friendly name; name=" + device!!.name +
+                        ", request=" + line!!.get() + ", lookups=" + device!!.metadataLookupRows() + ", sources=" + names.sources(),
                 )
                 check(
                     (((device!!.mac.isEmpty() && device!!.ip.equals(live.ip)) &&
@@ -4272,16 +4266,24 @@ class SmokeInstrumentation : Instrumentation() {
                     run {
                         var attempt: Int = 0
                         while ((attempt < 6)) {
+                            // The emulator's own advertiser can answer this address too. Re-arm
+                            // the bounded fixture exchange and assert admission, not which of
+                            // multiple valid hostnames wins presentation priority.
+                            synchronized(multicast) {
+                                @Suppress("UNCHECKED_CAST")
+                                val pending = questions.get(multicast) as MutableMap<String, Any>
+                                pending[ipv6!!] = question!!
+                            }
                             sender.send(DatagramPacket(response, response.size, group, 5353))
                             SystemClock.sleep(250)
-                            if ((wireTarget)!!.hostname.equals("engine-fixture.local")) {
+                            if ((wireTarget)!!.observations().any { it.field == "Hostname" && it.value == "engine-fixture.local" }) {
                                 break
                             }
                             attempt++
                         }
                     }
                     check(
-                        ((wireTarget)!!.hostname.equals("engine-fixture.local") &&
+                        ((wireTarget)!!.observations().any { it.field == "Hostname" && it.value == "engine-fixture.local" && it.source == "mDNS reverse hostname" } &&
                             (wireTarget)!!.evidence.contains("Matching mDNS reverse-PTR reply")),
                         ("Actual IPv6 multicast PTR fixture supplies the unique expected hostname; sources=" +
                             multicast.sources()),

@@ -112,12 +112,18 @@ object OmadaDiscoveryTest {
         val page="""<span id="devname"></span><script>$.ajax({url: "./data/login.json",type:'POST',data:{"operation":"read"}});</script>"""
         check(EapInfo.eligiblePage(page.toByteArray()),"Audited public page markers")
         check(!EapInfo.eligiblePage("<!--$page-->".toByteArray()),"Comments cannot qualify a public endpoint")
+        check(!EapInfo.eligiblePage(("<!--".repeat(16384)).toByteArray()),"Maximum-size repeated unclosed comments are rejected")
+        check(!EapInfo.eligiblePage(("<!--$page").toByteArray()),"Unterminated comment markers cannot authorize a POST")
+        check(EapInfo.eligiblePage(("<!--ignored-->$page<!--unfinished").toByteArray()),"Only visible markers before an unfinished comment qualify")
+        check(EapInfo.eligiblePage(("<!--ignored-->$page<!--ignored-->").toByteArray()),"Closed comments preserve public page markers")
+        check(!EapInfo.eligiblePage(("<!--".repeat(16385)).toByteArray()),"Oversized HTML remains rejected")
         check(!EapInfo.eligiblePage("<span>EAP245</span>".toByteArray()),"No HTML model guessing")
         check(EapInfo.parse("""{"dutMode":"EAP245","error":0,"serial":"fixture-secret"}""".toByteArray())=="EAP245","Allowlisted public model")
         for(json in listOf("{}","""{"dutMode":"EAP245","error":"0"}""","""{"dutMode":"EAP245","error":1}""",
             """{"dutMode":"EAP245","dutMode":"EAP225","error":0}""","""{"dutMode":"HS103","error":0}""","""{"dutMode":"EAP245\\n","error":0}"""))
             check(EapInfo.parse(json.toByteArray())==null,"Strict EAP metadata")
         check(eapWire(page,expectedRequests=2)=="EAP245","Two-stage public identity exchange")
+        check(eapWire("<!--$page",expectedRequests=1)==null,"Unterminated comment cannot trigger the identity POST")
         check(eapWire(page,server="Other HTTPD/1.0",expectedRequests=1)==null,"Never POST to other server family")
         check(eapWire("<html>Other TP-Link product</html>",expectedRequests=1)==null,"Never POST without EAP markers")
         check(eapWire(page,status=302,expectedRequests=1)==null,"Never follow redirects")

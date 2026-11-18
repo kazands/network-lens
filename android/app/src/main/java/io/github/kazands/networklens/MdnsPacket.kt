@@ -201,7 +201,8 @@ class MdnsPacket private constructor() {
             val result = Result()
             if (data == null || length < 12 || length > data.size || length > MAX_PACKET) return result
             try {
-                if (u16(data, 0) != 0 || (u16(data, 2) and 0xfa0f) != 0x8000) return result
+                // RFC 6762 section 18.5: ignore TC in multicast responses; framing is still checked below.
+                if (u16(data, 0) != 0 || (u16(data, 2) and 0xf80f) != 0x8000) return result
                 val questions = u16(data, 4)
                 val records = u16(data, 6) + u16(data, 8) + u16(data, 10)
                 if (questions > 32 || records > 128) return result

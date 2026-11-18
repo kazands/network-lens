@@ -14,7 +14,8 @@ class AndroidIcmp private constructor() {
         @JvmStatic @Throws(IOException::class)
         fun open(net: NetworkState, target: InetAddress?): IcmpEcho.Channel {
             val ipv6 = target is Inet6Address
-            if (target == null || !net.admitted(target) || net.network == null || (!ipv6 && net.ip.isEmpty())) {
+            val selectedNetwork = net.network
+            if (target == null || !net.admitted(target) || selectedNetwork == null || (!ipv6 && net.ip.isEmpty())) {
                 throw IcmpEcho.Failure(IcmpEcho.Problem.SETUP, "Target is outside the selected Wi-Fi")
             }
             var fd: FileDescriptor? = null
@@ -23,7 +24,7 @@ class AndroidIcmp private constructor() {
                 val descriptor = Os.socket(if (ipv6) OsConstants.AF_INET6 else OsConstants.AF_INET,
                     OsConstants.SOCK_DGRAM, if (ipv6) OsConstants.IPPROTO_ICMPV6 else OsConstants.IPPROTO_ICMP)
                 fd = descriptor
-                net.network!!.bindSocket(descriptor)
+                selectedNetwork.bindSocket(descriptor)
                 Os.bind(descriptor, InetAddress.getByName(if (ipv6) "::" else net.ip), 0)
                 Os.fcntlInt(descriptor, OsConstants.F_SETFL,
                     Os.fcntlInt(descriptor, OsConstants.F_GETFL, 0) or OsConstants.O_NONBLOCK)

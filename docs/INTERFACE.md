@@ -69,7 +69,7 @@ Synthetic renders were inspected in light/dark mode and at 200% text size.
 Repository diff and working-tree hygiene checks passed. Test evidence remains
 local and ignored. No household scan or physical phone was accessed.
 
-These interface changes are included in 0.3.19. Physical
+These interface changes remain included in 0.3.20. Physical
 TalkBack, hardware performance and real-device recognition changes are not
 validated by these interface checks. No release or phone installation was performed.
 
@@ -94,4 +94,4 @@ full host suite were not rerun for these Android reporting/cleanup corrections.
 No version change, publication or phone installation was performed.
 
 The candidate verification history above predates release versioning. See
-[0.3.19 release verification](VERIFICATION-0.3.19.md) for the final artifact and checks.
+[current release verification](VERIFICATION-0.3.20.md) for the final artifact and checks.

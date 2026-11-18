@@ -36,14 +36,16 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val context = c.applicationContext
     private val store = Store(context)
     private val token = store.token()
+    private val lifecycle = Any()
     private val cancelled = AtomicBoolean()
     private val found: ConcurrentMap<String, Device> = ConcurrentHashMap()
     private val freshResponders: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val echoAttempted = AtomicBoolean()
     @Volatile private var phase = "Finishing device details…"
     fun phase(): String = phase
-    private val sockets: MutableSet<Socket> = ConcurrentHashMap.newKeySet()
-    private val datagrams: MutableSet<DatagramSocket> = ConcurrentHashMap.newKeySet()
+    private val resources = ScanResources()
+    private val sockets: MutableSet<Socket> = resources.registry()
+    private val datagrams: MutableSet<DatagramSocket> = resources.registry()
     private val workers = Executors.newFixedThreadPool(32)
     private val enrichment = DiscoveryWork()
     private val detailsQueued: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -54,8 +56,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val ipv6Pending = AtomicInteger()
     private val excludedIpv6: MutableSet<String> = ConcurrentHashMap.newKeySet()
     @Volatile private var scanDeadline = Long.MAX_VALUE
-    private val metadataRequests = ServiceAdmission(96, 32)
-    private val metadataCandidates = ConcurrentHashMap<String, MetadataCandidates>()
+    private val metadataPlans = MetadataPlans()
     private val appleRequests = ServiceAdmission(32)
     private val ssdpMatchers = SsdpMatchers()
     private val eapRequests = ServiceAdmission(32)
@@ -69,6 +70,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val wsRecords = ServiceAdmission(256, 8)
     private val descriptions = DescriptionQueue(32, 3)
     private val health = DiscoveryHealth()
+    private val protocolRunners by lazy { LanProtocolRunners(context, net, resources, health,
+        { accepting }, { cancelled.get() }, { scanDeadline }, ::inScope, ::blocked) }
     @Volatile private var enriching = false
     @Volatile private var lastServiceChange = 0L
     private var nsdStarted = 0L
@@ -119,7 +122,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     fun scope(): String = scope
     fun sources(): Map<String, String> = health.sources()
     private var nsd: NsdManager? = null
-    private var multicast: WifiManager.MulticastLock? = null
+    private var multicast: Closeable? = null
     private var multicastThread: Thread? = null
     private var sadpThread: Thread? = null
     private var mdnsThread: Thread? = null
@@ -130,18 +133,30 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private var omadaThread: Thread? = null
     private val lanThreads = ArrayList<Thread>()
 
+    init {
+        resources.own(Closeable { workers.shutdownNow() })
+        resources.own(Closeable { enrichment.shutdownNow() })
+        resources.own(Closeable { metadataTimeouts.shutdownNow() })
+        resources.own(Closeable { cleanupNsd() })
+        resources.own(Closeable { mdnsAssembly.close(); mdnsQuestionSuppression.close() })
+        resources.own(Closeable { metadataPlans.close() })
+    }
+
     fun cancel() {
-        cancelled.set(true)
-        accepting = false
-        enriching = false
+        synchronized(lifecycle) {
+            cancelled.set(true)
+            accepting = false
+            enriching = false
+        }
         finishMetadataLookups(true)
-        workers.shutdownNow()
-        enrichment.shutdownNow()
-        metadataTimeouts.shutdownNow()
         closeIo()
-        cleanupNsd()
-        mdnsAssembly.close()
-        mdnsQuestionSuppression.close()
+    }
+    private fun beginScan(plan: ScanPlan) = synchronized(lifecycle) {
+        if (cancelled.get() || !resources.active()) throw InterruptedException("Scan stopped")
+        range = plan.range
+        scope = plan.scope
+        accepting = true
+        enriching = true
     }
     @Synchronized fun refreshNetwork(current: NetworkState): Boolean {
         if (!net.refresh(current)) return false
@@ -161,14 +176,12 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             } }
         } catch (_: Exception) {}
     }
-    private fun closeIo() {
-        for (socket in sockets) try { socket.close() } catch (_: IOException) {}
-        for (socket in datagrams) socket.close()
-    }
+    private fun closeIo() { resources.close() }
+    private fun selectedNetwork() = net.network ?: throw IOException("Selected Wi-Fi is unavailable")
     fun scan(cidr: String?, listener: Listener) {
         Thread({
             if (!ACTIVE.compareAndSet(false, true)) {
-                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow()
+                cancel()
                 listener.finished(emptyList(), false, "Another scan is finishing. Try again shortly.")
                 return@Thread
             }
@@ -184,25 +197,14 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             var total = 0
             try {
                 if (cancelled.get()) throw InterruptedException()
-                net.check(context)
-                var hosts: List<String> = ArrayList()
-                if (net.ip.isNotEmpty()) {
-                    val local = IpRange(net.ip, net.prefix)
-                    range = local
-                    if (!cidr.isNullOrBlankJava()) {
-                        val p = cidr!!.javaTrim().javaSplit("/", -1)
-                        if (p.size != 2) throw IllegalArgumentException("Enter an IPv4 range such as 192.168.1.0/24.")
-                        val requested = IpRange(p[0], Integer.parseInt(p[1]))
-                        range = requested
-                        if (requested.first < local.first || requested.last > local.last) throw IllegalArgumentException("Choose a range inside your connected Wi-Fi network.")
-                    }
-                    hosts = range!!.hosts(1024)
-                } else if (!cidr.isNullOrBlankJava()) throw IllegalArgumentException("This network has no IPv4 range. Use automatic discovery.")
-                val selected = range
-                scope = if (selected == null) "IPv6 advertised services + this phone's Wi-Fi addresses"
-                    else IpRange.address(if (selected.prefix >= 31) selected.first else selected.first - 1) + "/" + selected.prefix + " · IPv4 + IPv6 advertised services"
-                total = hosts.size; started = true; accepting = true; enriching = true
-                health.begin("IPv4 checks"); health.skipped("UPnP descriptions", "No supported description advertised")
+                networkCheck.check(context, net)
+                val plan = ScanPlan.create(net.ip, net.prefix, cidr)
+                val hosts = plan.hosts
+                beginScan(plan)
+                total = hosts.size; started = true
+                health.begin("IPv4 checks")
+                if (plan.sweepOmitted) health.truncated("IPv4 checks", "Address sweep not run: network exceeds 1,024 addresses; service discovery continues. Choose a smaller range to check individual addresses.")
+                health.skipped("UPnP descriptions", "No supported description advertised")
                 health.skipped(AppleDeviceInfo.SOURCE, "No open Apple service port observed")
                 health.skipped(EapInfo.SOURCE, "No HTTP identity candidate observed")
                 for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
@@ -296,12 +298,26 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             } finally {
                 accepting = false; enriching = false
                 finishMetadataLookups(cancelled.get())
-                workers.shutdownNow(); enrichment.shutdownNow(); metadataTimeouts.shutdownNow(); closeIo(); cleanupNsd()
+                closeIo()
+                try { cleanupNsd() } catch (_: Exception) {
+                    health.fail("Scan cleanup", "Native discovery cleanup failed")
+                    complete = false
+                    if (!cancelled.get()) message = health.summary()
+                }
                 health.finish(cancelled.get())
                 if (started && done.get() != total) health.truncated("IPv4 checks", "Address checks did not finish")
                 try {
                     workers.awaitTermination(2, TimeUnit.SECONDS); enrichment.awaitTermination(2, TimeUnit.SECONDS)
-                    for (thread in listOf(multicastThread, sadpThread, mdnsThread, mdnsV6Thread, wsThread, playStationThread, tpLinkThread, omadaThread) + lanThreads) thread?.join(1000)
+                    if (!resources.awaitThreads(2, TimeUnit.SECONDS)) {
+                        health.truncated("Scan cleanup", "A protocol worker did not stop within the cleanup budget")
+                        complete = false
+                        if (!cancelled.get()) message = health.summary()
+                    }
+                    if (resources.closeFailures > 0) {
+                        health.fail("Scan cleanup", "A resource could not be closed")
+                        complete = false
+                        if (!cancelled.get()) message = health.summary()
+                    }
                 } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
             }
             var result: List<Device>
@@ -458,7 +474,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             if (!inScope(address)) throw IOException("TCP target is outside this scan")
             val socket = Socket(); sockets.add(socket)
             try {
-                net.network!!.bindSocket(socket)
+                selectedNetwork().bindSocket(socket)
                 val start = System.nanoTime(); socket.connect(InetSocketAddress(address, port), timeout)
                 if (!socket.isConnected || socket.isClosed || address != socket.inetAddress || socket.port != port) throw IOException("TCP connection was not established to the requested peer")
                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start).toInt()
@@ -493,7 +509,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         if (cancelled.get()) return
         var socket: DatagramSocket? = null
         try {
-            socket = DatagramSocket(); datagrams.add(socket); net.network!!.bindSocket(socket); socket.soTimeout = timeout
+            socket = DatagramSocket(); datagrams.add(socket); selectedNetwork().bindSocket(socket); socket.soTimeout = timeout
             val id = ThreadLocalRandom.current().nextInt(65536)
             val query = NetBios.query(id); socket.connect(InetAddress.getByName(host), 137); socket.send(DatagramPacket(query, query.size))
             val bytes = ByteArray(4096); val response = DatagramPacket(bytes, bytes.size); socket.receive(response)
@@ -512,53 +528,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         finally { socket?.let { datagrams.remove(it); it.close() } }
     }
 
-    private fun startOmada() {
-        val source = OmadaDiscovery.SOURCE
-        val selectedRange = range
-        if (net.ip.isEmpty() || selectedRange == null) { health.skipped(source, "No IPv4 Wi-Fi range selected"); return }
-        if (selectedRange.prefix == 32 && selectedRange.contains(net.ip)) {
-            health.skipped(source, "No other IPv4 addresses selected"); return
-        }
-        health.begin(source)
-        omadaThread = Thread({
-            var socket: DatagramSocket? = null
-            try {
-                if (!accepting || cancelled.get()) return@Thread
-                net.check(context)
-                val selected = DatagramSocket(null).also { socket = it; datagrams.add(it) }
-                net.network!!.bindSocket(selected)
-                // Broadcasts require a wildcard local address; Android binds this socket to the
-                // selected Wi-Fi Network. Do not share/take a controller's existing listener.
-                selected.reuseAddress = false
-                selected.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"), OmadaDiscovery.PORT))
-                val result = OmadaDiscovery.listen(OmadaDiscovery.Channel { timeout ->
-                    net.check(context)
-                    selected.soTimeout = timeout
-                    val bytes = ByteArray(OmadaDiscovery.MAX_PACKET + 1)
-                    val packet = DatagramPacket(bytes, bytes.size)
-                    try {
-                        selected.receive(packet)
-                        OmadaDiscovery.Packet(packet.address, packet.port, bytes, packet.length)
-                    } catch (_: SocketTimeoutException) { null }
-                }, scanDeadline, { accepting && !cancelled.get() }, ::inScope) { peer, response ->
-                    net.check(context)
-                    omadaResolved(peer, response)
-                }
-                repeat(result.packets) { health.count(source, "packets") }
-                repeat(result.devices) { health.count(source, "devices") }
-                if (!cancelled.get()) {
-                    if (result.limited) health.truncated(source, "Announcement safety limit reached")
-                    else if (result.interrupted) health.truncated(source, "Listening window stopped early")
-                    else health.ok(source)
-                }
-            } catch (e: Exception) {
-                if (accepting && !cancelled.get()) {
-                    blocked(e)
-                    health.fail(source, if (e is BindException) "Discovery port already in use" else "Could not receive Omada announcements")
-                }
-            } finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "omada-discovery").also { it.start() }
-    }
+    private fun startOmada() { omadaThread = protocolRunners.omada(range, ::omadaResolved) }
 
     private fun omadaResolved(peer: InetAddress, response: OmadaDiscovery.Response) {
         if (!accepting || cancelled.get() || !inScope(peer)) return
@@ -590,7 +560,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if(!accepting || cancelled.get()) return@Thread
                 net.check(context)
                 val selected=DatagramSocket(null).also {socket=it;datagrams.add(it)}
-                selected.reuseAddress=false;net.network!!.bindSocket(selected)
+                selected.reuseAddress=false;selectedNetwork().bindSocket(selected)
                 selected.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"),29809));selected.broadcast=true;selected.soTimeout=200
                 val random=java.security.SecureRandom();val client=ByteArray(6).also {random.nextBytes(it);it[0]=2}
                 val first=random.nextInt(65536);val sequences=linkedSetOf<Int>()
@@ -627,7 +597,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if(accepting && !cancelled.get()) {blocked(e);health.fail(source,if(e is BindException) "Discovery port already in use" else "Could not receive discovery replies")}
             } finally {socket?.let {datagrams.remove(it);it.close()}}
         },source)
-        lanThreads.add(thread);thread.start()
+        lanThreads.add(thread);resources.start(thread)
     }
 
     private fun startLifxIdentity() {
@@ -644,7 +614,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if(!accepting || cancelled.get()) return@Thread
                 net.check(context)
                 val selected=DatagramSocket(null).also {socket=it;datagrams.add(it)}
-                net.network!!.bindSocket(selected);selected.bind(InetSocketAddress(InetAddress.getByName(net.ip),0));selected.broadcast=true
+                selectedNetwork().bindSocket(selected);selected.bind(InetSocketAddress(InetAddress.getByName(net.ip),0));selected.broadcast=true
                 val transaction=java.security.SecureRandom().nextInt().let {if(it==0)1 else it}
                 val result=LifxIdentity.discover(object:LifxIdentity.Channel {
                     override fun send(peer:InetAddress,port:Int,bytes:ByteArray) {
@@ -668,7 +638,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             } catch(e:Exception) {if(accepting && !cancelled.get()) {blocked(e);health.fail(source,"Could not receive discovery replies")}}
             finally {socket?.let {datagrams.remove(it);it.close()}}
         },source)
-        lanThreads.add(thread);thread.start()
+        lanThreads.add(thread);resources.start(thread)
     }
 
     private fun startTuyaAnnouncements() {
@@ -685,7 +655,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (!accepting || cancelled.get()) return@Thread
                     net.check(context)
                     val selected=DatagramSocket(null).also {socket=it;datagrams.add(it)}
-                    selected.reuseAddress=false;net.network!!.bindSocket(selected)
+                    selected.reuseAddress=false;selectedNetwork().bindSocket(selected)
                     selected.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"),port));selected.soTimeout=200
                     val end=minOf(scanDeadline,System.nanoTime()+TimeUnit.SECONDS.toNanos(6))
                     var packets=0;val peers=linkedSetOf<String>();var limited=false
@@ -713,7 +683,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if(accepting && !cancelled.get()) {blocked(e);health.fail(source,if(e is BindException) "Discovery port already in use" else "Could not receive announcements")}
                 } finally {socket?.let {datagrams.remove(it);it.close()}}
             },source)
-            lanThreads.add(thread);thread.start()
+            lanThreads.add(thread);resources.start(thread)
         }
     }
 
@@ -735,7 +705,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     val iface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
                     val selected = MulticastSocket(null).also { socket=it; datagrams.add(it) }
                     selected.reuseAddress=false
-                    net.network!!.bindSocket(selected)
+                    selectedNetwork().bindSocket(selected)
                     selected.bind(InetSocketAddress(if (method.listenPort == 0) InetAddress.getByName(net.ip) else InetAddress.getByName("0.0.0.0"), method.listenPort))
                     selected.networkInterface=iface; selected.timeToLive=1; selected.broadcast=true
                     val group = InetAddress.getByName("239.255.255.250")
@@ -775,58 +745,11 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (accepting && !cancelled.get()) {blocked(e);health.fail(method.source,if(e is BindException) "Discovery port already in use" else "Could not receive discovery replies")}
                 } finally {socket?.let {datagrams.remove(it);it.close()}}
             },method.source)
-            lanThreads.add(thread); thread.start()
+            lanThreads.add(thread); resources.start(thread)
         }
     }
 
-    private fun startTpLink() {
-        val source = TpLinkDiscovery.SOURCE
-        val selectedRange = range
-        if (net.ip.isEmpty() || selectedRange == null) { health.skipped(source, "No IPv4 Wi-Fi range selected"); return }
-        val targets = try { TpLinkDiscovery.targets(net.ip, net.prefix, selectedRange) }
-            catch (_: IllegalArgumentException) { health.fail(source, "Selected IPv4 range is unavailable"); return }
-        if (targets.isEmpty()) { health.skipped(source, "No other IPv4 addresses selected"); return }
-        health.begin(source)
-        tpLinkThread = Thread({
-            var socket: DatagramSocket? = null
-            try {
-                if (!accepting || cancelled.get()) return@Thread
-                net.check(context)
-                val selected = DatagramSocket(null).also { socket = it; datagrams.add(it) }
-                net.network!!.bindSocket(selected)
-                selected.bind(InetSocketAddress(InetAddress.getByName(net.ip), 0))
-                selected.broadcast = true
-                val result = TpLinkDiscovery.discover(object : TpLinkDiscovery.Channel {
-                    override fun send(target: InetAddress, port: Int, bytes: ByteArray) {
-                        if (!accepting || cancelled.get()) return
-                        net.check(context)
-                        selected.send(DatagramPacket(bytes, bytes.size, target, port))
-                        health.count(source, "requests")
-                    }
-                    override fun receive(timeoutMillis: Int): TpLinkDiscovery.Packet? {
-                        selected.soTimeout = timeoutMillis
-                        val bytes = ByteArray(TpLinkDiscovery.MAX_PACKET + 1)
-                        val packet = DatagramPacket(bytes, bytes.size)
-                        try { selected.receive(packet) } catch (_: SocketTimeoutException) { return null }
-                        return TpLinkDiscovery.Packet(packet.address, packet.port, bytes, packet.length)
-                    }
-                }, targets, java.security.SecureRandom().nextInt(), scanDeadline,
-                    { accepting && !cancelled.get() }, ::inScope) { peer, port, response ->
-                    net.check(context)
-                    tpLinkResolved(peer, port, response)
-                }
-                repeat(result.packets) { health.count(source, "packets") }
-                repeat(result.devices) { health.count(source, "devices") }
-                if (!cancelled.get()) {
-                    if (result.limited) health.truncated(source, "512-packet / 128-device safety limit reached")
-                    else if (result.interrupted) health.truncated(source, "Discovery window stopped early")
-                    else health.ok(source)
-                }
-            } catch (e: Exception) {
-                if (accepting && !cancelled.get()) { blocked(e); health.fail(source, "Could not receive TP-Link discovery replies") }
-            } finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "tplink-discovery").also { it.start() }
-    }
+    private fun startTpLink() { tpLinkThread = protocolRunners.tpLink(range, ::tpLinkResolved) }
     /** Current, scope-checked socket replies only. Advertised addresses never redirect discovery. */
     private fun tpLinkResolved(peer: InetAddress, port: Int, response: TpLinkDiscovery.Response) {
         if (!accepting || cancelled.get() || !inScope(peer)) return
@@ -845,55 +768,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }
     }
 
-    private fun startPlayStation() {
-        val source = PlayStationDiscovery.SOURCE
-        if (net.ip.isEmpty() || net.prefix >= 31) { health.skipped(source, "IPv4 Wi-Fi broadcast is unavailable"); return }
-        playStationThread = Thread({
-            health.begin(source)
-            var socket: DatagramSocket? = null
-            try {
-                if (!accepting || cancelled.get()) return@Thread
-                net.check(context)
-                // Use a private client-port range; never reuse another app's bound socket.
-                for (port in 9303..9319) {
-                    val candidate = DatagramSocket(null)
-                    try { candidate.bind(InetSocketAddress(InetAddress.getByName(net.ip), port)); socket = candidate; break }
-                    catch (_: BindException) { candidate.close() }
-                    catch (e: Exception) { candidate.close(); throw e }
-                }
-                val selected = socket ?: throw BindException("Discovery client ports unavailable")
-                datagrams.add(selected); net.network!!.bindSocket(selected); selected.broadcast = true
-                val broadcast = InetAddress.getByName(IpRange.address(IpRange(net.ip, net.prefix).last + 1))
-                val result = PlayStationDiscovery.discover(object : PlayStationDiscovery.Channel {
-                    override fun send(bytes: ByteArray) {
-                        if (!accepting || cancelled.get()) return
-                        net.check(context)
-                        selected.send(DatagramPacket(bytes, bytes.size, broadcast, PlayStationDiscovery.PORT))
-                        health.count(source, "requests")
-                    }
-                    override fun receive(timeoutMillis: Int): PlayStationDiscovery.Packet? {
-                        selected.soTimeout = timeoutMillis
-                        val bytes = ByteArray(PlayStationDiscovery.MAX_PACKET + 1)
-                        val packet = DatagramPacket(bytes, bytes.size)
-                        try { selected.receive(packet) } catch (_: SocketTimeoutException) { return null }
-                        return PlayStationDiscovery.Packet(packet.address, packet.port, bytes, packet.length)
-                    }
-                }, scanDeadline, { accepting && !cancelled.get() }, ::inScope) { peer, response ->
-                    net.check(context)
-                    playStationResolved(peer, response)
-                }
-                repeat(result.packets) { health.count(source, "packets") }
-                repeat(result.devices) { health.count(source, "devices") }
-                if (!cancelled.get()) {
-                    if (result.limited) health.truncated(source, "64-packet / 32-device safety limit reached")
-                    else if (result.interrupted) health.truncated(source, "Discovery window stopped early")
-                    else health.ok(source)
-                }
-            } catch (e: Exception) {
-                if (accepting && !cancelled.get()) { blocked(e); health.fail(source, "Could not receive console discovery replies") }
-            } finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "playstation-discovery").also { it.start() }
-    }
+    private fun startPlayStation() { playStationThread = protocolRunners.playStation(range, ::playStationResolved) }
     /** Only the current selected-Wi-Fi discovery socket supplies these parsed responses. */
     private fun playStationResolved(peer: InetAddress, response: PlayStationDiscovery.Response) {
         if (!accepting || cancelled.get() || !inScope(peer)) return
@@ -907,44 +782,19 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }
     }
     private fun startSsdp() {
-        multicastThread = Thread({
-            health.begin("SSDP / UPnP")
-            var socket: DatagramSocket? = null
-            try {
-                socket = DatagramSocket(); datagrams.add(socket); net.network!!.bindSocket(socket); socket.soTimeout = 300
-                val query = ("M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: ssdp:all\r\n\r\n").toByteArray(StandardCharsets.US_ASCII)
-                val group = InetAddress.getByName("239.255.255.250")
-                val start = System.nanoTime(); val end = start + TimeUnit.SECONDS.toNanos(5)
-                var replies = 0; var sent = 0
-                val seen = HashSet<String>()
-                while (accepting && !cancelled.get() && System.nanoTime() < end && replies < 400) {
-                    if (sent < 2 && System.nanoTime() - start >= TimeUnit.MILLISECONDS.toNanos((sent * 1200).toLong())) {
-                        socket.send(DatagramPacket(query, query.size, group, 1900)); sent++; health.count("SSDP / UPnP", "requests")
-                    }
-                    val data = ByteArray(4096); val p = DatagramPacket(data, data.size)
-                    try { socket.receive(p) } catch (_: SocketTimeoutException) { continue }
-                    replies++
-                    if (!inScope(p.address)) continue
-                    val headers = Ssdp.parse(data, p.length)
-                    if (headers.isEmpty()) continue
-                    val key = p.address.hostAddress + "|" + headers.getOrDefault("st", "") + "|" + headers.getOrDefault("usn", "") + "|" + headers.getOrDefault("location", "")
-                    if (!seen.add(key)) continue
-                    health.count("SSDP / UPnP", "unique replies")
-                    observe(net.scoped(p.address), "SSDP / UPnP discovery response")?.let { d ->
-                        synchronized(d) {
-                            applyFamilies(d, DiscoveryMatchers.match("ssdp", headers), "SSDP response")
-                            d.service(headers.getOrDefault("st", "SSDP / UPnP"))
-                            d.detail("UPnP server", headers.getOrDefault("server", ""))
-                            d.detail("UPnP identifier", headers.getOrDefault("usn", ""))
-                            d.identify(headers.getOrDefault("usn", ""), 70)
-                        }
-                        description(d, p.address, headers["location"], headers); queryDeviceName(d)
-                    }
+        multicastThread = protocolRunners.ssdp { peer, headers ->
+            observe(net.scoped(peer), "SSDP / UPnP discovery response")?.let { d ->
+                synchronized(d) {
+                    if (!accepting || cancelled.get()) return@ssdp
+                    applyFamilies(d, DiscoveryMatchers.match("ssdp", headers), "SSDP response")
+                    d.service(headers.getOrDefault("st", "SSDP / UPnP"))
+                    d.detail("UPnP server", headers.getOrDefault("server", ""))
+                    d.detail("UPnP identifier", headers.getOrDefault("usn", ""))
+                    d.identify(headers.getOrDefault("usn", ""), 70)
                 }
-                if (replies >= 400) health.truncated("SSDP / UPnP", "400-packet response limit reached") else if (!cancelled.get()) health.ok("SSDP / UPnP")
-            } catch (e: Exception) { if (!cancelled.get()) { blocked(e); health.fail("SSDP / UPnP", "Discovery request failed") } }
-            finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "service-discovery").also { it.start() }
+                description(d, peer, headers["location"], headers); queryDeviceName(d)
+            }
+        }
     }
     private fun startSadp() {
         val source = "SADP device discovery"
@@ -956,7 +806,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (!accepting || cancelled.get()) return@Thread
                 val iface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
                 socket = MulticastSocket(null); datagrams.add(socket); socket.reuseAddress = true; socket.bind(InetSocketAddress(37020))
-                net.network!!.bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 1; socket.soTimeout = 300
+                selectedNetwork().bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 1; socket.soTimeout = 300
                 val group = InetAddress.getByName("239.255.255.250"); socket.joinGroup(InetSocketAddress(group, 37020), iface)
                 val id = UUID.randomUUID().toString(); val query = Sadp.query(id)
                 val start = System.nanoTime(); val end = start + TimeUnit.SECONDS.toNanos(5)
@@ -983,7 +833,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 }
             } catch (e: Exception) { if (accepting && !cancelled.get()) { blocked(e); health.fail(source, "Could not receive device inquiries") } }
             finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "sadp-discovery").also { it.start() }
+        }, "sadp-discovery").also { resources.start(it) }
     }
     private fun sadpResolved(responder: InetAddress, values: Map<String, String>) {
         if (!inScope(responder)) return
@@ -1014,7 +864,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (!accepting || cancelled.get()) return@Thread
                 val iface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
                 socket = MulticastSocket(null); datagrams.add(socket); socket.bind(InetSocketAddress(0))
-                net.network!!.bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 1; socket.soTimeout = 250
+                selectedNetwork().bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 1; socket.soTimeout = 250
                 val versions = WsDiscovery.Version.values()
                 val ids = arrayOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
                 val requests = arrayOf(WsDiscovery.query(versions[0], ids[0]), WsDiscovery.query(versions[1], ids[1]))
@@ -1044,7 +894,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 }
             } catch (e: Exception) { if (accepting && !cancelled.get()) { blocked(e); health.fail(WSD_SOURCE, "Could not receive local discovery replies") } }
             finally { socket?.let { datagrams.remove(it); it.close() } }
-        }, "ws-discovery").also { it.start() }
+        }, "ws-discovery").also { resources.start(it) }
     }
     private fun wsPacket(responder: InetAddress, bytes: ByteArray, length: Int, version: WsDiscovery.Version, id: String): Int {
         if (!accepting || cancelled.get() || !inScope(responder)) return 0
@@ -1144,7 +994,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }
         val socket = Socket(); sockets.add(socket)
         try {
-            net.check(context); net.network!!.bindSocket(socket)
+            net.check(context); selectedNetwork().bindSocket(socket)
             val start = System.nanoTime()
             socket.connect(InetSocketAddress(d.ip, port), timeout)
             synchronized(d) {
@@ -1165,6 +1015,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun requestEapModel(d: Device) {
         if (!currentEapPeer(d)) return
         val source = EapInfo.SOURCE
+        synchronized(d) { d.detail("Network equipment identity request", EapInfo.TRANSPORT) }
         val admission = eapRequests.admit(d.ip, source)
         if (admission == ServiceAdmission.Result.LIMIT) {
             health.truncated(source, "32-device identity check limit reached"); return
@@ -1178,7 +1029,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 val model = EapInfo.read(peerAddress(d.ip), deadline, metadataTimeouts, { currentEapPeer(d) }, {
                     net.check(context)
                     val socket = Socket(); sockets.add(socket)
-                    try { net.network!!.bindSocket(socket); health.count(source, "requests"); socket }
+                    try { selectedNetwork().bindSocket(socket); health.count(source, "requests"); socket }
                     catch (e: Exception) { sockets.remove(socket); socket.close(); throw e }
                 }, { sockets.remove(it) })
                 if (applyEapReport(d, model)) health.count(source, if (model == null) "no EAP identity" else "models received")
@@ -1305,7 +1156,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val metadataFinalized = AtomicBoolean()
     private fun finishMetadataLookups(stopped: Boolean) {
         if (!metadataFinalized.compareAndSet(false, true)) return
-        metadataCandidates.values.forEach { it.close() }
+        metadataPlans.close()
         for (d in found.values) synchronized(d) {
             d.metadataLookups.finish(stopped)
             for (entry in d.metadataLookups.snapshot()) when (entry.state) {
@@ -1333,7 +1184,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         net.check(context)
         if (!inScope(peer)) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
         val socket = Socket(); sockets.add(socket)
-        try { net.network!!.bindSocket(socket); return exchange(socket) }
+        try { selectedNetwork().bindSocket(socket); return exchange(socket) }
         finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
     }
 
@@ -1348,7 +1199,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         val peer = peerAddress(d.ip)
         if (!inScope(peer)) return
         val source = request.kind.source
-        val admission = metadataRequests.admit(d.ip, request.kind.name)
+        val decision = metadataPlans.offer(d.ip, request, System.nanoTime())
+        val admission = decision.admission
         if (admission == ServiceAdmission.Result.LIMIT) {
             synchronized(d) {
                 if (enriching && !cancelled.get() && d.metadataLookups.queue(request)) d.metadataLookups.limit(request.kind)
@@ -1356,8 +1208,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             health.truncated(source, "32-per-method / 96-total metadata limit reached"); return
         }
         if (admission != ServiceAdmission.Result.ADMITTED && admission != ServiceAdmission.Result.DUPLICATE) return
-        val plan = metadataCandidates.computeIfAbsent(d.ip + "|" + request.kind.name) { MetadataCandidates() }
-        when (plan.offer(request, System.nanoTime())) {
+        val plan = decision.plan ?: return
+        when (decision.offer) {
             MetadataCandidates.Offer.START -> {}
             MetadataCandidates.Offer.LIMIT -> { health.truncated(source, "Two metadata target limit reached"); return }
             else -> return
@@ -1448,7 +1300,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (!currentAudioPeer(d)) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
                     val socket = Socket(); sockets.add(socket)
                     try {
-                        net.check(context); net.network!!.bindSocket(socket)
+                        net.check(context); selectedNetwork().bindSocket(socket)
                         health.count(plan.protocol.source, "requests")
                         AudioWire.exchange(socket, peerAddress(d.ip), query, deadline, metadataTimeouts) { currentAudioPeer(d) }
                     } finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
@@ -1576,7 +1428,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         health.count("UPnP descriptions", "requests")
         try {
             if (!enriching || cancelled.get()) return
-            net.check(context); net.network!!.bindSocket(socket)
+            net.check(context); selectedNetwork().bindSocket(socket)
             socket.connect(InetSocketAddress(responder, if (target.port < 0) 80 else target.port), 500)
             socket.getOutputStream().write(UpnpDescription.request(target))
             val input = socket.getInputStream()
@@ -1634,12 +1486,14 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         else health.ok("UPnP descriptions")
     }
     @Synchronized private fun startNsd() {
-        if (!accepting) return
+        if (!accepting || cancelled.get() || !resources.active()) return
         val now = System.nanoTime(); nsdStarted = now; lastServiceChange = now
         try {
-            val wm = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            multicast = wm.createMulticastLock("device-discovery").also { it.setReferenceCounted(false); it.acquire() }
-        } catch (e: Exception) { health.fail("Multicast reception", "Android could not enable multicast reception"); blocked(e) }
+            enableMulticast()
+        } catch (e: Exception) {
+            if (cancelled.get() || !resources.active()) return
+            health.fail("Multicast reception", "Android could not enable multicast reception"); blocked(e)
+        }
         try {
             nsd = NSD_HANDLE.acquire({
                 // Android 8 can hold a Context's entire service-cache monitor while
@@ -1659,6 +1513,24 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 // Direct multicast discovery does not depend on Android NSD.
                 nsdTypes.addAll(LocalServices.INITIAL)
             }
+        }
+    }
+    @Synchronized private fun enableMulticast(): WifiManager.MulticastLock? {
+        if (!accepting || cancelled.get() || !resources.active()) return null
+        val wm = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val lock = wm.createMulticastLock("device-discovery")
+        val lease = object : Closeable {
+            @Synchronized override fun close() { if (lock.isHeld) lock.release() }
+        }
+        try {
+            lock.setReferenceCounted(false)
+            lock.acquire()
+            // Cancellation between acquire and registration closes the lease immediately.
+            multicast = resources.own(lease)
+            return lock
+        } catch (e: Exception) {
+            lease.close()
+            throw e
         }
     }
     @Synchronized private fun discoverType(type: String) {
@@ -1810,7 +1682,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 val iface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
                 socket = MulticastSocket(null); datagrams.add(socket); socket.reuseAddress = true
                 socket.bind(InetSocketAddress(InetAddress.getByName(if (ipv6) "::" else "0.0.0.0"), 5353))
-                net.network!!.bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 255; socket.soTimeout = 200
+                selectedNetwork().bindSocket(socket); socket.networkInterface = iface; socket.timeToLive = 255; socket.soTimeout = 200
                 val group = InetAddress.getByName(if (ipv6) "ff02::fb%" + net.iface else "224.0.0.251")
                 socket.joinGroup(InetSocketAddress(group, 5353), iface)
                 val start = System.nanoTime(); var nextBatch = 0L; var enumerations = 0
@@ -1865,7 +1737,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 socket?.let { datagrams.remove(it); it.close() }
             }
         }, if (ipv6) "mdns-ipv6-discovery" else "mdns-query-discovery")
-        thread.start(); return thread
+        resources.start(thread); return thread
     }
     private class MdnsBatch(names: List<String>, val retry: Boolean) {
         val questions: List<String> = Collections.unmodifiableList(names)
@@ -2149,7 +2021,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             if (Build.VERSION.SDK_INT >= 34) for (callback in nsdCallbacks) try { manager.unregisterServiceInfoCallback(callback) } catch (_: Exception) {}
             nsdCallbacks.clear()
         }
-        queue.clear(); multicast?.let { if (it.isHeld) it.release() }
+        queue.clear(); multicast?.close()
     }
     companion object {
         private val NSD_HANDLE = ServiceHandle<NsdManager>()

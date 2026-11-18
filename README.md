@@ -6,18 +6,23 @@
 
 A focused Android Wi-Fi device finder, written in Kotlin. Start a scan, search the devices that responded, and inspect their IPv4/IPv6 addresses, available MAC addresses and reported details.
 
-[![Download Android APK — Network Lens 0.3.19 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.19/Network-Lens-0.3.19.apk)
+[![Download Android APK — Network Lens 0.3.20 preview](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.20/Network-Lens-0.3.20.apk)
 
-[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.19) · No GitHub account required to download.
+[Release notes, source and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.20) · No GitHub account required to download.
 
-**Development preview: 0.3.19.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
+**Development preview: 0.3.20.** Android 8.0+; target SDK 37. Network Lens is not yet a production release on Google Play.
 
-This preview expands **local device recognition** with Omada/EAP and Easy Smart
-network equipment, Samsung TV identity, WiZ, Yeelight, Govee, LIFX and passive Tuya
-announcements. It includes 348 pinned Home Assistant matcher rules, 5,479 offline
-Matter vendor/product records, independent identity probes, bounded metadata
-fallback and fairer lookup scheduling. See [discovery coverage](docs/DISCOVERY-COVERAGE.md)
-and [recognition planning](docs/RECOGNITION-PLANNING.md) for exact support and limits.
+This preview improves **scan reliability**. Stopping a scan or leaving the app
+releases discovery resources safely, including when cancellation happens during
+startup. On larger Wi-Fi networks, service discovery continues when the address
+range is too large to check individually. Scan details explain that coverage.
+Device-information parsing and update-installer error handling are more resilient.
+
+Local recognition includes Omada/EAP and Easy Smart network equipment, Samsung TV
+identity, WiZ, Yeelight, Govee, LIFX and passive Tuya announcements. The bundled
+catalogues include 348 Home Assistant matcher rules and 5,479 Matter product
+records. See [discovery coverage](docs/DISCOVERY-COVERAGE.md) and
+[recognition planning](docs/RECOGNITION-PLANNING.md) for support and limits.
 
 Device details lead with physical identity and explain recognition. Raw reports
 remain under **Show technical details**. The list uses **Unnamed device** when no
@@ -35,7 +40,7 @@ The public APK updates existing public-signed Network Lens installations in plac
 
 Download the APK, source package, `SHA256SUMS` and verification notes from the same release. Install the APK on your Android phone after checking its checksum. The preview uses the pinned production app-signing identity. Future maintainer previews under this application ID retain that identity. Private signing credentials are never distributed.
 
-Read the [0.3.19 verification notes](docs/VERIFICATION-0.3.19.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
+Read the [0.3.20 verification notes](docs/VERIFICATION-0.3.20.md) for completed checks and remaining limitations. Reports from other phones and routers are welcome; remove device names, addresses and other private identifiers before opening an issue.
 
 If you already have 0.3.17 or newer, use Check for updates. Older installations need the download link once to receive the updater.
 
@@ -47,6 +52,7 @@ If you already have 0.3.17 or newer, use Check for updates. Older installations 
 - Conservative grouping, IPv4 with IPv6 below it, searchable results, source-labelled device details and copy actions.
 - Dark and light appearances, accessible text scaling, Lucide device pictograms and Back navigation that preserves list position.
 - Scan finished/stopped status with per-method results, coverage and failure reasons. IPv6 discovery uses advertised addresses and eligible local routes; it does not enumerate the IPv6 address space.
+- Service discovery on automatic Wi-Fi ranges above 1,024 addresses. Individual address checks are skipped for these ranges and recorded in Scan details; select a smaller range when you need those checks.
 - Offline IEEE prefix lookup for explicitly reported MAC addresses. An interface supplier is kept separate from a device-reported manufacturer.
 - Source-labelled Thread/ESPHome fields and bounded local Shelly, WLED, Spotify Connect and IPP metadata queries. See [supported fields and limits](docs/LOCAL-METADATA.md).
 - Canonical product names from a free offline catalogue covering 86,540 product/family titles across 5,263 worldwide brands, indexed by 256,338 exact manufacturer-qualified aliases. Useful custom names remain below the product title; raw fields and recognition sources remain in Details. See [catalogue coverage and evidence rules](docs/DEVICE-IDENTITIES.md).
@@ -64,7 +70,10 @@ Results, filters, appearance and range choices stay in memory. Every scan starts
 
 A scan cannot guarantee a complete physical inventory. Sleeping devices, filtering, multicast delivery, network isolation and Android restrictions affect coverage. MAC addresses remain unknown unless available from a supported source. Device names and metadata are self-reported.
 
-Intermittent HomeKit (`_hap._tcp`) and web-service (`_http._tcp`) address resolution remains an open issue. Those failures keep scans Partial; the catalogue and display improvements do not establish a discovery fix. See [development status](docs/STATUS.md).
+Some HomeKit (`_hap._tcp`) and web-service (`_http._tcp`) advertisements still fail
+to provide a usable address within the scan window. Scan details preserve those
+failures and any incomplete coverage. The main status describes whether the scan
+finished or was stopped. See [development status](docs/STATUS.md).
 
 ## Build and test
 

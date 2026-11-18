@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import io.github.kazands.networklens.*
 import java.io.File
+import java.io.IOException
 
 /** Isolated emulator only; fixtures never contact GitHub or install a release. */
 internal object AppUpdateChecks {
@@ -89,6 +90,40 @@ internal object AppUpdateChecks {
                 state(UpdateFlow.Step.IDLE);show();flow.pause();flow.check()
                 check(flow.view.step==UpdateFlow.Step.IDLE && get(flow,"transfer")==null,"Background app cannot check GitHub")
                 flow.resume()
+            }
+            // Reopen the staged session on the real main-thread handoff, with only the platform
+            // opener injected. Session/callback cleanup still uses the real Android installer.
+            for(fault in listOf(IOException("Synthetic unavailable storage"),
+                SecurityException("Synthetic invalid session"),IllegalStateException("Synthetic installer failure"))) {
+                main {
+                    val installer=a.packageManager.packageInstaller
+                    val id=installer.createSession(UpdateInstaller.parameters(a,1024))
+                    var attempts=0
+                    var issuedCallback:PendingIntent?=null
+                    lateinit var failing:UpdateFlow
+                    failing=UpdateFlow(a,{}) { _,requested ->
+                        attempts++
+                        check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper(),"Installer reopen failure is exercised on the main thread")
+                        check(requested==id,"The staged session is the one being reopened")
+                        issuedCallback=get(failing,"callback") as PendingIntent
+                        throw fault
+                    }
+                    try {
+                        set(failing,"sessionId",id);set(failing,"callbackToken","synthetic-failure-$id")
+                        set(failing,"view",UpdateFlow.View(UpdateFlow.Step.STAGING))
+                        UpdateFlow::class.java.getDeclaredMethod("commitInstall",Int::class.javaPrimitiveType)
+                            .apply{isAccessible=true}.invoke(failing,id)
+                        check(attempts==1 && failing.view.step==UpdateFlow.Step.ERROR,"Session reopen ${fault.javaClass.simpleName} becomes a recoverable error without escaping")
+                        check(failing.view.message=="Android couldn’t prepare the update. Please try again.","Installer failure has a fixed user-facing message without platform exception details")
+                        check(get(failing,"sessionId")==-1 && get(failing,"callback")==null && !failing.canContinue(),"Failed handoff clears session ownership, callback and confirmation")
+                        var cancelled=false
+                        try {issuedCallback!!.send()} catch(_:PendingIntent.CanceledException) {cancelled=true}
+                        check(cancelled,"Failed handoff cancels the already-issued installer callback")
+                    } finally {
+                        failing.close()
+                        try {installer.abandonSession(id)} catch(_:RuntimeException) {}
+                    }
+                }
             }
             // Exercise the real framework commit/callback with the installed synthetic test build.
             // Do not approve or perform the installation: only Android's pending-user-action handoff.
