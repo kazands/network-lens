@@ -25,6 +25,21 @@ object TroubleshootingReportTest {
         verify(copy.omissions() == 0L && copy.snapshot().size < journal.snapshot().size, "Detached journal snapshot")
         val long = DiagnosticEvidence(); long.record("fixture", "model", "X".repeat(300))
         verify(long.snapshot().single().disposition.contains("shortened"), "Text truncation explicit")
+        val busy = DiagnosticEvidence()
+        repeat(DiagnosticEvidence.LIMIT) { busy.txt("Fixture service", mapOf("private$it" to "PRIVATE".toByteArray())) }
+        busy.record("Fixture model", "Model", "Synthetic product", "Offered to identity selection", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+        busy.record("Fixture reader", "Lookup outcome", "Response read failed", retention = DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+        busy.txt("Fixture service", mapOf("fwversion" to "fixture-version".toByteArray()))
+        verify(busy.snapshot().size == DiagnosticEvidence.LIMIT && busy.omissions() == 3L,
+            "Priority eviction preserves the total bound and counts every displaced event")
+        verify(busy.snapshot().any { it.value == "Synthetic product" } && busy.snapshot().any { it.value == "Response read failed" },
+            "Early withheld fields cannot crowd out late identity or lookup outcomes")
+        val busyCopy = busy.copy()
+        repeat(5) { busy.record("Fixture reader", "Lookup outcome", "Response read failed", retention = DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME) }
+        verify(busy.omissions() == 3L && busyCopy.snapshot() == busy.snapshot(), "Retained duplicate outcomes coalesce without manufacturing loss")
+        repeat(200) { busy.record("Fixture reader", "Lookup outcome", "Synthetic result $it", retention = DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME) }
+        verify(busy.snapshot().size == DiagnosticEvidence.LIMIT && busy.omissions() == 203L, "Even protected evidence stays bounded with explicit overflow")
+        verify(busyCopy.omissions() == 3L, "Priority and loss accounting are detached on snapshot")
         val lookups = MetadataLookups()
         val first = LocalMetadata.Request(LocalMetadata.Kind.CAST, 8008, "/setup/eureka_info")
         lookups.queue(first); lookups.failure(first.kind, MetadataHttp.Failure(MetadataHttp.Reason.READ_TIMEOUT))

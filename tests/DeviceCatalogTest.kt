@@ -4,6 +4,11 @@ object DeviceCatalogTest {
     private var checks = 0
     private fun check(ok: Boolean, why: String) { checks++; if (!ok) throw AssertionError(why) }
     @JvmStatic fun main(args: Array<String>) {
+        for (code in listOf("Echo Dot", "Echo_Dot", "Amazon Echo Dot")) {
+            val echo = DeviceCatalog.lookup(code, "Amazon")!!
+            check(echo.category == DeviceCatalog.Category.SPEAKER && echo.familyOnly && echo.title == "Amazon Echo Dot", "Echo Dot identifies speaker family without inventing generation")
+            check(DeviceCatalog.lookup(code) == null && DeviceCatalog.lookup(code, "Synthetic maker") == null, "Echo model requires its manufacturer")
+        }
         val cases = listOf("DS-7608NI-I2/8P" to "Hikvision DS-7608NI-I2/8P",
             "SHIELD Android TV" to "NVIDIA SHIELD TV", "PS5" to "Sony PlayStation 5", "Harmony Hub" to "Logitech Harmony Hub")
         for ((code, title) in cases) {

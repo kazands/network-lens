@@ -16,7 +16,11 @@ the retained upstream data: Mac notebooks/desktops, iPad, iPhone, HomePod, Apple
 and iPod Touch. A supplemental AppleDB table adds **128 exact iPad/iPhone codes**
 not present in that subset, including `iPad13,18` (10th-generation Wi-Fi),
 `iPad13,19` (10th-generation Wi-Fi + Cellular), and `iPhone17,3` (iPhone 16).
-The combined tables contain **284 codes**. A code must be listed exactly;
+The combined tables contain **284 canonical codes** plus **179 exact mobile board
+aliases**. A board is included only if the retained AppleDB snapshot gives it one
+owner and that released iPhone/iPad has one ProductType. For example, `J271AP`
+and `iPad13,18` describe the same supported model. Shared, internal, unreleased
+and non-mobile boards are excluded. A code must be listed exactly;
 unsupported families are not recognized by these tables. The separate
 [global product catalogue](DEVICE-IDENTITIES.md) covers exact manufacturer/model
 reports from worldwide hardware, including Android and IoT products. Neither
@@ -43,7 +47,7 @@ authenticity or security.
 - Recognition enters only through the reviewed current-wire model admission paths
   listed below. Native Android callbacks, cached records, unreviewed service types
   and routed proxy advertisements cannot seed these inputs.
-- Each endpoint keeps at most one input code, two distinct reported model values
+- Each endpoint keeps at most one selected input code, eight distinct reported model values
   and a conflict flag. Input codes are bounded to 64 printable ASCII bytes and
   compared without trimming, case folding, prefix matching or sanitization into
   a known identifier. The DNS-SD parser folds key case and retains only the first
@@ -52,13 +56,13 @@ authenticity or security.
   Recognition evaluates that first value; later duplicate strings cannot replace
   an unsupported or malformed value with a known identifier. Raw packet tests
   exercise parsing, direct-service admission, assembly and recognition together.
-- Different codes, including unsupported ones, suppress interpretation for the
+- Different non-equivalent codes, including unsupported ones, suppress interpretation for the
   rest of that endpoint's scan. Conflicting specific reported model or
   manufacturer observations also suppress it, even if the report arrives before
   recognition or is later evicted from the eight-entry display-observation list.
   The flag stays set for the scan and is copied independently with snapshots.
-  Two reported model values suffice because a match can agree only with its code
-  and description; a third distinct specific value is conflicting. Reported values
+  Reviewed board aliases, their canonical ProductType and description may agree;
+  any incompatible model or an overflow of eight retained models fails closed. Reported values
   retain the existing 160-character observation limit. Recognition never guesses
   a missing manufacturer from an interface vendor or software name.
 - Snapshot copies keep independent evidence. Group descriptions/icons require
@@ -81,7 +85,8 @@ upstream pattern at generation time. It does not expand patterns to identifiers
 that lack an example. Runtime matching uses a generated Kotlin exact lookup;
 no upstream regex, Ruby runtime or general recognition engine runs in the app.
 
-Board IDs, OS rules, broad family/prefix rules and the ambiguous `iMac10,1` /
+The Recog projection excludes board IDs (reviewed mobile aliases come separately
+from AppleDB), OS rules, broad family/prefix rules and the ambiguous `iMac10,1` /
 `iMac11,1` descriptions are excluded. Apple TV rules carry upstream
 `hw.certainty=0.10`; the selected entries expose only **Apple TV** and a TV media
 player category, without a generation or a fabricated confidence percentage.

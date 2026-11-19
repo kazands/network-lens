@@ -22,7 +22,7 @@ Identity observations show their source, priority and whether their value was se
 
 This is not a packet capture. HTTP headers, raw packets, TLS certificates, unused binary/vendor/audio payloads and unrequested information are not retained. IPP asks only for make/model. Malformed or oversized responses may have an error/size notice rather than decoded fields. Some transport-internal retries and discarded packets have only scan-level counters. No recorded attempt does not mean a method was never attempted. Silent devices cannot appear merely because they are present on the network.
 
-Each endpoint retains up to 128 distinct diagnostic entries, independently of the smaller display limits. Exact duplicates are coalesced. Rejected record events beyond that limit are counted explicitly; they are not a count of unique missing fields. Copying or grouping devices preserves the journal and its omission count; only newly recorded events can increase it. Source/field/value lengths are bounded at 128/128/256 characters, with shortening labelled. HTTP lookup history retains up to 64 previous attempts plus current protocol states and reports overflow. Existing parser and discovery admission limits remain; capture does not bypass them. Arrays are summarised with an item count instead of retaining their contents.
+Each endpoint retains up to 128 distinct diagnostic entries, independently of the smaller display limits. Retained exact duplicates are coalesced. Identity observations, lookup outcomes and parser-capture failures take precedence over other returned fields, which take precedence over withheld values. At capacity, a higher-priority event replaces the oldest lowest-priority entry; equal-priority events keep the earlier history. Displaced and rejected events are counted explicitly; they are not a count of unique missing fields. Copying or grouping devices preserves the journal and its omission count; only newly recorded events can increase it. Source/field/value lengths are bounded at 128/128/256 characters, with shortening labelled. HTTP lookup history retains up to 64 previous attempts plus current protocol states and reports overflow. Existing parser and discovery admission limits remain; capture does not bypass them. Arrays are summarised with an item count instead of retaining their contents.
 
 The whole report has no device-count export cap. Preview and clipboard pages are at most 12,000 characters; sharing streams all pages. A failure preparing the report produces an error, not a silently shortened attachment.
 
@@ -40,4 +40,14 @@ The older **Copy recognition report** remains a separate counts-only summary. It
 
 The implementation passed a fresh independent Deep code review with no substantive findings. Regression coverage includes masked and explicit-name reports, product-title provenance, snapshot isolation, exact omission counts, lookup history, lifecycle invalidation and temporary sharing.
 
-See [0.3.27 release verification](../VERIFICATION-0.3.27.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
+See [0.3.28 release verification](../VERIFICATION-0.3.28.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
+
+An optional Cast group-information reply that supplies no supported information is
+a finished check with an explicit “optional information not reported” count. It
+does not create an unfinished scan warning. Actual transport errors, malformed
+responses and deadlines remain visible and cannot be cleared by a later optional
+absence. This reporting change does not improve the receiver's response.
+
+Group counts describe displayed address groups, not a verified number of physical
+boxes. Separate audio zones can refer to one amplifier. A journal overflow is a
+count of recording events, not necessarily unique missing response fields.

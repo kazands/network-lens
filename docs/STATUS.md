@@ -1,10 +1,10 @@
 # Current status
 
-**Network Lens 0.3.27 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.28 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release adds a whole-network troubleshooting report and smoother device-details scrolling. Reports include unnamed devices, useful returned fields, lookup history and explicit coverage limits. Names and addresses are masked by default; users preview the report before sharing a temporary attachment from memory.
+This release improves recognition when devices report equivalent model identifiers, adds reviewed printer, speaker and plug categories, and keeps important identity evidence in busy-device troubleshooting reports. Optional Cast information no longer creates a warning when a receiver simply does not provide it; genuine failures remain visible.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.27.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.28.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
 
 ## What remains unverified
 

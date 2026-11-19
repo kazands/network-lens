@@ -261,9 +261,22 @@ object LocalMetadataTest {
 
         val unreported = DiscoveryHealth()
         MetadataHttp.recordFailure(unreported, "Cast group information", MetadataHttp.Failure(MetadataHttp.Reason.NOT_REPORTED), false)
-        check(unreported.sources().getValue("Cast group information").startsWith("Truncated") &&
+        check(unreported.sources().getValue("Cast group information").startsWith("OK") &&
             !unreported.sources().getValue("Cast group information").contains("invalid metadata"),
-            "Unreported optional information remains visible without claiming a malformed response")
+            "Optional information is a completed check, not malformed or unfinished work")
+        check(unreported.sources().getValue("Cast group information").contains("optional information not reported 1"),
+            "Optional absence remains visible in method diagnostics")
+        for (failedFirst in listOf(true, false)) {
+            val mixed = DiscoveryHealth()
+            val failure = MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED)
+            val optional = MetadataHttp.Failure(MetadataHttp.Reason.NOT_REPORTED)
+            for (error in if (failedFirst) listOf(failure, optional) else listOf(optional, failure))
+                MetadataHttp.recordFailure(mixed, "Fixture method", error, false)
+            check(mixed.sources().getValue("Fixture method").startsWith("Failed"), "Optional absence cannot erase a real failure in either order")
+        }
+        val expiredOptional = DiscoveryHealth()
+        MetadataHttp.recordFailure(expiredOptional, "Fixture method", MetadataHttp.Failure(MetadataHttp.Reason.NOT_REPORTED), true)
+        check(expiredOptional.sources().getValue("Fixture method").startsWith("Truncated"), "An expired request still reports its deadline")
         diagnostics()
         lookupOutcomes()
         mdnsTraffic()

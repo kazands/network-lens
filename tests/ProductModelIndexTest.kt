@@ -38,6 +38,23 @@ object ProductModelIndexTest {
         try { ProductModelIndex.read(ByteArrayInputStream(header.toByteArray()+byteArrayOf(0xc3.toByte(),0x28))) } catch (_:IOException) { utfRejected=true }
         check(utfRejected,"Malformed UTF-8 cannot enter catalogue names")
         DeviceCatalog.install(index)
+        for (code in listOf("MFC-L2720DW", "HL-L6200DW")) {
+            for (models in listOf(listOf("Brother $code series", code), listOf(code, "Brother $code series"))) {
+                val brother = DeviceCatalog.Evidence()
+                for (model in models) brother.offer("Model", model, "Current printer model")
+                check(brother.match() == null, "A printer alias still requires a reported manufacturer")
+                brother.offer("Manufacturer", "Brother", "Current manufacturer")
+                check(brother.match()?.product?.title == "Brother $code" && brother.match()?.product?.category == DeviceCatalog.Category.PRINTER,
+                    "Reviewed printer naming and category apply in either arrival order")
+                check(!brother.hasRecordedConflict() && brother.copy().match() == brother.match(), "Printer aliases survive snapshots without conflict")
+                brother.offer("Model", "Synthetic contradictory model", "Current secondary model")
+                check(brother.match() == null && brother.hasRecordedConflict(), "Printer normalization never discards contradictory evidence")
+            }
+        }
+        check(DeviceCatalog.lookup("Brother MFC-Z99999XYZ series", "Brother") == null &&
+            DeviceCatalog.lookup("MFC-L2720DW series", "Synthetic maker") == null &&
+            DeviceCatalog.lookup("MFC-L2720DW series extra", "Brother") == null,
+            "Printer convention needs an exact catalogue model, brand and suffix")
         val evidence=DeviceCatalog.Evidence()
         evidence.offer("Model","SM-S918B","Current model fixture")
         check(evidence.match()==null,"A broad model code alone cannot seed identification")

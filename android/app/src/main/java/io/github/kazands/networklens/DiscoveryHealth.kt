@@ -12,7 +12,7 @@ class DiscoveryHealth {
         READ_TIMEOUT("read timeouts"), READ_FAILED("response read failures"),
         HTTP_STATUS("HTTP errors"), INVALID_HTTP("invalid HTTP responses"),
         INVALID_METADATA("invalid metadata responses"), DEADLINE("metadata deadlines"),
-        REQUEST_FAILED("other request failures"),
+        REQUEST_FAILED("other request failures"), OPTIONAL_NOT_REPORTED("optional information not reported"),
         MDNS_RECEIVED("packets received"), MDNS_IPV4("IPv4 packets"), MDNS_IPV6("IPv6 packets"),
         MDNS_IGNORED_SOURCE("ignored source packets"), MDNS_OVERSIZED("oversized packets"),
         MDNS_NON_RESPONSE("non-response packets"), MDNS_REJECTED("rejected response packets"),

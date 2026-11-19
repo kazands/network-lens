@@ -41,9 +41,14 @@ internal object MetadataHttp {
         val failure = error as? Failure
         if (failure?.reason == Reason.CANCELLED && !expired) return
         val reason = if (expired) Reason.DEADLINE else failure?.reason
-        if (reason != Reason.NOT_REPORTED) health.diagnostic(source, reason?.event ?: DiscoveryHealth.Diagnostic.REQUEST_FAILED)
+        if (reason == Reason.NOT_REPORTED) {
+            health.diagnostic(source, DiscoveryHealth.Diagnostic.OPTIONAL_NOT_REPORTED)
+            health.ok(source)
+            return
+        }
+        health.diagnostic(source, reason?.event ?: DiscoveryHealth.Diagnostic.REQUEST_FAILED)
         val detail = reason?.detail ?: "Metadata request could not complete"
-        if (reason == Reason.DEADLINE || reason == Reason.NOT_REPORTED) health.truncated(source, detail)
+        if (reason == Reason.DEADLINE) health.truncated(source, detail)
         else health.fail(source, detail + if (reason == Reason.HTTP_STATUS) " (${failure!!.httpStatus})" else "")
     }
 
