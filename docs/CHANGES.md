@@ -1,5 +1,15 @@
 # What is new
 
+## 0.3.30 — Kidde smart detector recognition
+
+- Identify supported Kidde WD-family devices from matching live discovery records, with a useful name and sensor icon.
+- Keep friendly room names visible and preserve original reports in technical details.
+- Explain when the exact model or smoke/CO capabilities are not available.
+- Label the HomeKit service as an advertisement, without implying verified compatibility.
+- Reject ambiguous model fields and preserve recognition safeguards across grouped addresses.
+
+No new permissions, network probes, account access or cloud recognition are added.
+
 ## 0.3.29 — Clearer recognition and more time for larger networks
 
 - Avoid mistaking supported media-server software and generic service labels for the device itself.
@@ -44,6 +54,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.29).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.30).
 
-[Verification for this release](VERIFICATION-0.3.29.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.30.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

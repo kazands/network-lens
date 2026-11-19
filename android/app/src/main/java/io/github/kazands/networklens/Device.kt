@@ -103,12 +103,13 @@ class Device : Grouping.Endpoint {
     @Synchronized internal fun recognizeModel(attributes: Map<String, ByteArray>) = recognition.offer(attributes)
     @Synchronized internal fun recognizeServiceModel(type: String, attributes: Map<String, ByteArray>) = recognition.offerService(type, attributes)
     @Synchronized internal fun recognizeAppleModel(code: String) = recognition.offerAppleModel(code)
+    @Synchronized internal fun recognizeKidde(source: String) = catalogue.offerKidde(source)
     @Synchronized internal fun recognizeSmartThings(source: String) = catalogue.offerSmartThings(source)
     @Synchronized internal fun recognizeEnvisalink() = catalogue.offerEnvisalink()
     @Synchronized internal fun recognizeFireTvType(code: String, source: String) = catalogue.offerFireTvType(code, source)
 
     @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
-        !catalogue.hasFireTvHardwareIdentity() && !catalogue.hasEnvisalinkIdentity() && !catalogue.hasSmartThingsIdentity() && recognition.compatible(candidate) &&
+        !catalogue.hasFireTvHardwareIdentity() && !catalogue.hasEnvisalinkIdentity() && !catalogue.hasSmartThingsIdentity() && !catalogue.hasKiddeIdentity() && recognition.compatible(candidate) &&
             (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || Recog.appleMaker(manufacturer)) &&
             (model.isEmpty() || !IdentityHints.specific(model) || Recog.accepts(candidate, model)) &&
             hints.observations().none { hint -> IdentityHints.specific(hint.value) && when (hint.field) {
@@ -227,7 +228,7 @@ class Device : Grouping.Endpoint {
                 listOf(d.name) + d.observations().filter { it.field == "Name" }.map { it.value })
         } }, summaryFacts)
     }
-    private fun diagnosticPublic(field: String): Boolean = field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware", "Port", "Response capture", "Lookup outcome", AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE, "UPnP description status", "Scanning identity", "Discovery families", "Network equipment identity request") ||
+    private fun diagnosticPublic(field: String): Boolean = field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware", "Port", "Response capture", "Lookup outcome", AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE, "UPnP description status", "Scanning identity", "Discovery families", "Network equipment identity request", "Kidde discovery") ||
         field.lowercase().let { it.contains("model") || it.contains("manufacturer") || it.contains("firmware") || it.contains("platform") || it.contains("protocol version") || it.startsWith("matter ") }
 
     internal fun recognitionSummary(): String {
@@ -292,10 +293,16 @@ class Device : Grouping.Endpoint {
         val result = HardwareClassification.resolve(endpoints.flatMap { it.hardwareFacts() } + catalogueFacts)
         // Apply the identity constraint after combining addresses. Otherwise a
         // neighbor's category can restore a hardware interpretation rejected here.
-        return if ((combined.hasFireTvHardwareIdentity() || combined.hasEnvisalinkIdentity() || combined.hasSmartThingsIdentity()) && catalogueFacts.isEmpty())
+        return if ((combined.hasFireTvHardwareIdentity() || combined.hasEnvisalinkIdentity() || combined.hasSmartThingsIdentity() || combined.hasKiddeIdentity()) && catalogueFacts.isEmpty())
             result.copy(category = null, conflicted = true) else result
     }
-    internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
+    internal fun capabilities(): List<String> {
+        val peers = endpoints()
+        val kidde = peers.any { synchronized(it) { it.catalogue.hasKiddeIdentity() } }
+        return HardwareClassification.capabilities(peers.flatMap { synchronized(it) { it.services.toList() } }).map {
+            if (it == "HomeKit" && kidde) "HomeKit advertisement" else it
+        }.distinct().sorted()
+    }
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
         if (field == "Model" && UpnpDescription.presentationModel(value.orEmpty(), source.orEmpty())) {
             diagnostics.record(source.orEmpty(), "Bonjour presentation model", value, "Service presentation label; not physical host identity")

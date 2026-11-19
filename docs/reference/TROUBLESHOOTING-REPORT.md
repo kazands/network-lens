@@ -40,7 +40,7 @@ The older **Copy recognition report** remains a separate counts-only summary. It
 
 The implementation passed a fresh independent Deep code review with no substantive findings. Regression coverage includes masked and explicit-name reports, product-title provenance, snapshot isolation, exact omission counts, lookup history, lifecycle invalidation and temporary sharing.
 
-See [0.3.29 release verification](../VERIFICATION-0.3.29.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
+See [0.3.29 release verification](../archive/VERIFICATION-0.3.29.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
 
 An optional Cast group-information reply that supplies no supported information is
 a finished check with an explicit “optional information not reported” count. It

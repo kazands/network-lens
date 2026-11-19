@@ -8,7 +8,7 @@ Application ID: `io.github.kazands.networklens`. Version code: **57**.
 More qualified product matches, separation of software descriptions from hardware,
 MAC-source-aware address grouping, fairer diagnostic retention and identifier
 redaction, range-based scan budgets, and explicit handling of Android installation
-blocks. See [changes](CHANGES.md) and [current limits](STATUS.md).
+blocks. See [changes](../CHANGES.md) and [current limits](../STATUS.md).
 
 The latest fresh independent Deep review approved the implementation with no
 substantive findings after the earlier MAC-source issues were corrected. Release

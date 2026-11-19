@@ -28,7 +28,7 @@ class MdnsAssembly {
     private fun equal(a: MdnsPacket.Record, b: MdnsPacket.Record): Boolean =
         a.kind == b.kind && MdnsPacket.key(a.owner) == MdnsPacket.key(b.owner) &&
             MdnsPacket.key(a.target) == MdnsPacket.key(b.target) && a.port == b.port && a.address == b.address &&
-            a.attributes.keys == b.attributes.keys && a.attributes.all { (k, v) -> Arrays.equals(v, b.attributes[k]) }
+            a.duplicateModelKey == b.duplicateModelKey && a.attributes.keys == b.attributes.keys && a.attributes.all { (k, v) -> Arrays.equals(v, b.attributes[k]) }
     private fun expire(now: Long) {
         for (p in peers.values) {
             for (entries in p.sets.values) entries.removeAll { now - it.expires >= 0 }
@@ -98,7 +98,7 @@ class MdnsAssembly {
 
     private fun signature(service: MdnsPacket.Service): String =
         listOf(service.name, service.type, service.host, service.port.toString()).joinToString("\u0000") + "\u0000" +
-            service.attributes.entries.joinToString("|") { it.key + "=" + java.util.Base64.getEncoder().encodeToString(it.value) }
+            service.duplicateModelKey.toString() + "|" + service.attributes.entries.joinToString("|") { it.key + "=" + java.util.Base64.getEncoder().encodeToString(it.value) }
 
     /** Expiry can resolve a conflict without another incoming packet. Emit each new result once. */
     @Synchronized fun ready(now: Long): Map<InetAddress, List<MdnsPacket.Service>> {
@@ -133,6 +133,7 @@ class MdnsAssembly {
                 val service = MdnsPacket.Service(SafeText.label(instance[0], 128), type)
                 service.host = srv.target.joinToString("."); service.port = srv.port
                 service.ptrReceived = true; service.txtReceived = true
+                service.duplicateModelKey = txt.duplicateModelKey
                 for ((key, value) in txt.attributes) service.attributes[key] = value.clone()
                 out.add(RoutedCandidate(peer.address, InetAddress.getByAddress(bytes), service))
             }
@@ -253,6 +254,7 @@ class MdnsAssembly {
             val service = MdnsPacket.Service(SafeText.label(instance[0], 128), type)
             service.host = srv.target.joinToString("."); service.port = srv.port
             service.ptrReceived = true; service.txtReceived = true
+            service.duplicateModelKey = txt.duplicateModelKey
             for ((k, v) in txt.attributes) service.attributes[k] = v.clone()
             out.add(service)
         }
