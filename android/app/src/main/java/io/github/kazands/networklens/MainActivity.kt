@@ -560,10 +560,10 @@ class MainActivity : Activity() {
             if (capabilities.isNotEmpty()) detailRow(summary, "Services available", capabilities.joinToString(", "))
             body.addView(summary); space(body, 16)
         }
-        if (d.presentation().unnamed) {
+        if (!d.self && !d.gateway && d.groupProduct() == null) {
             val help = panel(); help.setPadding(dp(18), dp(16), dp(18), dp(16))
             help.addView(text("About this device", 16, ink, true)); space(help, 8)
-            help.addView(text(RecognitionCopy.UNNAMED, 14, muted, false)); space(help, 10)
+            help.addView(text(d.recognitionSummary(), 14, muted, false)); space(help, 10)
             help.addView(text(RecognitionCopy.NEXT_SCAN, 14, muted, false))
             body.addView(help); space(body, 16)
         }
@@ -678,6 +678,7 @@ class MainActivity : Activity() {
     private fun deviceText(group: Device): String {
         val text = StringBuilder(group.presentation().title)
         val classification = group.classification()
+        if (!group.self && !group.gateway && group.groupProduct() == null) text.append("\nIdentification: ").append(group.recognitionSummary())
         text.append("\nPrimary device type: ").append(if (classification.conflicted) "Conflicting reports" else classification.category?.label ?: "Not identified")
         if (group.capabilities().isNotEmpty()) text.append("\nServices available: ").append(group.capabilities().joinToString(", "))
         for (d in group.endpoints()) {

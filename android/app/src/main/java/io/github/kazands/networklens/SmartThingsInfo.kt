@@ -1,6 +1,6 @@
 package io.github.kazands.networklens
 
-/** Conservative current-advertisement interpretation; see docs/SMARTTHINGS.md. */
+/** Conservative current-advertisement interpretation; see docs/reference/SMARTTHINGS.md. */
 internal object SmartThingsInfo {
     const val TYPE = "_smartthings._tcp."
     const val HEDGE_TYPE = "_smartthings-hedge._tcp."

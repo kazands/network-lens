@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.CRC32
 
 /** Read-only TP-Link discovery. No login, relay commands, pairing or cloud requests.
- * Wire references and independently maintained model mappings: docs/TP-LINK.md. */
+ * Wire references and independently maintained model mappings: docs/reference/TP-LINK.md. */
 internal object TpLinkDiscovery {
     const val SOURCE = "TP-Link discovery"
     const val MODEL_SOURCE = "TP-Link discovery reported model"

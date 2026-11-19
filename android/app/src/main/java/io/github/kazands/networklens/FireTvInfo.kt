@@ -1,7 +1,7 @@
 package io.github.kazands.networklens
 
 /** WhisperPlay names and reviewed offline device-type identities.
- * References and limits: docs/FIRE-TV-RECOGNITION.md. */
+ * References and limits: docs/reference/FIRE-TV-RECOGNITION.md. */
 internal object FireTvInfo {
     const val TYPE = "_amzn-wplay._tcp."
     const val FAMILY = "amazon_fire_tv"

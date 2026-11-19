@@ -10,7 +10,7 @@ internal object RecognitionCoverageChecks {
         val selfOnly=Discovery(test.targetContext,NetworkState().apply {ip="198.18.0.1";prefix=24;key="synthetic-coverage";prefixes[ip]=24;addresses.add(ip)})
         set(selfOnly,"accepting",true);set(selfOnly,"enriching",true);set(selfOnly,"range",IpRange("198.18.0.1",32))
         try {
-            for(method in listOf("startLanIdentities","startTuyaAnnouncements","startLifxIdentity","startEasySmartDiscovery"))
+            for(method in listOf("startLanIdentities","startTuyaAnnouncements","startLifxIdentity","startEasySmartDiscovery","startNetworkEquipment"))
                 Discovery::class.java.getDeclaredMethod(method).apply {isAccessible=true}.invoke(selfOnly)
             val threads=selfOnly.javaClass.getDeclaredField("lanThreads").let {it.isAccessible=true;it.get(selfOnly) as List<*>}
             check(threads.isEmpty(),"Self-only scan starts no added broadcast/passive workers")

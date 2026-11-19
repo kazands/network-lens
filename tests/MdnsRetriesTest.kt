@@ -93,6 +93,30 @@ object MdnsRetriesTest {
             invalid = true
         }
         check(invalid, "Oversized packet request rejected")
+        // A settled scan can admit recovery much later than initial discovery.
+        // Every admitted query and its response window must count as pending.
+        val recovery = MdnsRetries()
+        val queuedAt = TimeUnit.SECONDS.toNanos(20)
+        val types = (0 until 32).map { "_recovery$it._tcp." }
+        check(!recovery.pending(false, queuedAt), "No recovery keeps an idle scan open")
+        check(recovery.recover(types) == 32, "Full bounded late recovery batch admitted")
+        check(recovery.pending(false, queuedAt) && recovery.pending(true, queuedAt), "Both families begin with pending recovery")
+        var lastSend = queuedAt
+        val sent = linkedSetOf<String>()
+        repeat(16) { batch ->
+            lastSend = queuedAt + TimeUnit.MILLISECONDS.toNanos(batch * 400L)
+            check(recovery.pending(false, lastSend), "Queued recovery prevents quiet completion")
+            sent.addAll(recovery.due(false, lastSend, 2))
+        }
+        check(sent == types.toSet(), "All recovery types get one opportunity")
+        check(recovery.pending(false, lastSend + gap - 1), "Final query retains its reply window")
+        check(!recovery.pending(false, lastSend + gap), "Drained family becomes idle after replies can arrive")
+        check(recovery.pending(true, lastSend + gap), "IPv4 completion cannot hide unsent IPv6 recovery")
+        check(recovery.recover(types) == 0 && !recovery.pending(false, lastSend + gap), "Duplicate recovery cannot extend a completed window")
+        val negativeClock = MdnsRetries()
+        negativeClock.recover(listOf("_http._tcp."))
+        check(negativeClock.due(false, start, 2).size == 1, "Recovery works with a negative monotonic-clock origin")
+        check(negativeClock.pending(false, start + gap - 1) && !negativeClock.pending(false, start + gap), "Reply window uses elapsed time, not a zero timestamp sentinel")
         System.out.println((("PASS · " + checks) + " mDNS retry checks"))
     }
 }

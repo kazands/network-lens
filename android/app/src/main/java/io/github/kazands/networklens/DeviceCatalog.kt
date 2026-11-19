@@ -15,7 +15,7 @@ internal object DeviceCatalog {
         SECURITY_SYSTEM("Security system"), ALARM_INTERFACE("Alarm interface"), DOOR("Door"), WINDOW("Window"), WINDOW_COVERING("Window covering"),
         ACCESS_POINT("Wi-Fi access point"), NETWORK_SWITCH("Network switch"),
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
-        SHOWER("Shower"), REMOTE("Remote control"), UNSPECIFIED("Not classified")
+        SHOWER("Shower"), REMOTE("Remote control"), REMOTE_HUB("Remote-control hub"), UNSPECIFIED("Not classified")
     }
     data class Product(val id: String, val brand: String, val title: String, val category: Category,
                        val models: Set<String>, val redundantNames: Set<String> = emptySet(), val familyOnly: Boolean = false,
@@ -31,11 +31,13 @@ internal object DeviceCatalog {
 
     private const val PLAYSTATION_SOURCE = "PlayStation discovery host-type"
     private fun keys(vararg values: String) = values.mapTo(HashSet(), ::key)
-    // Exact reported-model aliases and primary references: docs/DEVICE-IDENTITIES.md.
+    // Exact reported-model aliases and primary references: docs/reference/DEVICE-IDENTITIES.md.
     private val products = listOf("A.1", "A.3", "A.6", "A.1x", "A.3x", "A.6x").map { model ->
         Product("vssl:${key(model)}", "VSSL", "VSSL $model", Category.AMPLIFIER,
             keys(model, model.replace(".", ""), "VSSL $model", "VSSL ${model.replace(".", "")}"), manufacturerRequired = true)
     } + listOf(
+        Product("logitech:harmony-hub", "Logitech", "Logitech Harmony Hub", Category.REMOTE_HUB,
+            keys("Harmony Hub", "Logitech Harmony Hub"), familyOnly = true),
         Product("hikvision:ds-7608ni-i2-8p", "Hikvision", "Hikvision DS-7608NI-I2/8P", Category.RECORDER,
             keys("DS-7608NI-I2/8P", "Hikvision DS-7608NI-I2/8P")),
         Product("nvidia:shield-tv", "NVIDIA", "NVIDIA SHIELD TV", Category.TV_PLAYER,

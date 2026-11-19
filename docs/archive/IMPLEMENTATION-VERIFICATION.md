@@ -2,7 +2,7 @@
 
 Historical results for the specific candidates described below. These are not
 fresh test claims for the current download. See [current status](../STATUS.md)
-and [release verification](../VERIFICATION-0.3.15.md) for the supported release.
+and [release verification](VERIFICATION-0.3.15.md) for the supported release.
 
 ## Clear device identities and global catalogue (0.3.13)
 
@@ -33,7 +33,7 @@ account, per-scan request or cloud recognition. NIST updates its public XML
 nightly; this app currently uses a pinned snapshot from 2026-11-14. An optional
 verified online catalogue download is a separate possible addition; no device
 identifiers need to leave the phone to fetch public catalogue updates.
-See [DEVICE-IDENTITIES.md](../DEVICE-IDENTITIES.md) for data, notices, source access,
+See [DEVICE-IDENTITIES.md](../reference/DEVICE-IDENTITIES.md) for data, notices, source access,
 selection, evidence conflicts, grouping and PlayStation wire limits.
 
 Initial feature verification passed all 26 host suites / 29,839 checks, direct
@@ -118,7 +118,7 @@ both emulators were closed before testing. The earlier six-mode matrices remain
 recorded separately; the other five modes were not rerun for this table correction.
 Physical model accuracy, coverage and scan performance remain unverified; no
 phone install or release was performed. The existing discovery limitations below
-remain open. See [RECOG.md](../RECOG.md) for selection policy, exact artifacts and
+remain open. See [RECOG.md](../reference/RECOG.md) for selection policy, exact artifacts and
 verification limits.
 
 ## Typography and IPv6 layout (0.3.11)
@@ -135,7 +135,7 @@ The source now adds Thread model/vendor TXT fields, targeted ESPHome/Shelly/WLED
 discovery and bounded local Shelly/WLED/Spotify Connect/IPP metadata queries.
 These changes retain fresh-response admission, source labels, unknown values and
 the existing scan deadline. Protocol fields and limits are documented in
-[LOCAL-METADATA.md](../LOCAL-METADATA.md). Synthetic protocol and emulator checks do
+[LOCAL-METADATA.md](../reference/LOCAL-METADATA.md). Synthetic protocol and emulator checks do
 not establish compatibility or coverage on real devices.
 
 Before the diagnostic extension, the build including the Gen1 short-ID correction
@@ -193,7 +193,7 @@ The extra resolver path and tests were reverted; retained code matches `9df32e6`
 The mDNS receive-limit improvement remains, while native-resolution and Spotify
 availability limitations remain open. Exact measurements, rejected experiment
 boundaries and final-candidate checks are recorded in
-[LOCAL-METADATA.md](../LOCAL-METADATA.md). The PR remains draft.
+[LOCAL-METADATA.md](../reference/LOCAL-METADATA.md). The PR remains draft.
 
 The earlier restored matching-signed candidate was verified on the authorized
 Pixel 8.
@@ -282,13 +282,13 @@ Further discovery reliability work, real Thread-network validation and broader d
 
 The production-signed APK passed signature, alignment and package audits, 40 installation/update checks across API 26/37 and a physical Pixel 8 journey. That phone journey recorded 17 migration checks and 86 unique UI/scan conditions, three Complete scans and one intentionally stopped Partial scan. Stronger, endpoint-verified navigation reruns covered both fully visible and partly clipped rows after two inconclusive coordinate-based attempts. No app fix or cause for those earlier results is claimed.
 
-The signing identities were independently backed up and exercised through restored-key signatures. The source package includes upstream source/notices and public IEEE inputs whose regeneration matched the bundled vendor asset byte for byte. Exact artifact identities, historical test attempts and remaining limits are recorded in [VERIFICATION-0.3.8.md](../VERIFICATION-0.3.8.md). No household inventory or private signing material belongs in those public notes.
+The signing identities were independently backed up and exercised through restored-key signatures. The source package includes upstream source/notices and public IEEE inputs whose regeneration matched the bundled vendor asset byte for byte. Exact artifact identities, historical test attempts and remaining limits are recorded in [VERIFICATION-0.3.8.md](VERIFICATION-0.3.8.md). No household inventory or private signing material belongs in those public notes.
 
 Final physical checks additionally covered Home cancellation, a full process restart, a verified Wi-Fi connection replacement and local-network permission denial/restoration. Recovery scans still reproduced the known HomeKit/HTTP resolution failure; passing lifecycle checks do not repair it.
 
 ## Release-signing preparation
 
-The direct APK pipeline has an explicit `--release` path, separate production/app and Play-upload identities, pinned public fingerprints and a recovery-verification gate. Existing development signing and artifacts are preserved. See [RELEASE-SIGNING.md](../RELEASE-SIGNING.md). This source configuration alone does not claim a successful backup, signed binary, Android installation test, Play enrollment or public release; current verification belongs to its exact artifact/report. A verified App Bundle build and Play Console setup remain separate work.
+The direct APK pipeline has an explicit `--release` path, separate production/app and Play-upload identities, pinned public fingerprints and a recovery-verification gate. Existing development signing and artifacts are preserved. See [RELEASE-SIGNING.md](../reference/RELEASE-SIGNING.md). This source configuration alone does not claim a successful backup, signed binary, Android installation test, Play enrollment or public release; current verification belongs to its exact artifact/report. A verified App Bundle build and Play Console setup remain separate work.
 
 ## Repository migration verification (2026-10-29)
 

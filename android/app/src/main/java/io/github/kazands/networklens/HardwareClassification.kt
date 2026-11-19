@@ -4,6 +4,13 @@ package io.github.kazands.networklens
 internal object HardwareClassification {
     data class Fact(val category: DeviceCatalog.Category, val source: String)
     data class Result(val category: DeviceCatalog.Category?, val facts: List<Fact>, val conflicted: Boolean)
+    // These APIs specifically describe lighting. Generic Cast, AirPlay, HTTP and
+    // automation platforms deliberately have no physical category here.
+    fun serviceKind(type: String): String = when (LocalServices.canonicalType(type)) {
+        "_nanoleafapi._tcp." -> "Nanoleaf lighting device"
+        "_wled._tcp." -> "WLED lighting controller"
+        else -> ""
+    }
 
     fun capabilities(services: Collection<String>): List<String> = services.mapNotNull { service ->
         when (LocalServices.canonicalType(service)) {
@@ -15,6 +22,7 @@ internal object HardwareClassification {
             SmartThingsInfo.TYPE, SmartThingsInfo.HEDGE_TYPE -> "SmartThings"
             "_androidtvremote2._tcp." -> "Android TV remote service"
             "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.", "_pdl-datastream._tcp." -> "Printing"
+            "_uscan._tcp.", "_uscans._tcp." -> "Document scanning"
             "_smb._tcp." -> "File sharing"
             "_hap._tcp.", "_hap._udp." -> "HomeKit"
             "_matter._tcp.", "_matterc._udp." -> "Matter"
@@ -36,7 +44,7 @@ internal object HardwareClassification {
         "HomeKit TV media player" -> DeviceCatalog.Category.TV_PLAYER
         "Yamaha soundbar", "Yamaha subwoofer", "HomeKit speaker" -> DeviceCatalog.Category.SPEAKER
         "HomeKit audio receiver", "Yamaha audio receiver" -> DeviceCatalog.Category.AUDIO_RECEIVER
-        "HomeKit light", "UPnP light", "Yeelight light" -> DeviceCatalog.Category.LIGHT
+        "HomeKit light", "UPnP light", "Yeelight light", "Nanoleaf lighting device", "WLED lighting controller" -> DeviceCatalog.Category.LIGHT
         "HomeKit lock" -> DeviceCatalog.Category.LOCK
         "HomeKit outlet" -> DeviceCatalog.Category.OUTLET
         "HomeKit switch" -> DeviceCatalog.Category.SWITCH
@@ -90,6 +98,7 @@ internal object HardwareClassification {
         if (DeviceCatalog.Category.RECORDER in types || DeviceCatalog.Category.DOORBELL in types) types.remove(DeviceCatalog.Category.CAMERA)
         // A hub can also advertise a bridge role.
         if (DeviceCatalog.Category.HUB in types) types.remove(DeviceCatalog.Category.BRIDGE)
+        if (DeviceCatalog.Category.REMOTE_HUB in types) types.remove(DeviceCatalog.Category.REMOTE)
         val ordered = facts.distinct().sortedWith(compareBy({ it.category.name }, { it.source }))
         return Result(types.singleOrNull(), ordered, types.size > 1)
     }

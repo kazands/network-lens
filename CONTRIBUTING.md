@@ -1,29 +1,25 @@
-# Contributing to Network Lens
+# Contributing
 
-Thank you for helping improve Network Lens. Open a focused issue or pull request on GitHub. For large behavior changes, discuss the problem and proposed scope in an issue first.
+Network Lens is for home users first, with technical evidence available for enthusiasts and network technicians. Keep changes focused on finding current responders and explaining their identity clearly.
 
-## Keep the product focused
+## Before changing code
 
-Network Lens is a foreground Wi-Fi device finder. Preserve fresh-response requirements, current-session-only state, bounded cancellable discovery, selected-network binding and honest Complete/Partial reporting. Do not add saved history, background monitoring, analytics, accounts, cloud recognition or permissions without prior discussion.
+Read [project guidance](AGENTS.md) and [scan architecture](docs/reference/SCAN-ARCHITECTURE.md). Discuss large changes in an issue before implementation.
 
-Never promote cached advertisements, old router names or previous results into proof of current presence. A device that does not answer is not necessarily offline. Keep model/manufacturer/vendor claims tied to their actual source.
+Preserve fresh scans, selected-network binding, bounded work, cancellation and cleanup. Cached advertisements are candidates, not presence proof. Keep hardware identity separate from services, and preserve unknown or conflicting values. Do not add history, cloud recognition, background monitoring or new permissions without discussion.
 
-## Validation
+## Verify the change
 
-Follow [BUILDING.md](docs/BUILDING.md). Run relevant host suites and Android checks. State the exact checks run and any limitations in your pull request. Do not claim physical-device, Thread or API coverage from an emulator-only test. The emulator scripts deliberately refuse physical-device serials.
+Use the direct commands in [Build and test](docs/BUILDING.md). Add regressions for the actual discovery/admission path, not only a parser. State which checks ran and what remains unverified. Emulator success does not establish physical-device compatibility.
 
-Describe the problem, the resulting behavior, validation and remaining risks. Use small changes and preserve existing navigation, appearance, accessibility and cancellation behavior.
-
-See [scan ownership and evidence flow](docs/SCAN-ARCHITECTURE.md) before changing
-discovery lifetimes, and [recognition/performance baselines](docs/RECOGNITION-BASELINE.md)
-for the distinction between synthetic regressions and physical compatibility.
+Keep pull requests reviewable: explain the problem, resulting behavior, implementation, tests, risks and manual verification needed. Use concise Conventional Commit messages. Do not report failed or unfinished discovery work as successful.
 
 ## Protect private data
 
-Use synthetic device names and addresses in fixtures. Do not commit signing keys, credentials, device serials, household inventories, SSIDs, packet captures, APKs from other applications or personal screenshots. Check the staged diff before committing. Local tools and evidence are ignored; do not force-add them.
+Use synthetic names and addresses. Do not commit household scans, SSIDs, personal screenshots, serials, credentials, private keys or captures. Review staged files and run `python3 scripts/check-repository.py`; never force-add ignored artifacts. Emulator automation must reject phones. Physical checks need a specifically authorised target and must stop if Network Lens loses the foreground.
 
-Report security issues using [SECURITY.md](SECURITY.md).
+Report vulnerabilities through [Security reporting](SECURITY.md).
 
 ## Licensing
 
-By intentionally submitting a contribution for inclusion, you agree to license it under GPL-3.0-only, except clearly identified third-party material under compatible terms. Submit only material you have the right to contribute, and retain upstream notices and provenance. No separate contributor license agreement is required. This policy does not transfer copyright ownership.
+Contributions are licensed GPL-3.0-only, except clearly identified third-party material under compatible terms. Retain notices and provenance, and submit only material you have the right to contribute. No separate contributor agreement or copyright transfer is required. Do not incorporate Fing or Nmap code or databases.

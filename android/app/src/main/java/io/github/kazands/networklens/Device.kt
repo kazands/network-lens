@@ -69,7 +69,7 @@ class Device : Grouping.Endpoint {
         val label = lookup.kind.source + " · " + (if (ip.contains(':')) "IPv6" else "IPv4") +
             " · port " + lookup.port + if (lookup.secure) " · TLS" else ""
         val notes = ArrayList<String>()
-        for ((field, value) in listOf("Model" to model, "Manufacturer" to manufacturer)) {
+        for ((field, value) in if (lookup.kind == LocalMetadata.Kind.ESCL) emptyList() else listOf("Model" to model, "Manufacturer" to manufacturer)) {
             if (!IdentityHints.specific(value)) continue
             val sources = hints.observations().filter {
                 it.field == field && it.value == value && it.source != lookup.kind.source + " (reported)" &&
@@ -131,14 +131,22 @@ class Device : Grouping.Endpoint {
         if (matches.any { it.product.id != candidate.product.id }) return null
         return candidate.takeIf { endpoints.all { it.productCompatible(candidate) } }
     }
+    internal fun recognitionSummary(): String {
+        val endpoints=endpoints()
+        return RecognitionStatus.explain(groupProduct()!=null, classification().conflicted,
+            endpoints.any { synchronized(it) { IdentityHints.specific(it.model) } },
+            endpoints.flatMap { synchronized(it) { it.matchedFamilies.toList() } }.mapNotNull { DiscoveryMatchers.family(it)?.label }.distinct().sorted(),
+            endpoints.flatMap { it.metadataLookups.snapshot() },
+            endpoints.any { synchronized(it) { IdentityHints.specificName(it.name) } })
+    }
     internal fun presentation(): DevicePresentation.Labels {
         val product = groupProduct()?.product
         val classification = classification()
         val displayProduct = product?.copy(category = classification.category ?: DeviceCatalog.Category.UNSPECIFIED)
         val labels = DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
         val families = endpoints().flatMap { synchronized(it) { it.matchedFamilies.toList() } }.distinct()
-        val family = families.singleOrNull()?.let(DiscoveryMatchers::family)
-        return if (labels.unnamed && family != null && endpoints().none { it.familiesOverflow })
+        val family = DiscoveryMatchers.preferredFamily(families)
+        return if (labels.unnamed && !classification.conflicted && family != null && endpoints().none { it.familiesOverflow })
             labels.copy(title = family.label, subtitle = labels.subtitle.ifEmpty { "Device family; model not available" }, unnamed = false) else labels
     }
     @Synchronized private fun hardwareFacts(): List<HardwareClassification.Fact> =

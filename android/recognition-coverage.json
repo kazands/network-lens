@@ -1,0 +1,698 @@
+{
+  "abode": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "airgradient": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "airq": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "altruist": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "androidtv_remote": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "apple_tv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "arcam_fmj": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "awair": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "axis": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "baf": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bang_olufsen": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bitvis": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "blebox": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bluesound": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bluetti_modbus": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bond": {
+    "policy": "family",
+    "reason": "Reviewed complete matcher supplies a bridge role; exact model and reported manufacturer remain unknown."
+  },
+  "bosch_shc": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "braviatv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "brother": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "bsblan": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "cambridge_audio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "cast": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "control4": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "daikin": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "deako": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "deconz": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "denonavr": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "devialet": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "devolo_home_control": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "devolo_home_network": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "directv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "dlna_dmr": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "dlna_dms": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "doorbird": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "droplet": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "duco": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "e3dc": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "ecobee": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "eheimdigital": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "elgato": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "elmax": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "energieleser": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "enphase_envoy": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "escea": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "esphome": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "flow_it": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "forked_daapd": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "freebox": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "fritz": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "fritzbox": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "frontier_silicon": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "gogogate2": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "grandstream_home": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "guardian": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "harman_luxury": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "harmony": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "haven_iaq": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hdfury": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hegel": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "heos": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hive": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "home_connect": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "homee": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "homekit": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "homekit_controller": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "homevolt": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "homewizard": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hotspring": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hp_printer": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hr_energy_qube": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "huawei_lte": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hue": {
+    "policy": "family",
+    "reason": "Reviewed complete matcher supplies a bridge role; exact model and reported manufacturer remain unknown."
+  },
+  "hunterdouglas_powerview": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "hyperion": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "imeon_inverter": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "indevolt": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "indi_allsky": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "iometer": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "ipp": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "isy994": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "izone": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "kaleidescape": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "keenetic_ndms2": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "kiosker": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "kodi": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lametric": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lektrico": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "libresync": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "liebherr": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lifx": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "linkplay": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lookin": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "loqed": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lunatone": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "lutron_caseta": {
+    "policy": "family",
+    "reason": "Reviewed complete matcher supplies a bridge role; exact model and reported manufacturer remain unknown."
+  },
+  "lyngdorf": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "matter": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "miele": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "modern_forms": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "motionmount": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "music_assistant": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "my_pv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "nam": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "nanoleaf": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "netatmo": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "netgear": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "nrgkick": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "nut": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "octoprint": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "onewire": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "onkyo": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "openevse": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "openhome": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "overkiz": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "peblar": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "philips_js": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "plex": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "plugwise": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "powerfox": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "powerfox_local": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "powersensor_au": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "prana": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "pure_energie": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "rabbitair": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "rachio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "rainmachine": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "roku": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "romy": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "roomba": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "russound_rio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "samsungtv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "sensibo": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "shelly": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "slide_local": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "smappee": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "smlight": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "solaredge_modbus": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "solarman": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "songpal": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "sonos": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "soundtouch": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "syncthru": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "synology_dsm": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "system_bridge": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "systemnexa2": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "tado": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "tailwind": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "technove": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "thread": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "tradfri": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "trimlight": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "unifi_discovery": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "upnp": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "vegehub": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "velux": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "victron_gx": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "vizio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "voice_support": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "volumio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wattwaechter": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "webostv": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wemo": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wiim": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wilight": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wled": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "wyoming": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "xbox": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "xiaomi_aqara": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "xiaomi_miio": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "yamaha_musiccast": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "yeelight": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "zha": {
+    "policy": "family",
+    "reason": "Reviewed complete matcher supplies a bridge role; exact model and reported manufacturer remain unknown."
+  },
+  "zwave_js": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  },
+  "zwave_me": {
+    "policy": "family",
+    "reason": "Exact model and physical type require independent current device evidence."
+  }
+}

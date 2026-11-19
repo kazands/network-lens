@@ -12,7 +12,7 @@ import java.util.Locale
 internal object LocalMetadata {
     enum class Kind(val source: String) {
         SAMSUNG("Samsung TV device information"), SHELLY("Shelly device information"), WLED("WLED device information"),
-        SPOTIFY("Spotify Connect device information"), IPP("IPP printer information"), CAST("Cast device information")
+        SPOTIFY("Spotify Connect device information"), IPP("IPP printer information"), ESCL("eSCL scanner information"), CAST("Cast device information")
     }
     data class Report(val hints: Map<String, String> = emptyMap(), val details: Map<String, String> = emptyMap(), val mac: String = "")
     data class Request(val kind: Kind, val port: Int, val path: String, val secure: Boolean = false) {
@@ -27,7 +27,7 @@ internal object LocalMetadata {
             val body = if (kind == Kind.IPP) IppInfo.query("${if (secure) "ipps" else "ipp"}://$authority$path") else ByteArray(0)
             val target = path + if (kind == Kind.SPOTIFY) "?action=getInfo" else ""
             val headers = "${if (kind == Kind.IPP) "POST" else "GET"} $target HTTP/1.1\r\nHost: $authority\r\n" +
-                "Accept: ${if (kind == Kind.IPP) "application/ipp" else "application/json"}\r\n" +
+                "Accept: ${if (kind == Kind.IPP) "application/ipp" else if (kind == Kind.ESCL) "text/xml, application/xml" else "application/json"}\r\n" +
                 (if (kind == Kind.IPP) "Content-Type: application/ipp\r\nContent-Length: ${body.size}\r\n" else "") +
                 "Connection: close\r\n\r\n"
             return headers.toByteArray(StandardCharsets.US_ASCII) + body
@@ -65,6 +65,12 @@ internal object LocalMetadata {
                 if (shelly.matches(instance) || shelly.matches(host)) Request(Kind.SHELLY, service.port, "/shelly") else null
             }
             "_wled._tcp." -> Request(Kind.WLED, service.port, "/json/info")
+            "_uscan._tcp.", "_uscans._tcp." -> {
+                val root = rawText(service.attributes, "rs")
+                if (root.isEmpty() || root.contains(':') || root.startsWith("//")) null else safePath((if(root.startsWith('/')) root else "/$root").trimEnd('/') + "/ScannerCapabilities")?.let {
+                    Request(Kind.ESCL,service.port,it,LocalServices.canonicalType(service.type)=="_uscans._tcp.")
+                }
+            }
             "_spotify-connect._tcp." -> safePath(rawText(service.attributes, "CPath"))?.let { Request(Kind.SPOTIFY, service.port, it) }
             "_ipp._tcp.", "_ipps._tcp." -> {
                 val rp = rawText(service.attributes, "rp")
@@ -91,6 +97,7 @@ internal object LocalMetadata {
     } catch (_: Exception) { null }
 
     fun parse(kind: Kind, body: ByteArray): Report? {
+        if (kind == Kind.ESCL) return EsclInfo.parse(body)
         if (kind == Kind.SAMSUNG) return SamsungInfo.parse(body)
         if (kind == Kind.CAST) return CastInfo.parse(body)
         if (kind == Kind.IPP) return IppInfo.parse(body)?.let { Report(mapOf("Model" to it)) }

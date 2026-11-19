@@ -19,6 +19,37 @@ internal object SmartThingsChecks {
         fun service() = MdnsPacket.Service("0000000000000001", SmartThingsInfo.TYPE).apply { host = "hubv2-00000000000000001.local"; port = 8081 }
         fun matter() = MdnsPacket.Service("0000000000000001-0000000000000002", "_matter._tcp.").apply { host = service().host; port = 5540 }
         try {
+            val harmony = peer("198.18.0.20")
+            harmony.hint("Name", "Harmony Hub", "Synthetic friendly name", 80)
+            check(DeviceIcon.forGroup(harmony).drawable == R.drawable.ic_device_network, "Friendly name alone cannot select a remote icon")
+            harmony.hint("Name", "Fixture media room", "Synthetic friendly name", 100)
+            harmony.hint("Model", "Harmony Hub", "Synthetic current UPnP model", 80)
+            harmony.hint("Manufacturer", "Logitech", "Synthetic current UPnP maker", 80)
+            check(DeviceIcon.forGroup(harmony).drawable == R.drawable.ic_device_remote && DeviceIcon.categoryLabel(harmony) == "Remote-control hub", "Exact Harmony model selects remote hardware and icon")
+            check(harmony.presentation().title == "Logitech Harmony Hub" && harmony.presentation().subtitle == "Remote-control hub · Fixture media room", "Harmony keeps its useful room name")
+            val otherEndpoint = Device().apply { ip = "2001:db8::20"; link("synthetic:harmony") }
+            harmony.link("synthetic:harmony")
+            check(DeviceIcon.forGroup(Device.grouped(listOf(otherEndpoint, harmony)).single()).drawable == R.drawable.ic_device_remote, "Remote icon survives endpoint grouping")
+            val homeKitRemote = Device().apply { hint("Device type", "HomeKit remote", "Synthetic current HomeKit category", 80) }
+            check(DeviceIcon.forGroup(homeKitRemote).drawable == R.drawable.ic_device_remote && DeviceIcon.categoryLabel(homeKitRemote) == "Remote control", "Other known remotes share the icon without becoming hubs")
+            harmony.hint("Device type", "HomeKit thermostat", "Synthetic conflicting hardware", 80)
+            check(DeviceIcon.forGroup(harmony).drawable == R.drawable.ic_device_network, "Conflicting hardware does not retain a confident remote icon")
+            val bridge = Device().apply { hint("Device type", "HomeKit bridge", "Synthetic current HomeKit category", 80) }
+            check(DeviceIcon.forGroup(bridge).drawable == R.drawable.ic_device_smart_home, "Smart-home bridges share the home icon")
+            for (dark in listOf(false, true)) {
+                val bitmap = android.graphics.Bitmap.createBitmap(240, 120, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bitmap)
+                canvas.drawColor(android.graphics.Color.parseColor(if (dark) "#0c1b15" else "#f5faf6"))
+                for ((n, id) in listOf(R.drawable.ic_device_smart_home, R.drawable.ic_device_remote).withIndex()) {
+                    val icon = test.targetContext.getDrawable(id)!!.mutate()
+                    icon.setTint(android.graphics.Color.parseColor(if (dark) "#e2ede5" else "#243b2e"))
+                    icon.setBounds(24 + n * 120, 24, 96 + n * 120, 96)
+                    icon.draw(canvas)
+                }
+                val file = java.io.File(test.targetContext.getExternalFilesDir(null), "hub-icons-${if (dark) "dark" else "light"}.png")
+                file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+            }
             for (matterFirst in listOf(false, true)) {
                 val d = peer("198.18.0.10")
                 current.invoke(op, d, if (matterFirst) matter() else service())
@@ -26,6 +57,7 @@ internal object SmartThingsChecks {
                 current.invoke(op, d, MdnsPacket.Service("hub-" + "0".repeat(32), SmartThingsInfo.HEDGE_TYPE).apply { host = name + ".local"; port = 8766 })
                 check(d.presentation().title == "SmartThings Hub" && d.presentation().subtitle == "Smart-home hub", "Hub title replaces opaque IDs in either arrival order")
                 check(d.classification().category == DeviceCatalog.Category.HUB && DeviceIcon.categoryLabel(d) == "Smart-home hub", "Physical hub takes precedence over Matter capability")
+                check(DeviceIcon.forGroup(d).drawable == R.drawable.ic_device_smart_home, "Identified hub uses the connected-home icon")
                 check(d.model.isEmpty() && d.manufacturer.isEmpty() && d.mac.isEmpty(), "No inferred model, maker or MAC in reported fields")
                 check(d.capabilities() == listOf("Matter", "SmartThings"), "Radio capabilities not invented")
                 check(d.observations().any { it.value == service().host } && d.services.contains(SmartThingsInfo.HEDGE_TYPE), "Raw names and services retained")

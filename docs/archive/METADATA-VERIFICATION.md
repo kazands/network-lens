@@ -1,13 +1,13 @@
 # Historical local metadata verification
 
 These records apply to their named earlier candidates. See the current
-[release verification](../VERIFICATION-0.3.15.md) and [status](../STATUS.md).
+[release verification](VERIFICATION-0.3.15.md) and [status](../STATUS.md).
 
 # Local device metadata
 
 Network Lens reads the following local service metadata. These are device-reported
 observations, with source labels and per-endpoint lookup outcomes. Supported exact
-manufacturer/model reports can feed the [offline product catalogue](../DEVICE-IDENTITIES.md).
+manufacturer/model reports can feed the [offline product catalogue](../reference/DEVICE-IDENTITIES.md).
 Every scan starts fresh and all metadata remains in memory.
 
 | Service | Additional observations |
@@ -73,7 +73,7 @@ there is no automatic export, logging or persistence of endpoint diagnostics.
 
 ## Implementation verification history
 
-Current release checks are in [release verification](../VERIFICATION-0.3.15.md).
+Current release checks are in [release verification](VERIFICATION-0.3.15.md).
 The following results apply to the earlier candidates explicitly described here.
 
 The outcome increment from `dbf7828` passed 22 host suites / 16,209 checks, direct

@@ -12,16 +12,62 @@ internal class LanProtocolRunners(private val context: Context, private val net:
     private val blocked: (Exception) -> Unit) {
     private val datagrams: MutableSet<DatagramSocket> = resources.registry()
     private fun network() = net.network ?: throw IOException("Selected Wi-Fi is unavailable")
-    fun ssdp(resolved: (InetAddress, Map<String,String>) -> Unit): Thread = Thread({
-        val source=SsdpDiscovery.SOURCE
+    fun equipment(method: NetworkEquipment.Method, range: IpRange?, resolved: (InetAddress, NetworkEquipment.Report) -> Unit): Thread? {
+        if (net.ip.isEmpty() || range == null) { health.skipped(method.source,"No IPv4 Wi-Fi range selected"); return null }
+        if (range.prefix == 32 && range.contains(net.ip)) { health.skipped(method.source,"No other IPv4 addresses selected"); return null }
+        // Do not broadcast outside a custom scan range. Passive packets are still scope checked.
+        val full = IpRange(net.ip,net.prefix)
+        if (method == NetworkEquipment.Method.UBIQUITI && (range.first!=full.first || range.last!=full.last || net.prefix>=31)) {
+            health.skipped(method.source,"Broadcast discovery needs the full Wi-Fi range"); return null
+        }
+        health.begin(method.source)
+        return Thread({
+            var socket: DatagramSocket? = null
+            try {
+                if(!accepting() || cancelled()) return@Thread
+                net.check(context)
+                val selected=DatagramSocket(null).also {socket=it;datagrams.add(it)}
+                network().bindSocket(selected); selected.reuseAddress=false
+                selected.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"),method.port));selected.broadcast=true
+                val broadcast=InetAddress.getByName(IpRange.address(full.last + 1))
+                val result=NetworkEquipment.discover(method,object:NetworkEquipment.Channel {
+                    override fun send(bytes:ByteArray) {
+                        if(!accepting() || cancelled())return
+                        net.check(context);selected.send(DatagramPacket(bytes,bytes.size,broadcast,method.port));health.count(method.source,"requests")
+                    }
+                    override fun receive(timeout:Int):NetworkEquipment.Packet? {
+                        net.check(context);selected.soTimeout=timeout
+                        val bytes=ByteArray(4097);val packet=DatagramPacket(bytes,bytes.size)
+                        try {selected.receive(packet)} catch(_:SocketTimeoutException) {return null}
+                        return NetworkEquipment.Packet(packet.address,packet.port,bytes,packet.length)
+                    }
+                },deadline(),{accepting() && !cancelled()},inScope) {peer,report->
+                    net.check(context)
+                    if(accepting() && !cancelled() && inScope(peer))resolved(peer,report)
+                }
+                repeat(result.packets){health.count(method.source,"packets")}
+                repeat(result.devices){health.count(method.source,"identity reports")}
+                if(!cancelled()) {
+                    if(result.limited || result.interrupted)health.truncated(method.source,"Discovery work or time limit reached")
+                    else health.ok(method.source)
+                }
+            } catch(e:Exception) {
+                if(accepting() && !cancelled()) {blocked(e);health.fail(method.source,if(e is BindException)"Discovery port already in use" else "Could not receive equipment discovery")}
+            } finally {socket?.let {datagrams.remove(it);it.close()}}
+        },method.source).also {resources.start(it)}
+    }
+    fun ssdp(ipv6: Boolean = false, resolved: (InetAddress, Map<String,String>) -> Unit): Thread = Thread({
+        val source=SsdpDiscovery.SOURCE + if (ipv6) " · IPv6" else ""
         health.begin(source)
         var socket:DatagramSocket?=null
         try {
             if(!accepting() || cancelled()) return@Thread
             net.check(context)
-            val selected=DatagramSocket().also {socket=it;datagrams.add(it)}
+            val selected=MulticastSocket().also {socket=it;datagrams.add(it)}
             network().bindSocket(selected)
-            val group=InetAddress.getByName("239.255.255.250")
+            selected.networkInterface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
+            selected.timeToLive = 1
+            val group=InetAddress.getByName(if (ipv6) "ff02::c%" + net.iface else "239.255.255.250")
             val result=SsdpDiscovery.discover(object:SsdpDiscovery.Channel {
                 override fun send(bytes:ByteArray) {
                     if(!accepting() || cancelled())return
@@ -33,7 +79,7 @@ internal class LanProtocolRunners(private val context: Context, private val net:
                     try {selected.receive(packet)}catch(_:SocketTimeoutException){return null}
                     return SsdpDiscovery.Packet(packet.address,bytes,packet.length)
                 }
-            },deadline(),{accepting() && !cancelled()},inScope) {peer,headers->
+            },deadline(),{accepting() && !cancelled()},inScope, ipv6 = ipv6) {peer,headers->
                 net.check(context)
                 if(accepting() && !cancelled() && inScope(peer)) resolved(peer,headers)
             }
@@ -46,7 +92,7 @@ internal class LanProtocolRunners(private val context: Context, private val net:
             }
         }catch(e:Exception){if(accepting() && !cancelled()){blocked(e);health.fail(source,"Discovery request failed")}}
         finally {socket?.let {datagrams.remove(it);it.close()}}
-    },"service-discovery").also {resources.start(it)}
+    },if (ipv6) "SSDP / UPnP · IPv6" else "service-discovery").also {resources.start(it)}
     fun omada(range: IpRange?, resolved: (InetAddress, OmadaDiscovery.Response) -> Unit): Thread? {
         val source = OmadaDiscovery.SOURCE
         val selectedRange = range

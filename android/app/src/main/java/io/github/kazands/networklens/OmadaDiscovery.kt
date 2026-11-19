@@ -5,7 +5,7 @@ import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /** Receive-only ECSP discovery announcements. There is deliberately no send/adopt API.
- * Protocol evidence and coverage limits: docs/OMADA.md. */
+ * Protocol evidence and coverage limits: docs/reference/OMADA.md. */
 internal object OmadaDiscovery {
     const val SOURCE = "Omada announcements"
     const val MODEL_SOURCE = "Omada discovery reported model"
