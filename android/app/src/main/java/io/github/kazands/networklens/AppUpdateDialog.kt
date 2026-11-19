@@ -45,6 +45,7 @@ internal class AppUpdateDialog(context: Context, colors: Colors, private val flo
             UpdateFlow.Step.READY -> "Update verified$version"
             UpdateFlow.Step.STAGING -> "Preparing the installer…"
             UpdateFlow.Step.INSTALLING -> "Confirm the update"
+            UpdateFlow.Step.BLOCKED -> "Update blocked by Android"
             UpdateFlow.Step.ERROR -> "Update couldn’t finish"
         })
         value(releaseInfo, if (release != null && state.step in setOf(UpdateFlow.Step.AVAILABLE, UpdateFlow.Step.DOWNLOADING, UpdateFlow.Step.READY))
@@ -63,6 +64,7 @@ internal class AppUpdateDialog(context: Context, colors: Colors, private val flo
                 primary("Continue installation") { flow.install(); false }.secondary("Cancel") { true }
                 else primary("Cancel") { true }
             UpdateFlow.Step.CURRENT -> primary("Done") { true }
+            UpdateFlow.Step.BLOCKED -> primary("Close") { true }
         }
     }
 }

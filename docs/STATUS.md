@@ -1,17 +1,17 @@
 # Current status
 
-**Network Lens 0.3.28 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.29 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release improves recognition when devices report equivalent model identifiers, adds reviewed printer, speaker and plug categories, and keeps important identity evidence in busy-device troubleshooting reports. Optional Cast information no longer creates a warning when a receiver simply does not provide it; genuine failures remain visible.
+This release improves model recognition and address grouping, separates supported software descriptions from hardware identity, and gives larger supported networks more scan time. Troubleshooting reports mask additional identifiers and retain evidence more fairly across readers.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.28.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.29.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
 
 ## What remains unverified
 
-Synthetic tests do not establish a household accuracy percentage. Physical firmware compatibility, multicast delivery, sleeping devices, wireless isolation and low-memory performance still need testing across more networks. Physical TalkBack verification is separate from emulator assertions.
+Real /22 timing and affected-device recognition still need physical testing. The scan budget now scales from 55 seconds for a /24 to 100 seconds for a /22, with time reserved for device details. Unfinished checks remain visible; this is not a guarantee of complete discovery.
 
-MAC and exact model availability depend on device responses and Android restrictions. Some devices expose identity only through authenticated or cloud interfaces. Network Lens does not guess missing information or claim a complete inventory.
+The reported Google Play Protect classification remains unresolved. This release handles Android installation blocks more clearly and discards the blocked download; it does not establish Play Protect clearance. Keep Play Protect enabled. See [update troubleshooting](TROUBLESHOOTING.md#google-play-protect-blocks-the-apk).
 
-Google Play enrollment and a verified App Bundle publication path are not complete. The current release remains a direct-download preview.
+Synthetic checks do not establish household recognition accuracy. Physical firmware compatibility, multicast delivery, sleeping devices, wireless isolation, low-memory performance and TalkBack need broader testing. MAC and exact model availability depend on device responses and Android restrictions; unsupported details remain unknown.
 
-For an observed problem, start with [Troubleshooting](TROUBLESHOOTING.md). Older results and implementation investigations are in the [archive](archive/README.md).
+Google Play enrollment and a verified App Bundle publication path remain separate work. The current release is a direct-download preview.

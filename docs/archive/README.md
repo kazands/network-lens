@@ -1,6 +1,6 @@
 # Historical records
 
-These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.28.md) for today’s behavior and checks.
+These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.29.md) for today’s behavior and checks.
 
 - [IMPLEMENTATION VERIFICATION](IMPLEMENTATION-VERIFICATION.md)
 - [METADATA FOLLOWUP](METADATA-FOLLOWUP.md)
@@ -32,3 +32,5 @@ These are dated verification reports and investigations, retained for traceabili
 - [0.3.26 verification](VERIFICATION-0.3.26.md) — broader recognition and clearer details.
 
 - [0.3.27 release verification](VERIFICATION-0.3.27.md) — troubleshooting reports and smoother details.
+
+- [VERIFICATION 0.3.28](VERIFICATION-0.3.28.md)

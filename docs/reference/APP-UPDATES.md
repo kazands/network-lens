@@ -59,10 +59,21 @@ Completed or cancelled installer sessions are cleaned up; abandoned temporary
 files/sessions are removed when the app next starts after process death. No scan
 history or update preferences are saved.
 
-The manifest adds `REQUEST_INSTALL_PACKAGES` and one non-exported result receiver.
-Only the launcher is exported. There is no file provider, background service or
-new storage permission. A future Google Play distribution needs a separate review
+The updater uses `REQUEST_INSTALL_PACKAGES` and one non-exported result receiver.
+Only the launcher is exported. The separate troubleshooting-report provider is
+non-exported and uses temporary read grants; it does not share APKs. There is no
+background service or storage permission. A future Google Play distribution needs a separate review
 of its update mechanism and permission policy.
+
+## Blocked installations
+
+When Android returns `STATUS_FAILURE_BLOCKED`, the updater stops, abandons its
+installer session, deletes the downloaded APK, clears pending confirmation and
+shows a Close-only explanation. It does not offer an immediate install retry.
+Android uses this status for both verifier and policy blocks; the app does not
+claim to know which one occurred or display untrusted platform error text.
+This handling does not remove a Play Protect classification. See
+[Play Protect troubleshooting](../TROUBLESHOOTING.md#google-play-protect-blocks-the-apk).
 
 ## Verification
 
@@ -76,7 +87,7 @@ The 0.3.20 regression checks also exercise installer-session opening failures on
 the main thread. Storage, permission and installer errors leave a recoverable
 message, abandon the session and cancel its pending callback.
 
-See [current release verification](../VERIFICATION-0.3.28.md) for artifact-specific
+See [current release verification](../VERIFICATION-0.3.29.md) for artifact-specific
 checks and [BUILDING.md](../BUILDING.md) for commands. Earlier live in-app update
 journeys are recorded with the corresponding release notes and assets, including
 [the original updater release](../archive/VERIFICATION-0.3.17.md). A signed in-place emulator

@@ -78,3 +78,10 @@ Existing lifecycle, metadata and coalescing suites cover surrounding behaviour.
 
 See [recognition and performance baselines](RECOGNITION-BASELINE.md) for the
 separate physical compatibility boundary.
+
+
+### Address-sweep allowance (0.3.29)
+
+The normal scan budget remains 55 seconds. Each additional block of up to 256 hosts above 254 adds 15 seconds, up to 100 seconds for the supported 1,022-host /22. Service-only scans retain 55 seconds. Scope, presence evidence, probe timeouts and concurrency limits are unchanged.
+
+The initial sweep reserves the final 10 seconds for service/detail settlement. Expiring an address-check batch cancels its pending jobs and records a truncated method instead of throwing out of the coordinator and immediately closing unrelated readers. Unchecked addresses remain reported as unchecked; this is not a claim of complete discovery.

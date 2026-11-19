@@ -18,7 +18,7 @@ internal class UpdateFlow(private val activity: Activity, private val changed: (
     private val openCommitSession: (PackageInstaller, Int)->PackageInstaller.Session) {
     constructor(activity: Activity, changed: ()->Unit) :
         this(activity, changed, { installer, id -> installer.openSession(id) })
-    enum class Step { IDLE, CHECKING, CURRENT, AVAILABLE, DOWNLOADING, READY, STAGING, INSTALLING, ERROR }
+    enum class Step { IDLE, CHECKING, CURRENT, AVAILABLE, DOWNLOADING, READY, STAGING, INSTALLING, BLOCKED, ERROR }
     data class View(val step: Step=Step.IDLE, val message: String="", val percent: Int=0)
     var view=View(); private set
     var release: AppUpdates.Release?=null; private set
@@ -140,6 +140,12 @@ internal class UpdateFlow(private val activity: Activity, private val changed: (
                 if(foreground) install()
             }
             PackageInstaller.STATUS_SUCCESS -> {complete();set(View(Step.CURRENT,"Update installed. Reopen Network Lens to start a fresh scan."))}
+            PackageInstaller.STATUS_FAILURE_BLOCKED -> {
+                // Android can report a verifier or device-policy block here. Do not guess
+                // which one, repeat the install, or expose the platform's untrusted message.
+                abandon();apk?.delete();apk=null
+                set(View(Step.BLOCKED,"Android blocked this update. Keep Play Protect enabled. If its warning says the app may be harmful, report the version and warning to the developer for review. A managed device may instead require help from its administrator."))
+            }
             else -> {abandon();set(View(if(apk?.isFile==true) Step.READY else Step.ERROR,"The update wasn’t installed. You can try again."))}
         }
     }

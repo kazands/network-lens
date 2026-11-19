@@ -9,11 +9,12 @@ class Grouping private constructor() {
         fun isSelf(): Boolean
         fun hardwareAddress(): String
         fun links(): Collection<String>
+        fun hardwareAddressMayBeOtherInterface(): Boolean = false
     }
 
     private class Facts(endpoint: Endpoint) {
         val self = endpoint.isSelf()
-        val mac = endpoint.hardwareAddress()
+        val mac = if (endpoint.hardwareAddressMayBeOtherInterface()) "" else endpoint.hardwareAddress()
         val links = endpoint.links().filterTo(HashSet()) { it.isNotEmpty() }
     }
 

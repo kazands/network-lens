@@ -48,6 +48,7 @@ internal object DeviceIdentityChecks {
         check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Identity fixtures reject physical devices")
         DeviceCatalogLoader.load(test.targetContext)
         check(DeviceCatalog.extendedSize() == 256338, "The packaged global catalogue loads all pinned aliases offline")
+        ReportRegressionChecks.run(check)
         RecognitionEvidenceChecks.run(test, check)
         TpLinkChecks.run(test, check)
         OmadaChecks.run(test, check)

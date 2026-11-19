@@ -213,22 +213,24 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
                 observePhoneAddresses(net.addresses)
                 listener.progressSnapshot(0, total, ::snapshot)
-                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(55)
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(plan.budgetSeconds)
                 scanDeadline = deadline
                 health.skipped(IPV6_SOURCE, "No separate IPv6 echo checks were needed")
                 startNsd(); startMdns(); startSsdp(); startSadp(); startWsDiscovery(); startPlayStation(); startTpLink(); startOmada(); startLanIdentities(); startTuyaAnnouncements(); startLifxIdentity(); startEasySmartDiscovery(); startNetworkEquipment()
                 val echoTargets = hosts.any { it != net.ip }
                 health.skipped(ICMP_SOURCE, if (echoTargets) "Echo checks are used for unconfirmed addresses" else "No other IPv4 addresses in this range")
                 val count = total
+                val sweepDeadline = deadline - TimeUnit.SECONDS.toNanos(10)
                 val jobs = ArrayList<Future<*>>()
                 for (host in hosts) jobs.add(workers.submit {
-                    if (cancelled.get()) return@submit
+                    if (cancelled.get() || System.nanoTime() >= sweepDeadline) return@submit
                     if (host != net.ip) probe(host, 160, 220)
+                    if (Thread.currentThread().isInterrupted || System.nanoTime() >= sweepDeadline) return@submit
                     val n = done.incrementAndGet()
                     if (n % 8 == 0 || n == count) listener.progressSnapshot(n, count, ::snapshot)
                 })
-                awaitJobs(jobs, deadline, "IPv4 checks")
-                if (!cancelled.get()) {
+                val sweepFinished = awaitJobs(jobs, sweepDeadline, "IPv4 checks")
+                if (!cancelled.get() && sweepFinished) {
                     val unanswered = ArrayList<String>()
                     val metadata = ArrayList<String>()
                     for (host in hosts) if (host != net.ip) {
@@ -343,14 +345,10 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }, "device-discovery").start()
     }
     private fun String?.isNullOrBlankJava(): Boolean = this == null || javaTrim().isEmpty()
-    private fun awaitJobs(jobs: List<Future<*>>, deadline: Long, source: String) {
-        for (job in jobs) {
-            if (cancelled.get()) return
-            val left = deadline - System.nanoTime()
-            if (left <= 0) { health.truncated(source, "Scan time limit reached"); throw TimeoutException() }
-            try { job.get(left, TimeUnit.NANOSECONDS) }
-            catch (e: TimeoutException) { health.truncated(source, "Scan time limit reached"); throw e }
-        }
+    private fun awaitJobs(jobs: List<Future<*>>, deadline: Long, source: String): Boolean {
+        val finished = DiscoveryWork.awaitBatch(jobs, deadline) { cancelled.get() }
+        if (!finished && !cancelled.get()) health.truncated(source, "Address-check budget ended; service details continue")
+        return finished
     }
     private fun inScope(a: InetAddress): Boolean {
         if (!net.local(a)) return false
@@ -441,7 +439,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         return d
     }
     private fun probe(host: String, connectTimeout: Int, nameTimeout: Int) {
-        if (cancelled.get()) return
+        if (cancelled.get() || Thread.currentThread().isInterrupted) return
         if (useFreshResponse(host, connectTimeout, nameTimeout)) return
         val echo = echo(host, if (connectTimeout == 160) 200 else 300)
         if (cancelled.get() || echo.status == IcmpEcho.Status.CANCELLED) return
@@ -452,7 +450,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         }
         if (useFreshResponse(host, connectTimeout, nameTimeout)) return
         for (port in PORTS) {
-            if (cancelled.get()) return
+            if (cancelled.get() || Thread.currentThread().isInterrupted) return
             if (useFreshResponse(host, connectTimeout, nameTimeout)) return
             val result = confirmTcp(peerAddress(host), port, connectTimeout, "IPv4 checks")
             if (result.status == TcpCheck.Status.CANCELLED) return
@@ -1567,9 +1565,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun applyDescription(d: Device, values: Map<String, String>) {
         applyFamilies(d, DiscoveryMatchers.match("ssdp", values), "UPnP device description")
         val source = "UPnP device description"
-        d.hint("Name", values["friendlyName"], source + " friendly name", 80)
-        d.hint("Manufacturer", values["manufacturer"], source, 70)
-        d.hint("Model", values["modelName"], source, 70)
+        d.upnpIdentity(values)
         d.hint("Device type", UpnpDescription.deviceKind(values), source + " device type", 80)
         d.detail("UPnP model number", values["modelNumber"])
         d.detail("UPnP model description", values["modelDescription"])

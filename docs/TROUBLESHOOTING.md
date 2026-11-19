@@ -35,6 +35,21 @@ Public releases share one signing identity and should update in place. A develop
 
 If the download fails, retry on a working internet connection. Update checks use the phone's normal internet route; recognition itself stays local. Very old app versions without the updater need the [GitHub download](https://github.com/kazands/network-lens/releases) once.
 
+## Google Play Protect blocks the APK
+
+A “Harmful app blocked” warning is different from a request to scan an unfamiliar
+app. Keep Play Protect enabled and do not use “Install anyway” as a troubleshooting
+step. Expand **More details** and report the warning text, the APK version and
+whether it appeared during installation or while opening the app. Do not post
+screenshots containing Wi-Fi names or other personal information publicly.
+
+A matching signature and download checksum verify the publisher and file integrity;
+they are not malware clearance. A clean local test or third-party scanner result
+also does not clear Google's classification. The developer must investigate the
+exact release and, if appropriate, submit a
+[Play Protect classification appeal](https://developers.google.com/android/play-protect/warning-dev-guidance#appeals).
+Do not uninstall the existing app merely to retry a blocked update.
+
 ## Report a recognition problem
 
 For device-level investigation, use **Scan details → Troubleshooting report**. It includes every device and address, including unnamed devices, returned evidence and recorded lookup history. Preview it, then choose **Share full report** to send one text attachment through an app you select. Names and addresses are masked by default; enable their inclusion only when needed for private support. [What is included, withheld or not retained](reference/TROUBLESHOOTING-REPORT.md).

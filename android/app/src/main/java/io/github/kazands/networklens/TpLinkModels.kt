@@ -5,7 +5,7 @@ internal object TpLinkModels {
     private data class Family(val series: String, val label: String, val category: DeviceCatalog.Category, val models: List<String>)
     private val families = listOf(
         Family("Kasa", "Smart plug", DeviceCatalog.Category.OUTLET,
-            listOf("HS100", "HS103", "HS105", "HS110", "KP100", "KP105", "KP115", "KP125", "KP400", "EP10", "EP25")),
+            listOf("HS100", "HS103", "HS105", "HS110", "KP100", "KP105", "KP115", "KP125", "KP200", "KP400", "EP10", "EP25")),
         Family("Kasa", "Light switch", DeviceCatalog.Category.SWITCH, listOf("HS200", "HS210", "KS200", "KS200M", "KS205")),
         Family("Kasa", "Dimmer switch", DeviceCatalog.Category.SWITCH, listOf("HS220", "KS220", "KS220M", "KS225", "KS230")),
         Family("Tapo", "Smart plug", DeviceCatalog.Category.OUTLET,

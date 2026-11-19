@@ -1,5 +1,18 @@
 # What is new
 
+## 0.3.29 — Clearer recognition and more time for larger networks
+
+- Avoid mistaking supported media-server software and generic service labels for the device itself.
+- Recognise more reported MacBook Pro models, TP-Link KP200 outlets, Sony BRAVIA TVs, HP printer families, Synology NAS models and Fosi S3 streamers.
+- Reduce duplicate entries when an AirPlay device reports a different interface address, while keeping genuine adapter conflicts separate.
+- Mask additional device identifiers in troubleshooting reports, give different readers a fair share of report space, and explain when information could not be retained.
+- Give larger supported networks more scan time: up to 70 seconds for a /23 and 100 seconds for a /22. Normal /24 scans retain their 55-second budget, and time is reserved for device details.
+
+### Blocked updates
+
+- Stop and discard the downloaded APK when Android reports a security or policy block, with guidance to keep Play Protect enabled.
+- Document the difference between APK integrity checks and Google Play Protect clearance. This does not resolve the reported Play Protect classification.
+
 ## 0.3.28 — More consistent recognition
 
 - Recognise supported iPhones and iPads from 179 unambiguous board identifiers, including when another service reports the equivalent product code.
@@ -31,6 +44,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.28).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.29).
 
-[Verification for this release](VERIFICATION-0.3.28.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.29.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

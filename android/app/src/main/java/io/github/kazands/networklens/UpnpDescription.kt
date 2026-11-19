@@ -164,6 +164,16 @@ class UpnpDescription private constructor() {
             } catch (_: Exception) { Collections.emptyMap() }
         }
 
+        /** Known software descriptions remain service evidence, never the physical host's maker/model. */
+        internal fun softwareIdentity(values: Map<String, String>): Boolean =
+            DeviceCatalog.key(values["manufacturer"].orEmpty()) in setOf("jminim.org", "minimserver.com") &&
+                values["modelName"] in setOf("MinimServer", "MonitorService2") ||
+            values["manufacturer"] == "JF Light Industries" && values["modelName"] == "UpMPD"
+
+        // Samba's generic Bonjour icon/model hint does not identify Apple hardware.
+        internal fun presentationModel(value: String, source: String): Boolean =
+            value == "Xserve" && source == "mDNS current _device-info._tcp. TXT"
+
         /** A DLNA renderer can be a TV, speaker or software. Only explicit Samsung TV
          * descriptions qualify here; manufacturer, friendlyName and MediaRenderer alone do not. */
         internal fun deviceKind(values: Map<String, String>): String {
