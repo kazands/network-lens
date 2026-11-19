@@ -25,6 +25,7 @@ Network Lens keeps service capabilities separate from physical identity. Scanner
 | TVs and streaming devices | Local service descriptions; supported Samsung, Google and Fire TV fields | Availability differs by firmware and power state |
 | Audio systems | VSSL, Sonos, HEOS, MusicCast, BluOS and AirPlay/Cast relationships | A zone or group is not necessarily separate hardware |
 | Smart-home devices | Supported mDNS, SSDP, HomeKit, Matter and vendor announcements | Hub-attached Zigbee/Z-Wave devices and paired-only information may not be exposed over IP |
+| Kidde smart detectors | Matching current Kidde WD-family discovery fields | Family identification only; exact model, smoke/CO capabilities and HomeKit compatibility are not established |
 | TP-Link equipment and smart devices | Kasa, Omada/EAP and Easy Smart discovery | Models and firmware expose different local responses |
 | Other network equipment | Public Ubiquiti discovery and passive MikroTik announcements | The device must expose supported discovery on the selected network |
 | Printers and scanners | IPP and advertised eSCL capabilities | An attached peripheral must not replace the computer hosting it |

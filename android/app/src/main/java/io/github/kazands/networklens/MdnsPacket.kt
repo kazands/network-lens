@@ -39,6 +39,8 @@ class MdnsPacket private constructor() {
         @JvmField var port = 0
         @JvmField var ptrReceived = false
         @JvmField var txtReceived = false
+        // Keep DNS-SD first-value semantics, but let strict fingerprints reject ambiguous md fields.
+        @JvmField var duplicateModelKey = false
         @JvmField val attributes: MutableMap<String, ByteArray> = TreeMap()
         fun copy(): Service {
             val copy = Service(name, type)
@@ -46,6 +48,7 @@ class MdnsPacket private constructor() {
             copy.port = port
             copy.ptrReceived = ptrReceived
             copy.txtReceived = txtReceived
+            copy.duplicateModelKey = duplicateModelKey
             for ((key, value) in attributes) copy.attributes[key] = value.clone()
             return copy
         }
@@ -54,7 +57,8 @@ class MdnsPacket private constructor() {
     data class Question(val labels: List<String>, val kind: Int)
     data class Record(val owner: List<String>, val kind: Int, val ttl: Long, val flush: Boolean,
                       val target: List<String> = emptyList(), val port: Int = 0,
-                      val attributes: Map<String, ByteArray> = emptyMap(), val address: String = "")
+                      val attributes: Map<String, ByteArray> = emptyMap(), val address: String = "",
+                      val duplicateModelKey: Boolean = false)
     private class Name(val value: String, val plain: Boolean, val labels: List<String>)
 
     companion object {
@@ -263,6 +267,7 @@ class MdnsPacket private constructor() {
                                 var equal = 0
                                 while (equal < n && data[cursor + equal].toInt() != '='.code) equal++
                                 val key = String(data, cursor, equal, StandardCharsets.US_ASCII).lowercase(Locale.ROOT)
+                                if (key == "md" && s?.attributes?.containsKey(key) == true) s.duplicateModelKey = true
                                 if (s != null && s.attributes.size < 32 &&
                                     key.matches(Regex("[a-z0-9_-]{1,63}")) && !s.attributes.containsKey(key)) {
                                     s.attributes[key] = Arrays.copyOfRange(data, cursor + minOf(n, equal + 1), cursor + n)
@@ -336,6 +341,7 @@ class MdnsPacket private constructor() {
             }
             if (kind != 16) return null
             val attrs = TreeMap<String, ByteArray>(); var cursor = start; var fields = 0
+            var duplicateModelKey = false
             while (cursor < end) {
                 if (++fields > 128) throw IllegalArgumentException()
                 val n = data[cursor++].toInt() and 255
@@ -343,11 +349,12 @@ class MdnsPacket private constructor() {
                 var equal = 0
                 while (equal < n && data[cursor + equal].toInt() != '='.code) equal++
                 val key = String(data, cursor, equal, StandardCharsets.US_ASCII).lowercase(Locale.ROOT)
+                if (key == "md" && attrs.containsKey(key)) duplicateModelKey = true
                 if (attrs.size < 32 && key.matches(Regex("[a-z0-9_-]{1,63}")) && !attrs.containsKey(key))
                     attrs[key] = data.copyOfRange(cursor + minOf(n, equal + 1), cursor + n)
                 cursor += n
             }
-            return Record(labels, kind, ttl, flush, attributes = attrs)
+            return Record(labels, kind, ttl, flush, attributes = attrs, duplicateModelKey = duplicateModelKey)
         }
 
         private fun service(result: Result, owner: String): Service? {

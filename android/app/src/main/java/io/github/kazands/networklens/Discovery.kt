@@ -2084,6 +2084,10 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 d.detail("Amazon discovery", "Fire TV family from a WhisperPlay advertisement; model and generation require additional evidence")
                 d.detail("Amazon device type code (advertised)", fire.typeCode)
             }
+            if (!d.self && prefix == "mDNS current" && KiddeInfo.matches(service)) {
+                d.recognizeKidde(source)
+                d.detail("Kidde discovery", "WD-family fingerprint; exact model and sensor capabilities not reported. HomeKit compatibility has not been verified.")
+            }
             if (!d.self && SmartThingsInfo.matches(service)) d.recognizeSmartThings(source)
             val id = attribute(attrs, "id")
             if (id.isNotEmpty()) { d.identify(type + "|" + id, 80); val key = explicitId(type, attrs["id"]); if (key.isNotEmpty()) d.link(key) }

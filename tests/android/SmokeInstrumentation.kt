@@ -66,7 +66,7 @@ class SmokeInstrumentation : Instrumentation() {
             // Deterministic emulator fixtures; production deletion preserves appearance.
             var mode: String =
                 (if ((arguments === null)) "full" else arguments!!.getString("mode", "full"))
-            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast" || mode == "fire-tv" || mode == "envisalink" || mode == "smartthings") {
+            if (mode == "app-updates" || mode == "audio-zones" || mode == "scan-efficiency" || mode == "scan-ownership" || mode == "performance" || mode == "local-metadata" || mode == "recog" || mode == "device-identities" || mode == "google-cast" || mode == "fire-tv" || mode == "envisalink" || mode == "smartthings" || mode == "kidde") {
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
                 check(process.inputStream.bufferedReader().use { it.readText().trim() } == "1", "Synthetic discovery fixtures reject physical devices")
             }
@@ -77,6 +77,8 @@ class SmokeInstrumentation : Instrumentation() {
                 RecognitionReportChecks.run(this, ::check)
             } else if (mode == "detail-stability") {
                 DetailStabilityChecks.run(this, ::check)
+            } else if (mode == "kidde") {
+                KiddeChecks.run(this, ::check)
             } else if (mode == "smartthings") {
                 SmartThingsChecks.run(this, ::check)
             } else if (mode == "envisalink") {
@@ -98,6 +100,7 @@ class SmokeInstrumentation : Instrumentation() {
                 BroadAudioChecks.run(this, ::check)
             } else if (mode == "device-identities") {
                 BroadRecognitionChecks.run(this, ::check)
+                KiddeChecks.run(this, ::check)
                 SmartThingsChecks.run(this, ::check)
                 EnvisalinkChecks.run(this, ::check)
                 AppleRecognitionChecks.run(this, ::check)

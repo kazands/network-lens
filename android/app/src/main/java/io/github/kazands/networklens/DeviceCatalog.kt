@@ -28,7 +28,8 @@ internal object DeviceCatalog {
             id.startsWith("tplink:") && TpLinkModels.sameModel(id, value) ||
             reference.isNotEmpty() && models.any { modelKey(it) == modelKey(value) } && global.lookup(brand, printerModel(DeviceCatalog.brand(brand), value))?.title == title
         fun redundantName(value: String): Boolean =
-            id == SmartThingsInfo.PRODUCT_ID && SmartThingsInfo.technicalName(value) || key(value) in models || key(value) in redundantNames || key(value) == key(title)
+            id == SmartThingsInfo.PRODUCT_ID && SmartThingsInfo.technicalName(value) ||
+            id == KiddeInfo.PRODUCT_ID && KiddeInfo.technicalName(value) || key(value) in models || key(value) in redundantNames || key(value) == key(title)
     }
     data class Match(val product: Product, val source: String, val input: String, val recog: Recog.Model? = null)
 
@@ -167,6 +168,9 @@ internal object DeviceCatalog {
         private var fireTvSource = ""
         private var fireTvHardwareObserved = false
         private var envisalinkObserved = false
+        private var kiddeObserved = false
+        fun hasKiddeIdentity(): Boolean = kiddeObserved
+        fun offerKidde(source: String) { kiddeObserved = true; offerProduct(KiddeInfo.identity(source)) }
         private var smartThingsObserved = false
         fun hasSmartThingsIdentity(): Boolean = smartThingsObserved
         fun offerSmartThings(source: String) { smartThingsObserved = true; offerProduct(SmartThingsInfo.identity(source)) }
@@ -234,6 +238,7 @@ internal object DeviceCatalog {
         fun compatible(product: Product): Boolean = !conflicted &&
             (!envisalinkObserved || product.id == EnvisalinkInfo.PRODUCT_ID) &&
             (!smartThingsObserved || product.id == SmartThingsInfo.PRODUCT_ID) &&
+            (!kiddeObserved || product.id == KiddeInfo.PRODUCT_ID) &&
             (fireTvType.isEmpty() || (FireTvInfo.product(fireTvType)?.let { it.id == product.id }
                 ?: !product.id.startsWith(FireTvInfo.PRODUCT_PREFIX))) &&
             // A missing registry row is not missing identity. Grouped endpoints must agree
@@ -255,7 +260,7 @@ internal object DeviceCatalog {
                 FireTvInfo.product(fireTvType)?.takeIf(::compatible)?.let {
                     HardwareClassification.Fact(it.category, "Amazon device-type catalogue · $fireTvSource")
                 })
-            if (envisalinkObserved || smartThingsObserved) return listOfNotNull(registry()?.takeIf { compatible(it.product) }?.let {
+            if (envisalinkObserved || smartThingsObserved || kiddeObserved) return listOfNotNull(registry()?.takeIf { compatible(it.product) }?.let {
                 HardwareClassification.Fact(it.product.category, it.source)
             })
             return listOfNotNull(
@@ -315,6 +320,7 @@ internal object DeviceCatalog {
             it.fireTvHardwareObserved = fireTvHardwareObserved
             it.envisalinkObserved = envisalinkObserved
             it.smartThingsObserved = smartThingsObserved
+            it.kiddeObserved = kiddeObserved
             it.playStationResponse = playStationResponse
             it.tpLinkResponse = tpLinkResponse
             it.omadaResponse = omadaResponse
@@ -326,6 +332,7 @@ internal object DeviceCatalog {
             upnpEureka = upnpEureka || other.upnpEureka
             envisalinkObserved = envisalinkObserved || other.envisalinkObserved
             smartThingsObserved = smartThingsObserved || other.smartThingsObserved
+            kiddeObserved = kiddeObserved || other.kiddeObserved
             fireTvHardwareObserved = fireTvHardwareObserved || other.fireTvHardwareObserved
             offerFireTvType(other.fireTvType, other.fireTvSource)
             if (other.protocolBrand.isNotEmpty()) {

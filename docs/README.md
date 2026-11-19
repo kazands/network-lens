@@ -20,4 +20,4 @@ Start with the guide for the task you want to complete.
 
 ## Release evidence
 
-[0.3.29 verification](VERIFICATION-0.3.29.md) records exactly what was tested for this release. [Archived records](archive/README.md) preserve previous release checks and investigations. Historical results do not establish that the current APK passed the same checks.
+[0.3.30 verification](VERIFICATION-0.3.30.md) records exactly what was tested for this release. [Archived records](archive/README.md) preserve previous release checks and investigations. Historical results do not establish that the current APK passed the same checks.
