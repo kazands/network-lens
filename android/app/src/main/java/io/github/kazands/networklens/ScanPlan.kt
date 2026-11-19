@@ -2,6 +2,8 @@ package io.github.kazands.networklens
 
 /** Scope is independent of address-sweep capacity. Never silently substitute a smaller subnet. */
 internal class ScanPlan private constructor(val range: IpRange?, val hosts: List<String>, val sweepOmitted: Boolean) {
+    // Preserve the normal /24 budget; larger sweeps need more bounded time, not shorter probes.
+    val budgetSeconds: Long = 55L + ((hosts.size - 254).coerceAtLeast(0) + 255) / 256 * 15L
     val scope: String = if (range == null) "IPv6 advertised services + this phone's Wi-Fi addresses"
         else IpRange.address(if (range.prefix >= 31) range.first else range.first - 1) + "/" + range.prefix +
             if (sweepOmitted) " · Service discovery only (IPv4 + IPv6); IPv4 address sweep not run" else " · IPv4 + IPv6 advertised services"

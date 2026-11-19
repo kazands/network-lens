@@ -40,7 +40,7 @@ The older **Copy recognition report** remains a separate counts-only summary. It
 
 The implementation passed a fresh independent Deep code review with no substantive findings. Regression coverage includes masked and explicit-name reports, product-title provenance, snapshot isolation, exact omission counts, lookup history, lifecycle invalidation and temporary sharing.
 
-See [0.3.28 release verification](../VERIFICATION-0.3.28.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
+See [0.3.29 release verification](../VERIFICATION-0.3.29.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
 
 An optional Cast group-information reply that supplies no supported information is
 a finished check with an explicit “optional information not reported” count. It
@@ -51,3 +51,10 @@ absence. This reporting change does not improve the receiver's response.
 Group counts describe displayed address groups, not a verified number of physical
 boxes. Separate audio zones can refer to one amplifier. A journal overflow is a
 count of recording events, not necessarily unique missing response fields.
+
+
+### Identifier and capacity corrections (0.3.29)
+
+Opaque UPnP `uuid:` identifiers are masked even when they are not standard UUIDs and even when names/local addresses are included. Protocol service URNs remain visible.
+
+The 128-entry journal keeps identity/outcomes ahead of ordinary observations and withheld values. Within an equal-priority tier, a source holding more than 16 records can yield capacity to a less-represented reader. Reports include omitted-event counts by priority; these count rejected/displaced events, not unique missing fields. Bounded retention still cannot guarantee every returned field is retained.

@@ -309,3 +309,22 @@ The existing conservative Recog descriptions remain authoritative where present.
 
 Third-party AirPlay model strings alone do not count as Apple identity conflicts.
 A contradictory known Apple model or manufacturer still suppresses recognition.
+
+
+## Reviewed recognition corrections (0.3.29)
+
+These mappings require current model observations, not a device's friendly name.
+They do not populate missing device-reported manufacturer fields.
+
+- Apple `Mac15,3`, `Mac15,6`, `Mac15,8`, `Mac15,10`: MacBook Pro (14-inch, Nov 2023). `Mac15,7`, `Mac15,9`, `Mac15,11`: 16-inch family. Configuration is not inferred. [Apple model reference](https://support.apple.com/en-us/108052).
+- TP-Link `KP200`, including the regional `(US)` suffix: Kasa outlet. [TP-Link product reference](https://www.tp-link.com/us/home-networking/smart-plug/kp200/v1/).
+- Sony-qualified `BRAVIA 4K GB`: television family, not a specific retail panel model. [Sony television family](https://electronics.sony.com/tv-video/televisions/c/all-tvs).
+- HP-qualified `ColorLaserJet MFP M182-M185` aliases: printer family. The scanner's independently reported model remains separate. [HP family reference](https://support.hp.com/us-en/product/setup-user-guides/hp-color-laserjet-pro-m182-m185-multifunction-printer-series/29448777).
+- Synology-qualified `DS1513+` and `DS220j`: DiskStation network storage. [DS1513+ reference](https://global.download.synology.com/download/Document/Hardware/DataSheet/DiskStation/13-year/DS1513%2B/enu/Synology_DS1513_Plus_Data_Sheet_enu.pdf), [DS220j reference](https://www.synology.com/en-eu/company/news/article/DS220j).
+- Fosi Audio-qualified `S3`: audio streamer, without assuming built-in speakers. [Fosi product reference](https://fosiaudio.com/products/s3-balanced-hifi-streamer).
+
+Known MinimServer/MonitorService2 descriptions from their reviewed publishers and UpMPD descriptions remain software evidence. Their manufacturer/model/name fields do not override the hardware host. [MinimServer](https://minimserver.com/) and [upmpdcli](https://www.lesbonscomptes.com/upmpdcli/) run on other hardware. Unreviewed or contradictory hardware reports still suppress product matching.
+
+The exact `Xserve` label in Bonjour device-info is retained as a presentation hint, not Apple hardware identity: Samba can advertise it for the Finder icon. This exception does not apply to arbitrary model sources or actual Apple model identifiers. [Samba's presentation model discussion](https://lists.samba.org/archive/samba-technical/2019-January/131999.html).
+
+A current shared mDNS host may link IPv4/IPv6 endpoints despite different RAOP and network-adapter identifiers. A RAOP identifier alone never links endpoints. Repeated reports of the same MAC preserve the strongest source evidence, so a later RAOP advertisement cannot erase a confirmed adapter address. A stronger adapter report also replaces a selected RAOP identifier when their addresses differ; the alternate address and source remain in diagnostic evidence. Two conflicting network-adapter MAC reports still prevent grouping regardless of response order; original observations remain available.

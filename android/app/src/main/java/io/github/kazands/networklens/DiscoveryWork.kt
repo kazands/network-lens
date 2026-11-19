@@ -29,6 +29,23 @@ class DiscoveryWork {
             }
         }
     }
+    companion object {
+        internal fun awaitBatch(jobs: List<Future<*>>, deadline: Long, cancelled: () -> Boolean): Boolean {
+            for (job in jobs) {
+                if (cancelled()) return false
+                if (job.isDone) { job.get(); continue }
+                val left = deadline - System.nanoTime()
+                try {
+                    if (left <= 0) throw TimeoutException()
+                    job.get(left, TimeUnit.NANOSECONDS)
+                } catch (_: TimeoutException) {
+                    jobs.filter { !it.isDone }.forEach { it.cancel(true) }
+                    return false
+                }
+            }
+            return true
+        }
+    }
     fun submit(lane: Lane, task: Runnable): Boolean = submit(lane, "", task)
     fun submit(lane: Lane, owner: String, task: Runnable): Boolean = try {
         if (stopped) false else { pools.getValue(lane).execute(if (lane == Lane.METADATA || lane == Lane.CAST || lane == Lane.IPV6) FairWorkQueue.Task(owner, task) else task); true }

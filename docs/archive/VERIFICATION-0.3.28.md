@@ -8,13 +8,13 @@ Application ID: `io.github.kazands.networklens`. Version code: **56**.
 Compatible Apple board/product aliases, Brother printer and Chromecast model
 reports, reviewed printer/speaker/plug categories, fewer false Apple conflicts,
 accurate optional Cast check status, and prioritised bounded troubleshooting evidence.
-See [changes](CHANGES.md) and [report coverage](reference/TROUBLESHOOTING-REPORT.md).
+See [changes](../CHANGES.md) and [report coverage](../reference/TROUBLESHOOTING-REPORT.md).
 
 A fresh independent Deep review approved all 30 implementation files with no
 substantive findings. Release preparation updated version metadata and documentation.
 All 50 APK payload entries other than the manifest match the reviewed candidate;
 all 51 non-signature entries match between development and public builds.
-The [candidate record](VERIFICATION-RECOGNITION-EVIDENCE.md) identifies earlier
+The [candidate record](../VERIFICATION-RECOGNITION-EVIDENCE.md) identifies earlier
 implementation checks separately from this release's exact artifact checks.
 
 ## Passed checks

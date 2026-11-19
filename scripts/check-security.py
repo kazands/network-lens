@@ -130,7 +130,8 @@ def main():
               'kotlin_stdlib_sha256': provenance['sha256'], 'kotlin_stdlib_version': provenance['version'], 'total_class_count': len(names),
               'kotlin_notices_verified': True,
               'exported_components': ['io.github.kazands.networklens.MainActivity (launcher)'],
-              'private_components': ['io.github.kazands.networklens.UpdateResultReceiver (installer result only)'],
+              'private_components': ['io.github.kazands.networklens.UpdateResultReceiver (installer result only)',
+                                     'io.github.kazands.networklens.ReportShareProvider (temporary read grants only)'],
               'debuggable': False, 'allow_backup': False, 'full_backup_content': False,
               'cleartext_http': False, 'cloud_backup_and_device_transfer_exclusions': sorted(domains)}
     serialized = json.dumps(report, indent=2) + '\n'

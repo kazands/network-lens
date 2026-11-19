@@ -8,7 +8,7 @@ internal object DeviceCatalog {
         LAPTOP("Laptop"), DESKTOP("Desktop computer"), TABLET("Tablet"), PHONE("Smartphone"),
         SPEAKER("Speaker"), TV_PLAYER("Streaming device"), SMART_DISPLAY("Smart display"), HANDHELD("Portable media player"),
         RECORDER("Network video recorder"), CONSOLE("Game console"), THERMOSTAT("Thermostat"), TV("Television"),
-        PRINTER("Printer"), CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
+        NAS("Network storage"), PRINTER("Printer"), CAMERA("Camera"), DOORBELL("Video doorbell"), LIGHT("Light"), LOCK("Lock"), OUTLET("Outlet"),
         SWITCH("Switch"), SENSOR("Sensor"), FAN("Fan"), HEATER("Heater"), AIR_CONDITIONER("Air conditioner"),
         AIR_PURIFIER("Air purifier"), HUMIDIFIER("Humidifier"), DEHUMIDIFIER("Dehumidifier"),
         AMPLIFIER("Streaming amplifier"), AUDIO_RECEIVER("Audio receiver"), BRIDGE("Smart-home bridge"), HUB("Smart-home hub"), GARAGE_DOOR("Garage door opener"),
@@ -51,6 +51,17 @@ internal object DeviceCatalog {
             keys("Smart_Thermostat_Premium", "Smart Thermostat Premium", "ecobee Smart Thermostat Premium", "ECB601"), manufacturerRequired = true),
         Product("samsung:pn59d550", "Samsung", "Samsung PN59D550", Category.TV,
             keys("PN59D550", "PN59D550C1F", "PN59D550C1FXZC"), familyOnly = true, manufacturerRequired = true),
+        Product("synology:ds1513+", "Synology", "Synology DiskStation DS1513+", Category.NAS,
+            keys("DS1513+"), manufacturerRequired = true),
+        Product("synology:ds220j", "Synology", "Synology DiskStation DS220j", Category.NAS,
+            keys("DS220j"), manufacturerRequired = true),
+        Product("fosi:s3", "Fosi Audio", "Fosi Audio S3", Category.AUDIO_RECEIVER,
+            keys("S3", "Fosi Audio S3"), manufacturerRequired = true, displayType = "Audio streamer"),
+        Product("sony:bravia-4k-gb", "Sony", "Sony BRAVIA 4K GB", Category.TV,
+            keys("BRAVIA 4K GB"), familyOnly = true, manufacturerRequired = true),
+        Product("hp:color-laserjet-m182-m185", "HP", "HP Color LaserJet Pro MFP M182–M185", Category.PRINTER,
+            keys("HP ColorLaserJet MFP M182-M185", "HP Color LaserJet MFP M182-M185", "ColorLaserJet MFP M182-M185"),
+            familyOnly = true, manufacturerRequired = true),
         Product("amazon:echo-dot", "Amazon", "Amazon Echo Dot", Category.SPEAKER,
             keys("Echo Dot", "Echo_Dot", "Amazon Echo Dot"), familyOnly = true, manufacturerRequired = true)
     )).map { it.copy(titleSource = TitleSource.CATALOGUE) }
@@ -67,7 +78,7 @@ internal object DeviceCatalog {
         "dlink", "d-link", "d-link corporation" -> "d-link"
         "hp", "hp inc.", "hewlett-packard", "hewlett packard", "hewlett-packard company" -> "hp"
         "qnap", "qnap systems, inc." -> "qnap"
-        "synology", "synology inc.", "synology incorporated" -> "synology"
+        "synology", "synology inc", "synology inc.", "synology incorporated" -> "synology"
         "axis", "axis communications", "axis communications ab" -> "axis"
         "tp-link", "tp-link technologies co., ltd." -> "tp-link"
         "asus", "asustek computer inc." -> "asus"

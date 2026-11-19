@@ -221,6 +221,7 @@ class Device : Grouping.Endpoint {
                 add(entry.field, entry.value, entry.source, entry.disposition,
                     returned || diagnosticPublic(entry.field) || entry.source in setOf("Presence evidence", "Service observation", "Port observation", "Port check", "Audio lookup"))
             }
+            d.diagnostics.losses().forEach { (kind, count) -> add("Diagnostic omitted events: " + kind.name.lowercase().replace('_', ' '), count.toString()) }
             add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal retains up to ${DiagnosticEvidence.LIMIT} entries, prioritising identity observations and lookup outcomes over other returned fields, then withheld values. Capacity counts include displaced or rejected events; repeated omitted events can be counted again.")
             TroubleshootingReport.Endpoint(d.ip, listOf(d.hostname, d.mac, d.identity) + d.observations().filter { it.field == "Hostname" }.map { it.value }, facts, d.diagnostics.omissions(),
                 listOf(d.name) + d.observations().filter { it.field == "Name" }.map { it.value })
@@ -296,6 +297,11 @@ class Device : Grouping.Endpoint {
     }
     internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
+        if (field == "Model" && UpnpDescription.presentationModel(value.orEmpty(), source.orEmpty())) {
+            diagnostics.record(source.orEmpty(), "Bonjour presentation model", value, "Service presentation label; not physical host identity")
+            detail("Bonjour presentation model", value)
+            return
+        }
         diagnostics.record(source.orEmpty(), field.orEmpty(), value, "Offered to identity selection; priority $priority",
             if (field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware")) DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME
             else DiagnosticEvidence.Retention.OBSERVATION)
@@ -318,6 +324,18 @@ class Device : Grouping.Endpoint {
         }
     }
 
+    @Synchronized internal fun upnpIdentity(values: Map<String, String>) {
+        val source = "UPnP device description"
+        if (UpnpDescription.softwareIdentity(values)) {
+            for ((field, key) in listOf("Software manufacturer" to "manufacturer", "Software model" to "modelName", "Software name" to "friendlyName"))
+                diagnostics.record(source, field, values[key], "Service identity; not physical host identity", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+        } else {
+            hint("Name", values["friendlyName"], source + " friendly name", 80)
+            hint("Manufacturer", values["manufacturer"], source, 70)
+            hint("Model", values["modelName"], source, 70)
+        }
+    }
+
     @Synchronized fun identify(candidate: String?, priority: Int) {
         val clean = SafeText.label(candidate, 200)
         if (clean.isNotEmpty() && (identity.isEmpty() || priority > identityPriority ||
@@ -328,6 +346,8 @@ class Device : Grouping.Endpoint {
     }
     @Synchronized override fun isSelf(): Boolean = self
     @Synchronized override fun hardwareAddress(): String = mac
+    @Synchronized override fun hardwareAddressMayBeOtherInterface(): Boolean =
+        macSource == "RAOP advertised hardware ID; may be another interface"
     @Synchronized override fun links(): Collection<String> = ArrayList(groupLinks)
     @Synchronized fun link(key: String?) {
         if (key != null && key.length <= 200 && groupLinks.size < 32 && !groupLinks.contains(key)) groupLinks.add(key)
@@ -359,14 +379,29 @@ class Device : Grouping.Endpoint {
     @Synchronized fun hardware(address: String?, source: String?) {
         val valid = Address.mac(address)
         if (valid.isNotEmpty()) {
+            val cleanSource = SafeText.label(source, 128)
+            // Repeating an address must not downgrade its provenance: grouping uses
+            // the source to distinguish an adapter address from a RAOP identifier.
+            if (mac == valid && hardwareSourceRank(cleanSource) <= hardwareSourceRank(macSource)) return
             if (mac.isNotEmpty() && mac != valid) {
-                val prefer = source!!.contains("ARP cache") || (source.contains("NetBIOS") && !macSource.contains("ARP cache"))
+                // A RAOP identifier may name another interface. A later adapter
+                // report must constrain grouping even when its address differs.
+                val prefer = cleanSource.contains("ARP cache") || (cleanSource.contains("NetBIOS") && !macSource.contains("ARP cache")) ||
+                    (hardwareAddressMayBeOtherInterface() && hardwareSourceRank(cleanSource) > 0)
                 if (prefer) detail("Other advertised MAC", mac + " · " + macSource)
-                else { detail("Other reported MAC", valid + " · " + source); return }
+                else { detail("Other reported MAC", valid + " · " + cleanSource); return }
             }
             mac = valid
-            macSource = SafeText.label(source, 128)
+            macSource = cleanSource
         }
+    }
+
+    private fun hardwareSourceRank(source: String): Int = when {
+        source.contains("ARP cache") -> 3
+        source.contains("NetBIOS") -> 2
+        source == "RAOP advertised hardware ID; may be another interface" -> 0
+        source.isEmpty() -> -1
+        else -> 1
     }
 
     @Synchronized fun detail(key: String?, value: String?) {

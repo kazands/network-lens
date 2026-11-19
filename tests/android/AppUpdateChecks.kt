@@ -37,7 +37,7 @@ internal object AppUpdateChecks {
                 check(!receiver.exported && receiver.enabled,"Installer callback is private")
                 check(a.packageManager.getPackageInfo(a.packageName,PackageManager.GET_PERMISSIONS).requestedPermissions?.contains("android.permission.REQUEST_INSTALL_PACKAGES")==true,"APK installation permission declared")
             }
-            val labels=mapOf(UpdateFlow.Step.IDLE to "Ready to check",UpdateFlow.Step.CHECKING to "Checking for updates…",UpdateFlow.Step.CURRENT to "You’re up to date",UpdateFlow.Step.AVAILABLE to "Update available · 0.99.0",UpdateFlow.Step.DOWNLOADING to "Downloading · 47%",UpdateFlow.Step.READY to "Update verified · 0.99.0",UpdateFlow.Step.STAGING to "Preparing the installer…",UpdateFlow.Step.INSTALLING to "Confirm the update",UpdateFlow.Step.ERROR to "Update couldn’t finish")
+            val labels=mapOf(UpdateFlow.Step.IDLE to "Ready to check",UpdateFlow.Step.CHECKING to "Checking for updates…",UpdateFlow.Step.CURRENT to "You’re up to date",UpdateFlow.Step.AVAILABLE to "Update available · 0.99.0",UpdateFlow.Step.DOWNLOADING to "Downloading · 47%",UpdateFlow.Step.READY to "Update verified · 0.99.0",UpdateFlow.Step.STAGING to "Preparing the installer…",UpdateFlow.Step.INSTALLING to "Confirm the update",UpdateFlow.Step.BLOCKED to "Update blocked by Android",UpdateFlow.Step.ERROR to "Update couldn’t finish")
             for(dark in listOf(false,true)) for(scale in listOf(1f,2f)) {
                 main {
                     a.resources.updateConfiguration(Configuration(original).apply{fontScale=scale;screenWidthDp=320},a.resources.displayMetrics)
@@ -141,6 +141,27 @@ internal object AppUpdateChecks {
                 check(flow.view.step==UpdateFlow.Step.INSTALLING,"Unrelated installer session ignored")
                 result.invoke(flow,Intent("synthetic-token").putExtra(PackageInstaller.EXTRA_SESSION_ID,id).putExtra(PackageInstaller.EXTRA_STATUS,PackageInstaller.STATUS_FAILURE_ABORTED))
                 check(flow.view.step==UpdateFlow.Step.ERROR && get(flow,"sessionId")==-1,"Rejected installation abandons session without claiming success")
+                val blockedFile=File(a.cacheDir,"synthetic-blocked.apk").apply{writeText("synthetic")}
+                val blockedId=installer.createSession(UpdateInstaller.parameters(a,1024))
+                set(flow,"apk",blockedFile);set(flow,"sessionId",blockedId);set(flow,"callbackToken","synthetic-blocked-token")
+                set(flow,"callback",UpdateInstaller.callback(a,blockedId,"synthetic-blocked-token"))
+                set(flow,"pendingConfirmation",Intent("synthetic.confirmation"));state(UpdateFlow.Step.INSTALLING)
+                val blockedResult=Intent("synthetic-blocked-token").putExtra(PackageInstaller.EXTRA_SESSION_ID,blockedId)
+                    .putExtra(PackageInstaller.EXTRA_STATUS,PackageInstaller.STATUS_FAILURE_BLOCKED)
+                    .putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE,"Untrusted synthetic platform details")
+                result.invoke(flow,Intent(blockedResult).setAction("wrong-token"))
+                check(blockedFile.exists() && flow.view.step==UpdateFlow.Step.INSTALLING,"Unauthenticated block cannot delete the download or change state")
+                result.invoke(flow,blockedResult)
+                check(flow.view.step==UpdateFlow.Step.BLOCKED,"Android security or policy block is distinct from a retryable failure")
+                check(!blockedFile.exists() && get(flow,"apk")==null,"Blocked download is removed")
+                check(get(flow,"sessionId")==-1 && get(flow,"callback")==null && !flow.canContinue(),"Block clears the installer session, callback and confirmation")
+                // PackageInstaller removes abandoned sessions asynchronously. The bounded
+                // eventual-removal assertion below covers this session along with the others.
+                check(flow.view.message.contains("Keep Play Protect enabled") && !flow.view.message.contains("Untrusted"),"Fixed block guidance does not expose platform details")
+                show()
+                check(texts(dialog().window!!.decorView).none{it.text.toString() in setOf("Install update","Continue installation","Check again")},"Blocked dialog offers no immediate retry or bypass")
+                flow.install();flow.download();flow.pause();flow.resume();flow.dismiss()
+                check(flow.view.step==UpdateFlow.Step.BLOCKED && get(flow,"transfer")==null,"Blocked state cannot restart installation or download and survives foreground changes")
                 val file=File(a.cacheDir,"synthetic-invalid.apk").apply{writeText("not an apk")}
                 var rejected=false
                 try{UpdateInstaller.verify(a,release,file)}catch(_:AppUpdates.Failure){rejected=true}

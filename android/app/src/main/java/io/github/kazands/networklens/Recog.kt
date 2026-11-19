@@ -26,7 +26,17 @@ internal object Recog {
         }
     }
 
-    fun lookup(code: String): Model? = if (code.length in 1..64) RecogModels.lookup(code) ?: AppleModels.lookup(code) else null
+    fun lookup(code: String): Model? = if (code.length in 1..64) RecogModels.lookup(code) ?: AppleModels.lookup(code) ?: reviewedMac(code) else null
+
+    // Apple Support 108052, reviewed 2026-11-19. No CPU/RAM/configuration inference.
+    private fun reviewedMac(code: String): Model? {
+        val title = when (code) {
+            "Mac15,3", "Mac15,6", "Mac15,8", "Mac15,10" -> "MacBook Pro (14-inch, Nov 2023)"
+            "Mac15,7", "Mac15,9", "Mac15,11" -> "MacBook Pro (16-inch, Nov 2023)"
+            else -> return null
+        }
+        return Model(code, title, Category.LAPTOP, 0, true, catalogueSource = "Apple Support · 108052")
+    }
 
     fun sameModel(first: String, second: String): Boolean = first == second ||
         lookup(first)?.let { a -> lookup(second)?.canonicalCode == a.canonicalCode } == true
@@ -84,6 +94,7 @@ internal object Recog {
             val bytes = fields.single()
             if (bytes.size !in 1..64 || bytes.any { it.toInt() !in 33..126 }) { conflicted = true; return }
             val next = String(bytes, Charsets.US_ASCII)
+            if (UpnpDescription.presentationModel(next, source)) return
             lookup(next)?.copy(observationSource = source)?.let {
                 typeModels.putIfAbsent(it.category, "${it.source} · ${it.input}")
             }

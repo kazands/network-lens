@@ -107,7 +107,7 @@ internal object TroubleshootingReport {
             // Match every rule against the ORIGINAL text. Neither private labels nor other generated
             // replacements can become input to another rule. Merge overlapping masks without leaks.
             pattern(URL) { "[URL withheld]" }; pattern(SECRET) { "[credential field withheld]" }
-            pattern(UUID, ::label); pattern(EMAIL) { "[email withheld]" }
+            pattern(UDN, ::label); pattern(UUID, ::label); pattern(EMAIL) { "[email withheld]" }
             val ordered = masks.sortedWith(compareBy<Mask> { it.start }.thenByDescending { it.end })
             return buildString {
                 var cursor = 0
@@ -127,6 +127,8 @@ internal object TroubleshootingReport {
             private val SECRET = Regex("(?i)\\b(?:password|passwd|access_token|refresh_token|authorization|cookie|private_key)\\s*[:=]\\s*[^\\s,;]+")
             private val IPV4 = Regex("(?<![0-9])(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?![0-9])")
             private val MAC = Regex("(?i)(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}")
+            // UPnP UDNs are opaque: many vendors do not use RFC UUID formatting.
+            private val UDN = Regex("(?i)\\buuid:[^\\s;|]+")
             private val UUID = Regex("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b")
             private val EMAIL = Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
         }

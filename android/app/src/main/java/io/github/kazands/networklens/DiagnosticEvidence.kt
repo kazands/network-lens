@@ -7,6 +7,11 @@ internal class DiagnosticEvidence {
     enum class Retention { WITHHELD, OBSERVATION, IDENTITY_OR_OUTCOME }
     private val entries = linkedMapOf<Entry, Retention>()
     private var omitted = 0L
+    private val losses = LongArray(Retention.entries.size)
+    private fun lost(retention: Retention) {
+        omitted = (omitted + 1).coerceAtMost(Long.MAX_VALUE - 1)
+        losses[retention.ordinal] = (losses[retention.ordinal] + 1).coerceAtMost(Long.MAX_VALUE - 1)
+    }
     @Synchronized fun record(source: String, field: String, value: String?, disposition: String = "Returned observation; not a recognition decision", retention: Retention = Retention.OBSERVATION) {
         if (value.isNullOrEmpty()) return
         val limited = source.length > 128 || field.length > 128 || value.length > 256
@@ -17,16 +22,24 @@ internal class DiagnosticEvidence {
             return
         }
         if (entries.size == LIMIT) {
-            val victim = entries.minByOrNull { it.value.ordinal }!!
-            omitted = (omitted + 1).coerceAtMost(Long.MAX_VALUE - 1)
-            if (victim.value >= retention) return
+            val lowest = entries.values.minOf { it.ordinal }
+            val candidates = entries.filterValues { it.ordinal == lowest }
+            val sourceCounts = candidates.keys.groupingBy { it.source }.eachCount()
+            val victim = candidates.maxByOrNull { sourceCounts.getValue(it.key.source) }!!
+            // At equal priority a noisy source cannot monopolise the journal. Retain at
+            // least 16 entries per source before rotating room to a less represented reader.
+            val fair = victim.value == retention && sourceCounts.getValue(victim.key.source) > 16 &&
+                sourceCounts.getValue(victim.key.source) > (sourceCounts[entry.source] ?: 0) + 1
+            if (victim.value > retention || victim.value == retention && !fair) { lost(retention); return }
+            lost(victim.value)
             entries.remove(victim.key)
         }
         entries[entry] = retention
     }
     @Synchronized fun snapshot() = entries.keys.toList()
     @Synchronized fun omissions() = omitted
-    @Synchronized fun copy() = DiagnosticEvidence().also { it.entries.putAll(entries); it.omitted = omitted }
+    @Synchronized fun losses(): Map<Retention, Long> = Retention.entries.associateWith { losses[it.ordinal] }
+    @Synchronized fun copy() = DiagnosticEvidence().also { it.entries.putAll(entries); it.omitted = omitted; losses.copyInto(it.losses) }
 
     fun txt(source: String, values: Map<String, ByteArray>) {
         for ((key, bytes) in values) {
