@@ -20,7 +20,7 @@ internal object EnvisalinkInfo {
     }
     fun matches(bytes: ByteArray): Boolean = bytes.contentEquals(greeting)
     fun identity() = DeviceCatalog.Match(DeviceCatalog.Product(PRODUCT_ID, "Envisacor", "Envisalink",
-        DeviceCatalog.Category.ALARM_INTERFACE, emptySet(), familyOnly = true),
+        DeviceCatalog.Category.ALARM_INTERFACE, emptySet(), familyOnly = true, titleSource = DeviceCatalog.TitleSource.CATALOGUE),
         "Envisalink DSC TPI greeting", "5053CD (login request; checksum verified)")
 
     /** Caller supplies a scoped, tracked socket and closes it on return/cancellation. No retries. */

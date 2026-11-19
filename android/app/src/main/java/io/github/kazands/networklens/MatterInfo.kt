@@ -33,7 +33,7 @@ internal object MatterInfo {
             val row=entries[(vendor.toLong() shl 16) or product.toLong()] ?: return null
             val title=if(row.name.startsWith(row.brand,true)) row.name else "${row.brand} ${row.name}"
             val productInfo=DeviceCatalog.Product("matter:${row.vendor}:${row.product}",row.brand,title,category(row.type),
-                setOf(row.name,row.part).filter {it.isNotEmpty()}.map(DeviceCatalog::key).toSet())
+                setOf(row.name,row.part).filter {it.isNotEmpty()}.map(DeviceCatalog::key).toSet(), titleSource = DeviceCatalog.TitleSource.CATALOGUE)
             return DeviceCatalog.Match(productInfo,"Matter DCL · snapshot $height","VID=${row.vendor}; PID=${row.product}")
         }
         companion object {

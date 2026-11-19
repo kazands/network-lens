@@ -1,7 +1,7 @@
 # Broader local recognition
 
 For the current coverage expansion, see [recognition expansion](RECOGNITION-EXPANSION.md) and the
-[checked integration inventory](RECOGNITION-COVERAGE.md). See [release verification](../VERIFICATION-0.3.26.md).
+[checked integration inventory](RECOGNITION-COVERAGE.md). See [release verification](../archive/VERIFICATION-0.3.26.md).
 Recognition still uses current responses on the selected Wi-Fi. Results remain
 in memory, and no scan data or household identifiers are sent to a recognition
 service. Missing models remain unknown.
@@ -184,7 +184,7 @@ clipboard/identity checks after a fresh emulator boot, broader matrix results,
 test corrections, and the remaining permission-dialog and physical-test limits.
 
 The candidate verification history above predates release versioning. See
-[current release verification](../VERIFICATION-0.3.26.md) for the final artifact and checks.
+[current release verification](../archive/VERIFICATION-0.3.26.md) for the final artifact and checks.
 
 ## Envisalink support in 0.3.24
 

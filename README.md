@@ -8,11 +8,11 @@ See what is on your Wi-Fi. Find responding devices, understand what they are, an
 
 Network Lens is a free, open-source Android app for home users and smart-home enthusiasts. It keeps everyday scanning simple while making addresses, services and discovery evidence available when you need them.
 
-[![Download Network Lens 0.3.26 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.26/Network-Lens-0.3.26.apk)
+[![Download Network Lens 0.3.27 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.27/Network-Lens-0.3.27.apk)
 
 **Android 8.0 or newer · Development preview · No account required**
 
-Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.26)
+Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.27)
 
 ## Find your devices
 
@@ -40,6 +40,10 @@ Sleeping devices, network isolation and Android restrictions can limit what a sc
 - [Privacy and permissions](docs/PRIVACY.md) — what stays on your phone and why access is requested.
 - [Developer guide](docs/BUILDING.md) — build and test the app.
 - [All documentation](docs/README.md) — technical references and release verification.
+
+## Troubleshoot with one report
+
+Open **Scan details → Troubleshooting report** to preview and share the retained evidence for every device, including unnamed results. Names and addresses are masked by default. Review the preview before sharing. [What the report includes](docs/reference/TROUBLESHOOTING-REPORT.md).
 
 ## Contribute
 

@@ -20,6 +20,6 @@ internal object SmartThingsInfo {
     fun acceptsManufacturer(value: String): Boolean = value in setOf("smartthings", "samsung", "aeotec")
     fun identity(source: String) = DeviceCatalog.Match(DeviceCatalog.Product(
         PRODUCT_ID, "SmartThings", "SmartThings Hub", DeviceCatalog.Category.HUB,
-        setOf("smartthings hub", "samsung smartthings hub"), familyOnly = true),
+        setOf("smartthings hub", "samsung smartthings hub"), familyOnly = true, titleSource = DeviceCatalog.TitleSource.CATALOGUE),
         "SmartThings hub advertisement · $source", "SmartThings service with matching hub hostname and instance ID; generation not verified")
 }

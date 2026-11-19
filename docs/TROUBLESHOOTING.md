@@ -37,6 +37,13 @@ If the download fails, retry on a working internet connection. Update checks use
 
 ## Report a recognition problem
 
+For device-level investigation, use **Scan details → Troubleshooting report**. It includes every device and address, including unnamed devices, returned evidence and recorded lookup history. Preview it, then choose **Share full report** to send one text attachment through an app you select. Names and addresses are masked by default; enable their inclusion only when needed for private support. [What is included, withheld or not retained](reference/TROUBLESHOOTING-REPORT.md).
+
+
+After a scan finishes or is stopped, open **Scan details → Copy recognition report** and paste the summary into your support conversation. It includes aggregate recognition counts and lookup outcomes, with no device names, addresses, model strings, serials or credentials. It does not upload anything. Sample results and scans still in progress cannot be copied this way.
+
+The report describes what the app recognised, not whether every identification is correct. It counts device groups separately from address endpoints and excludes this phone's groups. A missing lookup record is not proof that no request ran: some readers report only scan-wide outcomes. For an individual problem, the information below is still useful.
+
 Include the Network Lens version, Android version, expected make/model and whether the device was awake. From technical details, share only the relevant reported model, manufacturer, device type, services and lookup outcome/source.
 
 Remove IP/MAC addresses, room and personal names, SSIDs, serials, pairing IDs and credentials before posting. Never attach an unredacted household scan or screenshot to a public issue. Use synthetic examples when possible.

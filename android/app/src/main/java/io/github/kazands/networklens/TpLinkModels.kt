@@ -22,6 +22,6 @@ internal object TpLinkModels {
         if (match.groupValues[1].isNotEmpty() && !match.groupValues[1].equals(family.series, true) ||
             match.groupValues[3].isNotEmpty() && code !in setOf("HS210", "KS230")) return null
         return DeviceCatalog.Product("tplink:${DeviceCatalog.key(code)}", "TP-Link", "TP-Link ${family.series} $code",
-            family.category, setOf(DeviceCatalog.key(code)), manufacturerRequired = true, displayType = family.label)
+            family.category, setOf(DeviceCatalog.key(code)), manufacturerRequired = true, displayType = family.label, titleSource = DeviceCatalog.TitleSource.CATALOGUE)
     }
 }

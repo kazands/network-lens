@@ -14,7 +14,7 @@ internal object FireTvInfo {
     private val stick4k = DeviceCatalog.Product(
         PRODUCT_PREFIX + "AKPGW064GI9HE", "Amazon", "Amazon Fire TV Stick 4K", DeviceCatalog.Category.TV_PLAYER,
         setOf("fire tv", "amazon fire tv", "fire tv stick 4k", "amazon fire tv stick 4k", "aftmm"),
-        familyOnly = true, reference = "ioBroker.alexa2@6471cf116653e50b6cbc6c4dd54c2d52bfea4190 · Amazon device-type table")
+        familyOnly = true, reference = "ioBroker.alexa2@6471cf116653e50b6cbc6c4dd54c2d52bfea4190 · Amazon device-type table", titleSource = DeviceCatalog.TitleSource.CATALOGUE)
     fun product(code: String): DeviceCatalog.Product? = stick4k.takeIf { code == "AKPGW064GI9HE" }
 
     fun parse(service: MdnsPacket.Service): Report? {

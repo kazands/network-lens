@@ -2,7 +2,7 @@
 
 Included in 0.3.26. This reference records coverage contracts and remaining limits.
 No new permission, persistent inventory, cloud identification or background scan.
-See [exact verification results and remaining physical checks](../VERIFICATION-0.3.26.md).
+See [exact verification results and remaining physical checks](../archive/VERIFICATION-0.3.26.md).
 
 ## Coverage contracts
 

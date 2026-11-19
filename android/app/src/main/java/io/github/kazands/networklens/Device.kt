@@ -30,11 +30,29 @@ class Device : Grouping.Endpoint {
     @JvmField val evidence: MutableList<String> = ArrayList()
     @JvmField val details: MutableMap<String, String> = LinkedHashMap()
     internal val audioPlayers = linkedMapOf<String, AudioPlayers.Player>()
-    internal val audioPlayerStatuses = linkedMapOf<String, String>()
+    internal val audioPlayerStatuses: MutableMap<String, String> = object : LinkedHashMap<String, String>() {
+        override fun put(key: String, value: String): String? {
+            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition")
+            return super.put(key, value)
+        }
+    }
     internal var audioReport: AudioZones.Report? = null
     internal var audioStatus = ""
+        set(value) {
+            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition")
+            field = value
+        }
     internal var audioIdentity = ""
     internal var audioRows: List<Pair<String, String>> = emptyList()
+    internal var diagnostics = DiagnosticEvidence()
+        private set
+    @Synchronized internal fun finishAudioLookups(stopped: Boolean) {
+        for ((key, value) in audioPlayerStatuses.toMap()) if (value.endsWith(": Waiting or checking"))
+            audioPlayerStatuses[key] = value.removeSuffix("Waiting or checking") +
+                if (stopped) "Stopped before lookup finished" else "Lookup did not finish"
+        if (audioStatus.endsWith(": Waiting or checking")) audioStatus = audioStatus.removeSuffix("Waiting or checking") +
+            if (stopped) "Stopped before lookup finished" else "Lookup did not finish"
+    }
     private var hints = IdentityHints()
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
@@ -131,6 +149,85 @@ class Device : Grouping.Endpoint {
         if (matches.any { it.product.id != candidate.product.id }) return null
         return candidate.takeIf { endpoints.all { it.productCompatible(candidate) } }
     }
+    /** Input is a detached scan snapshot. Never promote diagnostic-only data into identity. */
+    internal fun troubleshootingGroup(finishedAt: Long = 0): TroubleshootingReport.Group {
+        val product = groupProduct()
+        val category = classification()
+        val state = recognitionReportGroup()
+        fun titleKind(p: DeviceCatalog.Product?) = if (p?.titleSource == DeviceCatalog.TitleSource.CATALOGUE)
+            TroubleshootingReport.ValueKind.CATALOGUE else TroubleshootingReport.ValueKind.TEXT
+        val summaryFacts = listOf(
+            TroubleshootingReport.Fact("Identification", product?.product?.title ?: "No compatible product match", publicValue = true, kind = titleKind(product?.product)),
+            TroubleshootingReport.Fact("Primary type", category.category?.label ?: "Not identified", publicValue = true),
+            TroubleshootingReport.Fact("Recognition level", state.level.label, publicValue = true),
+            TroubleshootingReport.Fact("Recorded conflict", state.conflict.toString(), publicValue = true),
+            TroubleshootingReport.Fact("Explanation", recognitionSummary(), publicValue = true),
+            TroubleshootingReport.Fact("Classification evidence", category.facts.joinToString("; ") { it.category.label + " from " + it.source }, publicValue = true)
+        ) + listOfNotNull(product?.let { TroubleshootingReport.Fact("Product match source", it.source, decision = "Input: ${it.input}", publicValue = true) })
+        return TroubleshootingReport.Group("", endpoints().map { d -> synchronized(d) {
+            val facts = ArrayList<TroubleshootingReport.Fact>()
+            fun add(field: String, value: String, source: String = "", decision: String = "", public: Boolean = true, kind: TroubleshootingReport.ValueKind = TroubleshootingReport.valueKind(field)) {
+                facts.add(TroubleshootingReport.Fact(field, value, source, decision, public, kind))
+            }
+            add("IP address", d.ip, public = false)
+            add("Address family", if (d.ip.contains(':')) "IPv6" else "IPv4")
+            add("Network name", d.name, public = false); add("Hostname", d.hostname, public = false)
+            add("MAC address", d.mac, d.macSource, public = false)
+            add("IEEE interface vendor", MacVendors.lookup(d.mac), decision = "Interface vendor only; not reported manufacturer")
+            add("Manufacturer", d.manufacturer); add("Model", d.model); add("Reported device type", d.kind)
+            add("This phone", d.self.toString()); add("Gateway", d.gateway.toString())
+            add("Response time ms", if (d.latency < 0) "Not available" else d.latency.toString())
+            add("Presence evidence", d.evidence.joinToString("; ").ifEmpty { "None retained" })
+            add("Services", d.services.joinToString("; ").ifEmpty { "None retained" })
+            add("Observed / advertised ports", d.ports.sorted().joinToString(", ").ifEmpty { "None retained" })
+            d.links().forEach { add("Grouping link", it, it.substringBefore(':'), "Opaque association, not proof of physical ownership", false) }
+            add("Last response age at scan end ms", if (finishedAt > 0 && d.lastSeen > 0) (finishedAt - d.lastSeen).coerceAtLeast(0).toString() else "Not recorded")
+            d.identifiedProduct()?.let { add("Endpoint product match", it.product.title, it.source, "Input: " + it.input, kind = titleKind(it.product)) }
+            for (h in d.observations()) {
+                val chosen = when(h.field) { "Name" -> d.name; "Hostname" -> d.hostname; "Manufacturer" -> d.manufacturer; "Model" -> d.model; "Device type" -> d.kind; else -> "" }
+                add(h.field, h.value, h.source, if (h.value == chosen) "Selected reported value; priority ${h.priority}" else "Alternate/supporting observation; priority ${h.priority}", h.field !in setOf("Name", "Hostname"))
+            }
+            val history = d.metadataLookups.history()
+            if (history.isEmpty()) add("HTTP identity lookup history", "No attempts recorded; does not prove none were attempted")
+            history.forEachIndexed { n, it -> add("Lookup ${n+1}", it.description(), it.kind.source,
+                "port ${it.port}; ${if(it.secure) "TLS" else "plain HTTP"}; state ${it.state}; elapsed ${it.elapsedMs?.let { ms -> "${ms}ms" } ?: "not recorded"}") }
+            add("Lookup history overflow", d.metadataLookups.omissions().toString())
+            for ((key, value) in d.details) add(key, value, "Retained device detail", public = diagnosticPublic(key))
+            if (d.audioStatus.isNotEmpty()) add("Audio lookup", d.audioStatus)
+            d.audioPlayerStatuses.values.forEach { add("Audio lookup", it) }
+            for ((key, value) in d.audioRows) add(key, value, "Audio grouping", public = key in setOf("Audio lookup", "Player source", "Player role", "Group membership", "Source") || diagnosticPublic(key))
+            for (player in d.audioPlayers.values) {
+                add("Audio player ID", player.id, player.protocol.source, public = false)
+                for (group in player.groups) {
+                    add("Audio group ID", group.id, player.protocol.source, "Relation: ${group.relation}; role: ${group.role}", false)
+                    add("Audio group leader", group.leader, player.protocol.source, public = false)
+                    group.peers.sorted().forEach { add("Audio group member", it, player.protocol.source, public = false) }
+                }
+            }
+            d.audioReport?.let { audio ->
+                add("Zone hardware ID", audio.hardware, audio.kind.source, public = false)
+                add("Zone number", audio.zone.toString(), audio.kind.source)
+                add("Zone model", audio.model, audio.kind.source)
+                add("Zone group ID", audio.group, audio.kind.source, public = false)
+                add("Zone coordinator", audio.coordinator, audio.kind.source, public = false)
+                for (member in audio.members) {
+                    add("Zone member", member.id, audio.kind.source, public = false)
+                    add("Zone member parent", member.parent, audio.kind.source, public = false)
+                }
+            }
+            for (entry in d.diagnostics.snapshot()) {
+                val returned = entry.disposition.startsWith("Returned") || entry.disposition.contains("withheld") || entry.disposition == "Array content omitted"
+                add(entry.field, entry.value, entry.source, entry.disposition,
+                    returned || diagnosticPublic(entry.field) || entry.source in setOf("Presence evidence", "Service observation", "Port observation", "Port check", "Audio lookup"))
+            }
+            add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal records offered observations independently up to ${DiagnosticEvidence.LIMIT} entries.")
+            TroubleshootingReport.Endpoint(d.ip, listOf(d.hostname, d.mac, d.identity) + d.observations().filter { it.field == "Hostname" }.map { it.value }, facts, d.diagnostics.omissions(),
+                listOf(d.name) + d.observations().filter { it.field == "Name" }.map { it.value })
+        } }, summaryFacts)
+    }
+    private fun diagnosticPublic(field: String): Boolean = field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware", "Port", "Response capture", "Lookup outcome", AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE, "UPnP description status", "Scanning identity", "Discovery families", "Network equipment identity request") ||
+        field.lowercase().let { it.contains("model") || it.contains("manufacturer") || it.contains("firmware") || it.contains("platform") || it.contains("protocol version") || it.startsWith("matter ") }
+
     internal fun recognitionSummary(): String {
         val endpoints=endpoints()
         return RecognitionStatus.explain(groupProduct()!=null, classification().conflicted,
@@ -138,6 +235,38 @@ class Device : Grouping.Endpoint {
             endpoints.flatMap { synchronized(it) { it.matchedFamilies.toList() } }.mapNotNull { DiscoveryMatchers.family(it)?.label }.distinct().sorted(),
             endpoints.flatMap { it.metadataLookups.snapshot() },
             endpoints.any { synchronized(it) { IdentityHints.specificName(it.name) } })
+    }
+    /** Export facts rather than text, so device-controlled names/models never reach the clipboard report. */
+    internal fun recognitionReportGroup(): RecognitionReport.Group {
+        val endpoints = endpoints()
+        val product = groupProduct()?.product
+        val classification = classification()
+        val combined = DeviceCatalog.Evidence()
+        endpoints.forEach { synchronized(it) { combined.include(it.catalogue) } }
+        val conflict = classification.conflicted || combined.hasRecordedConflict() ||
+            endpoints.any { synchronized(it) { it.recognition.hasRecordedConflict() } } ||
+            product == null && endpoints.mapNotNull { it.identifiedProduct() }.any { candidate ->
+                endpoints.any { !it.productCompatible(candidate) } || endpoints.any { other ->
+                    other.identifiedProduct()?.product?.id?.let { it != candidate.product.id } == true
+                }
+            }
+        val family = endpoints.any { synchronized(it) {
+            !it.familiesOverflow && it.matchedFamilies.any { domain -> DiscoveryMatchers.family(domain) != null }
+        } }
+        val level = when {
+            product != null && !product.familyOnly -> RecognitionReport.Level.PRODUCT
+            product != null || family -> RecognitionReport.Level.FAMILY
+            endpoints.any { it.services.isNotEmpty() } -> RecognitionReport.Level.SERVICES
+            else -> RecognitionReport.Level.UNKNOWN
+        }
+        val lookups = endpoints.flatMap { endpoint -> synchronized(endpoint) {
+            endpoint.metadataLookups.snapshot().map(RecognitionReport::metadata) + listOfNotNull(
+                endpoint.details[AppleDeviceInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.APPLE, it) },
+                endpoint.details[EapInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.EAP, it) },
+                endpoint.details[EnvisalinkInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.ENVISALINK, it) })
+        } }
+        return RecognitionReport.Group(level, product == null && endpoints.any { IdentityHints.specific(it.model) },
+            conflict, classification.category != null && !classification.conflicted, endpoints.size, lookups)
     }
     internal fun presentation(): DevicePresentation.Labels {
         val product = groupProduct()?.product
@@ -166,6 +295,7 @@ class Device : Grouping.Endpoint {
     }
     internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
+        diagnostics.record(source.orEmpty(), field.orEmpty(), value, "Offered to identity selection; priority $priority")
         if (field == "Device type") hardwareType.offer(SafeText.label(value, 160), SafeText.label(source, 128))
         if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
             val cleanValue = SafeText.label(value, 160)
@@ -209,14 +339,17 @@ class Device : Grouping.Endpoint {
         else -> "Device at " + ip
     }
     @Synchronized fun evidence(value: String?) {
+        diagnostics.record("Presence evidence", "Presence evidence", value)
         val clean = SafeText.label(value, 160)
         if (clean.isNotEmpty() && evidence.size < 16 && !evidence.contains(clean)) evidence.add(clean)
     }
     @Synchronized fun service(value: String?) {
+        diagnostics.record("Service observation", "Service observation", value)
         val clean = SafeText.label(value, 128)
         if (clean.isNotEmpty() && services.size < 24 && !services.contains(clean)) services.add(clean)
     }
     @Synchronized fun port(port: Int) {
+        if (port in 1..65535) diagnostics.record("Port observation", "Port", port.toString())
         if (port in 1..65535 && ports.size < 64 && !ports.contains(port)) ports.add(port)
     }
 
@@ -234,6 +367,7 @@ class Device : Grouping.Endpoint {
     }
 
     @Synchronized fun detail(key: String?, value: String?) {
+        diagnostics.record("Device detail", key.orEmpty(), value, "Diagnostic detail; may not affect identity")
         val cleanKey = SafeText.label(key, 64)
         val cleanValue = SafeText.label(value, 160)
         if (cleanKey.isEmpty() || cleanValue.isEmpty() || legacySource(cleanKey)) return
@@ -286,6 +420,9 @@ class Device : Grouping.Endpoint {
         copy.audioPlayerStatuses.putAll(audioPlayerStatuses)
         copy.audioIdentity = audioIdentity; copy.audioStatus = audioStatus; copy.audioRows = audioRows.toList()
         for (member in members) copy.members.add(member.copy())
+        // Recording setters above rebuild state, not scan events. Restore the exact journal last,
+        // including its overflow count, so taking a snapshot cannot manufacture omissions.
+        copy.diagnostics = diagnostics.copy()
         return copy
     }
 

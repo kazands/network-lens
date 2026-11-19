@@ -56,7 +56,7 @@ object LocalMetadataTest {
         repeat(length) { val b = input.read(); if (b < 0) throw EOFException(); out.write(b) }
         return out.toByteArray()
     }
-    private fun exchange(kind: LocalMetadata.Kind, reply: ByteArray, inspect: (ByteArray) -> Unit = {}): LocalMetadata.Report? {
+    private fun exchange(kind: LocalMetadata.Kind, reply: ByteArray, diagnostics: DiagnosticEvidence? = null, inspect: (ByteArray) -> Unit = {}): LocalMetadata.Report? {
         val failure = AtomicReference<Throwable?>()
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             val thread = Thread {
@@ -68,13 +68,19 @@ object LocalMetadataTest {
                 return Socket().use { socket ->
                     MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), LocalMetadata.Request(kind, server.localPort,
                         if (kind == LocalMetadata.Kind.IPP) "/ipp/print" else "/metadata"),
-                        System.nanoTime() + TimeUnit.SECONDS.toNanos(2), timer) { true }
+                        System.nanoTime() + TimeUnit.SECONDS.toNanos(2), timer, diagnostics) { true }
                 }
             } finally { timer.shutdownNow(); thread.join(3000); check(!thread.isAlive, "Loopback fixture finishes"); failure.get()?.let { throw it } }
         }
     }
 
     private fun diagnostics() {
+        val returned = DiagnosticEvidence()
+        var rejected = false
+        try { exchange(LocalMetadata.Kind.SPOTIFY, response(utf("""{"status":402,"spotifyError":7,"activeUser":"PRIVATE_FIXTURE"}""")), returned) }
+        catch (e: MetadataHttp.Failure) { rejected = e.reason == MetadataHttp.Reason.INVALID_METADATA }
+        check(rejected && returned.snapshot().any { it.field == "spotifyError" && it.value == "7" }, "Rejected identity response still retains safe error evidence through real HTTP transport")
+        check(returned.snapshot().none { it.value.contains("PRIVATE_FIXTURE") }, "Live capture drops account values before retaining diagnostics")
         val source = LocalMetadata.Kind.SPOTIFY.source
         val health = DiscoveryHealth().apply { workStarted(source) }
         val timer = ScheduledThreadPoolExecutor(1)

@@ -149,4 +149,12 @@ full host suite were not rerun for these Android reporting/cleanup corrections.
 No version change, publication or phone installation was performed.
 
 The candidate verification history above predates release versioning. See
-[current release verification](../VERIFICATION-0.3.26.md) for the final artifact and checks.
+[current release verification](../archive/VERIFICATION-0.3.26.md) for the final artifact and checks.
+
+## Scrolling stability
+
+Wi-Fi capability notifications that leave the connection, addresses, routes and displayed connection information unchanged do not rebuild the current page. Connection reconciliation still runs, and network replacement or withdrawn scope still clears or prunes results. Device-details scroll restoration runs after layout and before drawing. The `detail-stability` emulator mode checks repeated notifications, expanded evidence, necessary redraws and network replacement in both appearances at normal and enlarged text sizes.
+
+### Troubleshooting report
+
+Scan details offers a detailed report alongside the counts-only summary. A privacy choice precedes a static, paged preview. Share sends the full report as one temporary text attachment; Copy this page includes its page number. Preview/sharing is unavailable for sample results, active scans and retired scan sessions. See [coverage and lifecycle](TROUBLESHOOTING-REPORT.md).

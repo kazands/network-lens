@@ -143,6 +143,24 @@ object DeviceCatalogTest {
         val protocol = DeviceCatalog.Match(apple.product.copy(id = "protocol:fixture:model"), "Fixture discovery", "Model=Fixture")
         check(RecognitionCopy.explanation(protocol).contains("local discovery service") && !RecognitionCopy.explanation(protocol).contains("catalogue"), "Protocol model explanation does not claim a catalogue match")
         check(RecognitionCopy.explanation(apple).contains("Apple model catalogue"), "Apple matching explains its actual source")
+        val bundled = listOf(DeviceCatalog.lookup("PS5")!!, GoogleCastModels.lookup("Google Home Mini")!!,
+            TpLinkModels.lookup("HS100")!!, FireTvInfo.product("AKPGW064GI9HE")!!,
+            SmartThingsInfo.identity("Synthetic current response").product, EnvisalinkInfo.identity().product)
+        for (product in bundled) check(product.titleSource == DeviceCatalog.TitleSource.CATALOGUE,
+            "Reviewed bundled title carries explicit provenance: ${product.id}")
+        for (source in listOf(LocalMetadata.Kind.SAMSUNG.source + " (reported)",
+            LanIdentity.Method.GOVEE.source + " (reported)", OmadaDiscovery.MODEL_SOURCE)) {
+            val evidence = DeviceCatalog.Evidence()
+            evidence.offer("Model", "Private Room television", source)
+            val product = evidence.match()!!.product
+            check(product.titleSource == DeviceCatalog.TitleSource.DEVICE, "Peer-generated title is not trusted catalogue text")
+            check(evidence.copy().match()!!.product.titleSource == DeviceCatalog.TitleSource.DEVICE,
+                "Copied recognition evidence retains device-title provenance")
+            check(product.copy(category = DeviceCatalog.Category.TV).titleSource == DeviceCatalog.TitleSource.DEVICE,
+                "Presentation category overrides do not change title provenance")
+        }
+        check(DeviceCatalog.Product("fixture", "Fixture", "Private Room", DeviceCatalog.Category.UNSPECIFIED, emptySet()).titleSource == DeviceCatalog.TitleSource.DEVICE,
+            "New product constructors default to name masking")
         println("PASS · $checks product catalogue and presentation checks")
     }
 }

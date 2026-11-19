@@ -1,6 +1,6 @@
 # Envisalink recognition
 
-See [current release verification](../VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
+See [current release verification](../archive/VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
 
 Network Lens can identify the Envisalink family from the DSC Third Party
 Interface (TPI) greeting. The list shows **Envisalink · Alarm interface**, with a

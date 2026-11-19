@@ -1034,13 +1034,21 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             socket.connect(InetSocketAddress(d.ip, port), timeout)
             synchronized(d) {
                 if (!enriching || cancelled.get()) return false
+                d.diagnostics.record("Port check", "TCP port $port", "Connection succeeded")
                 d.port(port); d.latency = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start).toInt()
             }
             if (port == AppleDeviceInfo.PORT) requestAppleModel(d)
             if (port == 80) requestEapModel(d)
             if (port == 8001) requestSamsung(d)
             return true
-        } catch (e: Exception) { blocked(e); return false }
+        } catch (e: Exception) {
+            d.diagnostics.record("Port check", "TCP port $port", when (e) {
+                is java.net.SocketTimeoutException -> "Connection timed out"
+                is java.net.ConnectException -> "Connection failed or refused"
+                else -> "Connection unavailable or interrupted"
+            })
+            blocked(e); return false
+        }
         finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
     }
 
@@ -1053,6 +1061,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         synchronized(d) { d.detail("Network equipment identity request", EapInfo.TRANSPORT) }
         val admission = eapRequests.admit(d.ip, source)
         if (admission == ServiceAdmission.Result.LIMIT) {
+            d.diagnostics.record(source, "Lookup outcome", "Not attempted: 32-device identity check limit reached")
             health.truncated(source, "32-device identity check limit reached"); return
         }
         if (admission != ServiceAdmission.Result.ADMITTED) return
@@ -1136,6 +1145,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     }
     private fun applyEnvisalinkReport(d: Device, report: EnvisalinkInfo.Report): Boolean = synchronized(d) {
         if (!currentEnvisalinkPeer(d) || d.details[EnvisalinkInfo.SOURCE] != "Waiting or checking") return@synchronized false
+        d.diagnostics.record(EnvisalinkInfo.SOURCE, "Lookup outcome", report.text)
         if (report == EnvisalinkInfo.Report.UNAVAILABLE) d.details.remove(EnvisalinkInfo.SOURCE)
         else {
             d.port(EnvisalinkInfo.PORT)
@@ -1167,7 +1177,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (!enriching || cancelled.get() || !inScope(peerAddress(d.ip))) return@Runnable
                 val report = readOnlyMetadata(peerAddress(d.ip), deadline, { enriching && !cancelled.get() }) { socket ->
                     health.count(source, "requests")
-                    AppleDeviceInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts) { enriching && !cancelled.get() }
+                    AppleDeviceInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts, diagnostics = d.diagnostics) { enriching && !cancelled.get() }
                 }
                 if (applyAppleReport(d, report)) health.count(source, when (report.status) {
                     AppleDeviceInfo.Status.MODEL -> "models received"
@@ -1256,10 +1266,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 MetadataLookups.State.WORK_LIMIT -> health.truncated(entry.kind.source, "Metadata work limit reached")
                 else -> {}
             }
-            d.audioPlayerStatuses.replaceAll { _, value -> if (value.endsWith(": Waiting or checking"))
-                value.removeSuffix("Waiting or checking") + (if (stopped) "Stopped before lookup finished" else "Lookup did not finish") else value }
-            if (d.audioStatus.endsWith(": Waiting or checking")) d.audioStatus = d.audioStatus.substringBefore(":") +
-                if (stopped) ": Stopped before lookup finished" else ": Lookup did not finish"
+            d.finishAudioLookups(stopped)
             for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE))
                 if (d.details[source] == "Waiting or checking")
                     d.detail(source, if (stopped) "Stopped before lookup finished" else "Lookup did not finish")
@@ -1319,7 +1326,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                         val report = metadataReader?.read(peer, candidate, deadline) { enriching && !cancelled.get() }
                             ?: readOnlyMetadata(peer, deadline, { enriching && !cancelled.get() }) { socket ->
                             health.count(source, "requests")
-                            MetadataHttp.exchange(socket, peer, candidate, deadline, metadataTimeouts) { enriching && !cancelled.get() }
+                            MetadataHttp.exchange(socket, peer, candidate, deadline, metadataTimeouts, d.diagnostics) { enriching && !cancelled.get() }
                         }
                         if (!enriching || cancelled.get()) break
                         networkCheck.check(context, net)
@@ -1372,6 +1379,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         synchronized(broadAudioRequests) {
             if (key in broadAudioRequests) return
             if (broadAudioRequests.size >= 64 || broadAudioRequests.count { it.startsWith(d.ip + "|") } >= 8) {
+                d.diagnostics.record(source, "Lookup outcome", "Not attempted: audio lookup limit reached")
                 health.truncated(plan.protocol.source, "Audio lookup limit reached"); return
             }
             broadAudioRequests.add(key)
@@ -1531,6 +1539,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 override fun read(b: ByteArray, o: Int, n: Int): Int { remaining(); return input.read(b, o, n) }
             }
             val body = UpnpDescription.readResponse(bounded)
+            d.diagnostics.xml("UPnP description response", body)
             val values = UpnpDescription.parse(body)
             if (values.isEmpty()) throw IOException("No supported description fields")
             synchronized(d) {
@@ -2027,6 +2036,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun applyService(d: Device, service: MdnsPacket.Service, prefix: String) {
         synchronized(d) {
             val type = service.type; val name = service.name; val source = prefix + " " + type
+            d.diagnostics.txt(source, service.attributes)
             if (EsclInfo.applies(type)) {
                 // The scanner may be attached to a computer. Isolate its identity
                 // for both direct advertisements and separately confirmed routed hosts.

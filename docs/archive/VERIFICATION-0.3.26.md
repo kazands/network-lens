@@ -8,7 +8,7 @@ Application ID: `io.github.kazands.networklens`. Version code: **54**.
 Broader integration-family labels, recognition explanations, Ubiquiti/MikroTik
 readers, eSCL service details, bounded recovery, IPv6 SSDP/admission improvements,
 and smart-home/remote icons. Scanner advertisements and capabilities cannot
-replace their host's identity. See [changes](CHANGES.md) and [recognition](RECOGNITION.md).
+replace their host's identity. See [changes](../CHANGES.md) and [recognition](../RECOGNITION.md).
 
 Deep code review, including a fresh independent reviewer, approved the complete
 50-file implementation changeset without substantive findings. The release step
@@ -65,5 +65,5 @@ The public update check used Android installation on an emulator; live in-app
 internet download and physical installation were not exercised. No phone was
 operated. No GitHub CI was added; verification was performed locally.
 
-Earlier candidate and release results remain in [the archive](archive/README.md).
+Earlier candidate and release results remain in [the archive](README.md).
 They are not substituted for this version's results.
