@@ -170,6 +170,14 @@
       "url": "https://github.com/lucide-icons/lucide/blob/main/icons/gamepad-2.svg",
       "accessed": "2026-11-14",
       "sha256": "b0671de7afbebdafc4d655d867d9851947170b906fb187e749410039df867509"
+    },
+    {
+      "name": "house-wifi",
+      "path": "icons/house-wifi.svg",
+      "git_blob_sha": "56d4530d68a673729a5188b542d4d91247d7657e",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/house-wifi.svg",
+      "accessed": "2026-11-18",
+      "sha256": "2652f09e633f16cde688871b47f312fe8d9103c4d87a15021539dd6ddff9cfd7"
     }
   ]
 }

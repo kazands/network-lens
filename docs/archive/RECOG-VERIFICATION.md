@@ -1,7 +1,7 @@
 # Historical recog verification
 
 These records apply to their named earlier candidates. See the current
-[release verification](../VERIFICATION-0.3.15.md) and [status](../STATUS.md).
+[release verification](VERIFICATION-0.3.15.md) and [status](../STATUS.md).
 
 # Offline model recognition
 
@@ -18,7 +18,7 @@ The generated table contains 156 exact canonical Apple model-code examples from
 the retained upstream data: Mac notebooks/desktops, iPad, iPhone, HomePod, Apple TV
 and iPod Touch. A code must be listed exactly; newer products and unsupported
 families are not recognized by this Recog subset. The separate
-[global product catalogue](../DEVICE-IDENTITIES.md) covers exact manufacturer/model
+[global product catalogue](../reference/DEVICE-IDENTITIES.md) covers exact manufacturer/model
 reports from worldwide hardware, including Android and IoT products. Neither
 path establishes retail-model accuracy on physical hardware by itself.
 
@@ -111,7 +111,7 @@ The host-test and direct app-build scripts run this check automatically.
 
 ## Current verification
 
-See [release verification](../VERIFICATION-0.3.15.md) for current artifact hashes and
+See [release verification](VERIFICATION-0.3.15.md) for current artifact hashes and
 checks. The remaining records below describe their specific earlier candidates.
 
 ## Shared identifier correction verification (2026-11-14)

@@ -10,7 +10,8 @@ ICONS = {'router': 'router', 'smartphone': 'smartphone', 'printer': 'printer',
          'toggle-left': 'switch', 'thermometer': 'thermostat', 'activity': 'sensor',
          'bell-ring': 'doorbell', 'fan': 'fan', 'laptop': 'laptop',
          'monitor': 'monitor', 'tablet': 'tablet', 'tv-minimal-play': 'tv_player',
-         'server': 'recorder', 'gamepad-2': 'game_console'}
+         'server': 'recorder', 'gamepad-2': 'game_console', 'house-wifi': 'smart_home'}
+ORIGINAL_ICONS = {'remote': 'remote'}
 ANDROID = 'http://schemas.android.com/apk/res/android'
 ET.register_namespace('android', ANDROID)
 
@@ -45,8 +46,10 @@ def geometry(node):
 
 
 def main():
-    for source, name in ICONS.items():
-        svg = ET.parse(ROOT / 'android/lucide-original' / (source + '.svg')).getroot()
+    for source, name in (ICONS | ORIGINAL_ICONS).items():
+        original = source in ORIGINAL_ICONS
+        folder = 'icons-original' if original else 'lucide-original'
+        svg = ET.parse(ROOT / 'android' / folder / (source + '.svg')).getroot()
         assert svg.attrib['viewBox'] == '0 0 24 24'
         assert svg.attrib['fill'] == 'none' and svg.attrib['stroke-width'] == '2'
         assert svg.attrib['stroke-linecap'] == 'round' and svg.attrib['stroke-linejoin'] == 'round'
@@ -59,9 +62,11 @@ def main():
                 '{'+ANDROID+'}strokeWidth': '2', '{'+ANDROID+'}strokeLineCap': 'round',
                 '{'+ANDROID+'}strokeLineJoin': 'round', '{'+ANDROID+'}pathData': geometry(node)})
         ET.indent(vector)
-        content = '<!-- Lucide: ISC/MIT; see raw/lucide_license.txt. Converted from vendored SVG; geometry retained. -->\n' + ET.tostring(vector, encoding='unicode') + '\n'
+        notice = ('Network Lens original artwork: GPL-3.0-only. See android/icons-original/README.md.' if original else
+                  'Lucide: ISC/MIT; see raw/lucide_license.txt. Converted from vendored SVG; geometry retained.')
+        content = '<!-- ' + notice + ' -->\n' + ET.tostring(vector, encoding='unicode') + '\n'
         (ROOT / 'android/app/src/main/res/drawable' / ('ic_device_' + name + '.xml')).write_text(content)
-    print(f'Converted {len(ICONS)} Lucide icons to native Android vectors.')
+    print(f'Converted {len(ICONS)} Lucide and {len(ORIGINAL_ICONS)} original icons to native Android vectors.')
 
 
 if __name__ == '__main__':

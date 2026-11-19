@@ -9,7 +9,7 @@ class LocalServices private constructor() {
         @JvmField val INITIAL: List<String> = Collections.unmodifiableList(listOf(
             "_http._tcp.", "_https._tcp.", "_googlecast._tcp.", FireTvInfo.TYPE, "_airplay._tcp.",
             "_raop._tcp.", "_ipp._tcp.", "_ipps._tcp.", "_printer._tcp.",
-            "_smb._tcp.", "_workstation._tcp.", "_ssh._tcp.", "_device-info._tcp.",
+            "_smb._tcp.", "_workstation._tcp.", "_ssh._tcp.", "_device-info._tcp.", "_uscan._tcp.", "_uscans._tcp.",
             "_hap._tcp.", "_spotify-connect._tcp.", "_pdl-datastream._tcp.",
             "_companion-link._tcp.", "_hap._udp.", "_matter._tcp.",
             "_matterc._udp.", "_meshcop._udp.", "_esphomelib._tcp.",

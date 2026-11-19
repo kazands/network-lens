@@ -10,7 +10,7 @@ internal class MetadataLookups {
                      val httpStatus: Int? = null, val model: Boolean = false, val manufacturer: Boolean = false) {
         fun description(): String = when (state) {
             State.QUEUED -> "Waiting or checking"
-            State.SUCCESS -> "Succeeded" + (if (!model) "; model not reported" else "") +
+            State.SUCCESS -> if (kind == LocalMetadata.Kind.ESCL) "Succeeded; scanner information is shown separately" else "Succeeded" + (if (!model) "; model not reported" else "") +
                 (if (!manufacturer) "; manufacturer not reported" else "")
             State.FAILED -> (reason?.detail ?: "Metadata request could not complete") +
                 (if (reason == MetadataHttp.Reason.HTTP_STATUS && httpStatus != null) " ($httpStatus)" else "")

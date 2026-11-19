@@ -9,6 +9,7 @@ python3 scripts/generate-android-models.py --check
 python3 scripts/generate-product-models.py --check
 python3 scripts/generate-android-hardware.py --check
 python3 scripts/generate-discovery-matchers.py --check
+python3 scripts/check-recognition-coverage.py
 python3 scripts/update-matter-models.py --check
 if [[ $# -eq 1 && "$1" == --release ]]; then
     BUILD_MODE=release
@@ -31,7 +32,7 @@ if [[ ! -f "$PLATFORM" || ! -x "$BUILD_TOOLS/aapt2" ]]; then echo 'Android SDK p
 BUILD_DIR="$PWD/.tools/build"
 APK_DIR="$PWD/artifacts"
 if [[ "$BUILD_MODE" == release ]]; then BUILD_DIR="$PWD/.tools/build-release"; APK_DIR="$PWD/artifacts/release"; fi
-APK_PATH="$APK_DIR/Network-Lens-0.3.25.apk"
+APK_PATH="$APK_DIR/Network-Lens-0.3.26.apk"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" artifacts
 # Remove only this script's generated output so removed source files cannot survive a rebuild.
 find "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" -type f -delete

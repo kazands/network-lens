@@ -120,7 +120,7 @@ Normalize native Android service types with a single leading separator, missing 
 - Coalesce progress before copying/grouping device lists. Stale operations, reset tokens and post-terminal progress must not evaluate deferred snapshots. The final frozen list must reach the UI without being replaced by older work.
 - Compare controlled before/after work counts and identical synthetic data, plus aggregate real-device timings when available. State instrumentation overhead and changing-network limits; do not call a Partial scan complete or infer an overall speedup from a synthetic burst alone.
 
-Audio zone mapping: run emulator-only `audio-zones` for fresh-response admission, VSSL amplifier identity and related zones, distinct Sonos players and bonded roles, conflicting UDN, Stop/late replies, themed/scaled details and source-labelled copy. See [audio protocol boundaries](../docs/AUDIO-ZONES.md). Real amplifier/player firmware checks remain separate.
+Audio zone mapping: run emulator-only `audio-zones` for fresh-response admission, VSSL amplifier identity and related zones, distinct Sonos players and bonded roles, conflicting UDN, Stop/late replies, themed/scaled details and source-labelled copy. See [audio protocol boundaries](../docs/reference/AUDIO-ZONES.md). Real amplifier/player firmware checks remain separate.
 
 Broader audio: the same emulator-only `audio-zones` mode checks HEOS/MusicCast/BluOS lookup admission, distinct per-port players, AirPlay/Cast virtual-group separation, cached-advertisement rejection, selected scope, per-endpoint budgets, copy isolation, missing peers, replaced endpoints and cancellation. Host fixtures cover each wire reader and group correlation rules. No test may contact physical audio hardware.
 

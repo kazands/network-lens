@@ -57,7 +57,7 @@ type, plus original path/hash. No installation instructions or device artwork ar
 used. The generator cross-checks exact manufacturer/model pairs against the
 pinned Google-supported naming data and rejects ambiguity. It supplies neither
 presence nor reported manufacturer. See `android-hardware-provenance.json` and
-[Android recognition](../docs/ANDROID-RECOGNITION.md).
+[Android recognition](../docs/reference/ANDROID-RECOGNITION.md).
 
 ## Rapid7 Recog model mappings
 

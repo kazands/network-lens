@@ -93,6 +93,7 @@ class SmokeInstrumentation : Instrumentation() {
                 AudioZoneChecks.run(this, ::check)
                 BroadAudioChecks.run(this, ::check)
             } else if (mode == "device-identities") {
+                BroadRecognitionChecks.run(this, ::check)
                 SmartThingsChecks.run(this, ::check)
                 EnvisalinkChecks.run(this, ::check)
                 AppleRecognitionChecks.run(this, ::check)

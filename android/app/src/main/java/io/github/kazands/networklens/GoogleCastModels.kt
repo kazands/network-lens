@@ -1,7 +1,7 @@
 package io.github.kazands.networklens
 
 /** Exact first-party product names, not a manufacturer inference from the Cast service.
- * Public names and physical types: docs/DEVICE-IDENTITIES.md#google-cast-models.
+ * Public names and physical types: docs/reference/DEVICE-IDENTITIES.md#google-cast-models.
  * Missing reported fields stay missing; ambiguous generations retain a family title. */
 internal object GoogleCastModels {
     private fun product(id: String, title: String, category: DeviceCatalog.Category,

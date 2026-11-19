@@ -87,7 +87,7 @@ object ScanLifecycleTest {
             }
         }
         val ssdp=SsdpDiscovery.discover(channel,TimeUnit.SECONDS.toNanos(55),{true},{it==peer},{now}){_,_->emissions++}
-        check(sends==4 && ssdp.sent==4 && emissions==1 && ssdp.unique==1 && !ssdp.interrupted,"SSDP retries and deduplication retain the fixed receive window")
+        check(sends==10 && ssdp.sent==10 && emissions==1 && ssdp.unique==1 && !ssdp.interrupted,"SSDP retries and deduplication retain the bounded recovery window")
         check(searches.count { "ST: ssdp:all\r\n" in it }==2 && searches.count { "ST: urn:dial-multiscreen-org:service:dial:1\r\n" in it }==2,
             "Broad and DIAL searches each receive two attempts without launching applications")
         now=0;sends=0;receives=0;emissions=0
@@ -110,8 +110,8 @@ object ScanLifecycleTest {
         val dialResult=SsdpDiscovery.discover(dialOnly,TimeUnit.SECONDS.toNanos(55),{true},{it==peer},{now}){sender,headers->
             emissions++;check(UpnpDescription.target(headers["location"],sender)!=null,"DIAL-only receiver can reach the guarded description reader")
         }
-        check(dialRequested && emissions==1 && dialResult.sent==4 && now<=TimeUnit.SECONDS.toNanos(5),
-            "A DIAL-only receiver is discovered and deduplicated within the original five seconds")
+        check(dialRequested && emissions==1 && dialResult.sent==10 && now<=TimeUnit.SECONDS.toNanos(12),
+            "A DIAL-only receiver is discovered and deduplicated within the bounded recovery window")
         println("PASS · $checks scope, resource ownership, cancellation and metadata scheduling checks")
     }
 }

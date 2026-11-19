@@ -1,6 +1,6 @@
 package io.github.kazands.networklens
 
-/** Reviewed exact models, never prefix-based guesses. Sources: docs/TP-LINK.md. */
+/** Reviewed exact models, never prefix-based guesses. Sources: docs/reference/TP-LINK.md. */
 internal object TpLinkModels {
     private data class Family(val series: String, val label: String, val category: DeviceCatalog.Category, val models: List<String>)
     private val families = listOf(
