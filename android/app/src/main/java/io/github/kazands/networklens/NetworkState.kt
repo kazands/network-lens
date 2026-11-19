@@ -31,6 +31,12 @@ class NetworkState {
     fun sameScope(other: NetworkState?): Boolean =
         sameConnection(other) && snapshot().networks == other!!.snapshot().networks && snapshot().routes.same(other.snapshot().routes)
 
+    /** Ignore capability-only notifications (for example signal strength), not address or route changes. */
+    fun sameConfiguration(other: NetworkState?): Boolean =
+        sameScope(other) && other != null && ip == other.ip && prefix == other.prefix &&
+            gateway == other.gateway && iface == other.iface && dns == other.dns &&
+            addresses.toSet() == other.addresses.toSet() && prefixes == other.prefixes
+
     /** Additions and privacy-address rotation preserve existing work; withdrawal does not. */
     fun retainsScope(other: NetworkState?): Boolean =
         sameConnection(other) && other!!.snapshot().networks.containsAll(snapshot().networks) && snapshot().routes.retains(other.snapshot().routes)

@@ -37,7 +37,7 @@ internal object AppleDeviceInfo {
     }
 
     /** Parse a small flat string dictionary only. Never resolve a DTD, entity or nested value. */
-    fun parse(body: ByteArray): Map<String, String> {
+    fun parse(body: ByteArray, diagnosticFields: Boolean = false): Map<String, String> {
         if (body.size !in 1..MAX_BODY) throw IOException("Invalid Apple response size")
         try {
             val text = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
@@ -53,7 +53,7 @@ internal object AppleDeviceInfo {
                 setFeature("http://xml.org/sax/features/external-general-entities", false)
                 setFeature("http://xml.org/sax/features/external-parameter-entities", false)
             }
-            val handler = Plist()
+            val handler = Plist(diagnosticFields)
             val reader = factory.newSAXParser().xmlReader
             reader.contentHandler = handler; reader.errorHandler = handler; reader.entityResolver = handler
             reader.setProperty("http://xml.org/sax/properties/lexical-handler", handler)
@@ -80,7 +80,7 @@ internal object AppleDeviceInfo {
 
     /** Caller binds this socket to selected Wi-Fi and owns cancellation/closure. */
     fun exchange(socket: Socket, peer: InetAddress, deadline: Long, timer: ScheduledExecutorService,
-                 port: Int = PORT, active: () -> Boolean): Report {
+                 port: Int = PORT, diagnostics: DiagnosticEvidence? = null, active: () -> Boolean): Report {
         fun remaining(): Int {
             if (!active() || Thread.currentThread().isInterrupted) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
             val left = deadline - System.nanoTime()
@@ -110,7 +110,15 @@ internal object AppleDeviceInfo {
                 val size = DataInputStream(ByteArrayInputStream(read(4))).readInt()
                 if (size !in 1..MAX_BODY) throw MetadataHttp.Failure(MetadataHttp.Reason.INVALID_METADATA)
                 val body = read(size); remaining(); stage = 3
-                return parse(body)
+                val fields = parse(body, true)
+                for ((key, value) in fields) {
+                    val keep = key == "Error" && value in setOf("PasswordProtected", "GetProhibited", "MissingValue", "InvalidArgument", "InvalidHostID", "MissingHostID", "PairingDialogResponsePending", "UserDeniedPairing", "SessionInactive", "InvalidService", "UnknownError") ||
+                        key == "Value" && model && value.matches(Regex("[A-Za-z][A-Za-z0-9]{0,47},[0-9]{1,6}")) ||
+                        key == "Request" && value in setOf("QueryType", "GetValue") || key == "Type" && value == TYPE || key == "Key" && value == "ProductType"
+                    diagnostics?.record(SOURCE + if (model) " GetValue" else " QueryType", DiagnosticEvidence.fieldName(key),
+                        if (keep) value else "[value withheld; ${value.length} characters]", "Returned Apple field; acceptance is recorded in lookup outcome")
+                }
+                return fields
             }
             if (!serviceResponse(roundTrip(false))) return Report(Status.OTHER)
             verified = true
@@ -139,7 +147,7 @@ internal object AppleDeviceInfo {
         } finally { timeout.cancel(false) }
     }
 
-    private class Plist : DefaultHandler(), LexicalHandler {
+    private class Plist(val diagnosticFields: Boolean) : DefaultHandler(), LexicalHandler {
         val values = LinkedHashMap<String, String>()
         private val keys = HashSet<String>()
         private var depth = 0
@@ -173,7 +181,7 @@ internal object AppleDeviceInfo {
                     if (key.isEmpty() || !keys.add(key)) throw SAXException("Duplicate plist key")
                     pending = key
                 } else {
-                    if (pending in setOf("Request", "Type", "Key", "Value", "Error")) values[pending!!] = text.toString()
+                    if (diagnosticFields || pending in setOf("Request", "Type", "Key", "Value", "Error")) values[pending!!] = text.toString()
                     pending = null
                 }
             }

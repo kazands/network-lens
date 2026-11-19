@@ -1,6 +1,6 @@
 # Omada and EAP network equipment discovery
 
-See [current release verification](../VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
+See [current release verification](../archive/VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
 
 ## What is supported
 
@@ -105,4 +105,4 @@ appearances and text sizes. See [BUILDING.md](../BUILDING.md) for commands and
 [STATUS.md](../STATUS.md) for the checks actually completed.
 
 The candidate verification history above predates release versioning. See
-[current release verification](../VERIFICATION-0.3.26.md) for the final artifact and checks.
+[current release verification](../archive/VERIFICATION-0.3.26.md) for the final artifact and checks.

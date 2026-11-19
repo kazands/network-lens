@@ -79,6 +79,9 @@ class MainActivity : Activity() {
     private var count: TextView? = null
     private var progress: ProgressBar? = null
     private var scanDetailsDialog: ScanDetailsDialog? = null
+    private var troubleshootingDialog: AppDialog? = null
+    private var reportGeneration = 0L
+    private var reportPreparing = false
     private var optionsDialog: AppDialog? = null
     private var updater: UpdateFlow? = null
     private var updateDialog: AppUpdateDialog? = null
@@ -153,6 +156,7 @@ class MainActivity : Activity() {
     override fun onStop() { super.onStop(); leaveForeground() }
     private fun leaveForeground() {
         updater?.pause(); suspendUpdateDialog()
+        invalidateTroubleshooting(false)
         stopWatchingConnection(); wifiName?.stop(); scanDetailsDialog?.dismiss(); optionsDialog?.dismiss(); optionsMenu?.dismiss(); discovery?.cancel()
     }
     override fun onDestroy() {
@@ -206,6 +210,7 @@ class MainActivity : Activity() {
         network = current; store.observeConnection(current); devices = current?.let { store.devices(it.key) } ?: emptyList()
     }
     private fun dismissConnectionDialogs() {
+        invalidateTroubleshooting()
         scanDetailsDialog?.dismiss(); optionsDialog?.dismiss(); optionsMenu?.dismiss()
     }
     private fun watchConnection() {
@@ -227,7 +232,14 @@ class MainActivity : Activity() {
     }
     private fun refreshConnection() {
         if (destroyed || networkChanges == null || demo) return
-        loadNetwork(); render()
+        val current = try { NetworkState.current(this) } catch (_: RuntimeException) { null }
+        // Android also notifies us about capabilities that do not change this page.
+        // Replacing its ScrollView on those callbacks interrupts a drag/fling and text selection.
+        val unchanged = network?.sameConfiguration(current) ?: (current == null)
+        val token = store.token()
+        val wasSelected = selected != null
+        reconcileNetwork(current)
+        if (!unchanged || !store.isCurrent(token) || wasSelected != (selected != null)) render()
     }
     private fun palette() {
         val dark = store.dark()
@@ -428,7 +440,104 @@ class MainActivity : Activity() {
             val report = network?.let { store.report(it.key) }; val operation = discovery
             val sources = operation?.sources() ?: report?.sources ?: emptyMap()
             ScanDetailsDialog.Snapshot(demo, scanning, report, operation?.scope() ?: "", done, total, message, sources)
-        }.also { it.show() }
+        }.also { it.onCopyRecognition = ::copyRecognitionReport; it.onTroubleshooting = ::troubleshootingOptions; it.show() }
+    }
+    private fun invalidateTroubleshooting(clearShared: Boolean = true) {
+        reportGeneration++; reportPreparing = false
+        troubleshootingDialog?.dismiss(); troubleshootingDialog = null
+        if (clearShared) ReportShareProvider.clear()
+    }
+    private fun troubleshootingOptions() {
+        refreshConnection()
+        if (demo || scanning || network?.let { store.report(it.key) } == null) { toast("Finish or stop a real scan first."); return }
+        scanDetailsDialog?.dismiss()
+        val dialog = AppDialog(dialogContext(), dialogColors(), "Troubleshooting report")
+        val include = android.widget.CheckBox(dialogContext()).apply {
+            text = "Include device names and local addresses"
+            setTextColor(ink); minHeight = dp(48)
+        }
+        dialog.content().addView(dialog.paragraph("Includes every device, returned observations and recorded lookup history. By default, personal names and addresses are replaced with labels. Unreviewed response values and credentials are withheld. Review the preview before sharing.", 15, ink, false))
+        dialog.content().addView(include)
+        dialog.content().addView(dialog.paragraph("The shared file is held in memory for up to 10 minutes. The receiving app may save it. Starting a new scan or detecting a network change removes the temporary copy. If another app is open, Network Lens checks for network changes when you return.", 13, muted, false))
+        dialog.primary("Preview report") { prepareTroubleshooting(include.isChecked); true }
+        dialog.secondary("Cancel") { true }
+        troubleshootingDialog = dialog; dialog.show()
+    }
+    private fun prepareTroubleshooting(includeNames: Boolean) {
+        refreshConnection()
+        if (reportPreparing || demo || scanning) return
+        val current = network ?: return
+        val report = store.report(current.key) ?: return
+        val token = store.token(); val generation = ++reportGeneration
+        val raw = store.devices(current.key)
+        val info = try { packageManager.getPackageInfo(packageName, 0) } catch (_: PackageManager.NameNotFoundException) { null }
+        val code = info?.let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() } ?: 0
+        reportPreparing = true
+        toast("Preparing the report for every device…")
+        presentation.execute {
+            try {
+                val groups = Device.grouped(raw)
+                val state = when { report.statusLabel == "Scan stopped" -> RecognitionReport.ScanState.STOPPED; report.complete -> RecognitionReport.ScanState.FINISHED; else -> RecognitionReport.ScanState.NOTES }
+                val others = groups.filterNot { it.endpoints().any { endpoint -> endpoint.self } }
+                val summary = RecognitionReport.text(others.map { it.recognitionReportGroup() }, groups.size - others.size,
+                    state, report.sources, report.omittedSources, info?.versionName.orEmpty(), code, Build.VERSION.SDK_INT)
+                val context = listOf(
+                    TroubleshootingReport.Fact("Scan status", state.label, publicValue = true),
+                    TroubleshootingReport.Fact("IPv4 addresses checked", "${report.checked} / ${report.total}", publicValue = true),
+                    TroubleshootingReport.Fact("Scan scope", report.scope),
+                    TroubleshootingReport.Fact("Scan explanation", report.reason, publicValue = true),
+                    TroubleshootingReport.Fact("Method records omitted", report.omittedSources.toString(), publicValue = true)
+                ) + report.sources.map { (key, value) -> TroubleshootingReport.Fact("Discovery method", value, key, publicValue = true) }
+                val document = TroubleshootingReport.create(summary, groups.map { it.troubleshootingGroup(report.finished) }, context, includeNames)
+                main.post {
+                    if (destroyed || generation != reportGeneration || !store.isCurrent(token) || scanning || demo || network?.key != current.key) return@post
+                    reportPreparing = false
+                    troubleshootingDialog = TroubleshootingDialog(dialogContext(), dialogColors(), document, {
+                        refreshConnection()
+                        if (store.isCurrent(token) && network?.key == current.key && !scanning && !demo) {
+                            val uri = ReportShareProvider.publish(packageName, document)
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"; putExtra(Intent.EXTRA_STREAM, uri)
+                                clipData = ClipData.newRawUri("Troubleshooting report", uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try { startActivity(Intent.createChooser(intent, "Share troubleshooting report")) }
+                            catch (_: android.content.ActivityNotFoundException) { ReportShareProvider.clear(); toast("No sharing app is available. You can copy individual pages.") }
+                        }
+                    }, { text ->
+                        refreshConnection()
+                        if (store.isCurrent(token) && network?.key == current.key && !scanning && !demo) {
+                            (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(ClipData.newPlainText("Troubleshooting report", text))
+                            toast("Report page copied.")
+                        }
+                    }).also { it.show() }
+                }
+            } catch (_: Exception) {
+                main.post { if (generation == reportGeneration) { reportPreparing = false; toast("The report could not be prepared. No partial report was shared.") } }
+            }
+        }
+    }
+    private fun copyRecognitionReport() {
+        // Reconcile attachment changes before reading the current session; never export a retired scan.
+        refreshConnection()
+        if (demo || scanning) { toast("Finish or stop a real scan before copying its report."); return }
+        val current = network ?: run { toast("Run a scan to create a recognition report."); return }
+        val report = store.report(current.key) ?: run { toast("Run a scan to create a recognition report."); return }
+        val groups = Device.grouped(store.devices(current.key))
+        val self = groups.count { group -> group.endpoints().any { it.self } }
+        val facts = groups.filterNot { group -> group.endpoints().any { it.self } }.map { it.recognitionReportGroup() }
+        val info = try { packageManager.getPackageInfo(packageName, 0) } catch (_: PackageManager.NameNotFoundException) { null }
+        val code = info?.let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() } ?: 0
+        val state = when {
+            report.statusLabel == "Scan stopped" -> RecognitionReport.ScanState.STOPPED
+            report.complete -> RecognitionReport.ScanState.FINISHED
+            else -> RecognitionReport.ScanState.NOTES
+        }
+        val text = RecognitionReport.text(facts, self, state, report.sources, report.omittedSources,
+            info?.versionName.orEmpty(), code, Build.VERSION.SDK_INT)
+        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+            .setPrimaryClip(ClipData.newPlainText("Recognition report", text))
+        toast("Recognition report copied. Paste it into your support conversation.")
     }
     private fun groupsForDisplay(): List<Device> {
         if (groupedSource !== devices) { displayGroups = Device.grouped(devices); groupedSource = devices }
@@ -625,7 +734,15 @@ class MainActivity : Activity() {
             (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(ClipData.newPlainText("Device details", deviceText(d)))
             toast("Device details copied.")
         }
-        body.addView(copy); scroll.post { if (detailScroll === scroll) scroll.scrollTo(0, previousY) }
+        body.addView(copy)
+        // Restore only after measuring the new content, before it is ever drawn at the top.
+        scroll.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (scroll.viewTreeObserver.isAlive) scroll.viewTreeObserver.removeOnPreDrawListener(this)
+                if (detailScroll === scroll) scroll.scrollTo(0, previousY)
+                return true
+            }
+        })
     }
     private fun detailRow(panel: LinearLayout, label: String, value: String) {
         val stacked = resources.configuration.fontScale >= 1.4f || resources.configuration.screenWidthDp < 340
@@ -722,6 +839,7 @@ class MainActivity : Activity() {
         startDiscovery()
     }
     private fun startDiscovery() {
+        invalidateTroubleshooting()
         resetListPosition(); store.clear()
         val chosen = network!!; val token = store.token(); val operation = Discovery(this, chosen); discovery = operation
         scanning = true; selected = null; done = 0; total = 0; devices = ArrayList(); message = ""; render()
@@ -893,6 +1011,7 @@ class MainActivity : Activity() {
     }
     private fun resetSessionData() { resetSessionData(true) }
     private fun resetSessionData(forgetRange: Boolean) {
+        invalidateTroubleshooting()
         resetListPosition(); store.clear(); discovery?.cancel(); discovery = null; scanning = false; devices = ArrayList(); selected = null; demo = false
         query = ""; message = ""; if (forgetRange) range = ""
         loadNetwork(); render()

@@ -22,9 +22,13 @@ import java.util.function.Supplier
 class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val read: Supplier<Snapshot>) :
     AppDialog(context, colors, "Scan details") {
 
+    internal var onTroubleshooting: (() -> Unit)? = null
+    internal var onCopyRecognition: (() -> Unit)? = null
+
     class Snapshot(sample: Boolean, running: Boolean, report: ScanReport?, activeScope: String,
         checked: Int, total: Int, message: String, sources: Map<String, String>) {
         @JvmField val sample = sample
+        val hasReport = report != null
         @JvmField val running = !sample && running
         @JvmField val complete = !sample && !running && report != null && report.complete
         val statusLabel = report?.statusLabel ?: ""
@@ -38,7 +42,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         @JvmField val sources: Map<String, String> =
             if (sample) Collections.emptyMap() else Collections.unmodifiableMap(LinkedHashMap(sources))
 
-        fun same(other: Snapshot?): Boolean = other != null && sample == other.sample &&
+        fun same(other: Snapshot?): Boolean = other != null && sample == other.sample && hasReport == other.hasReport &&
             running == other.running && complete == other.complete && checked == other.checked &&
             total == other.total && finished == other.finished && scope == other.scope && reason == other.reason &&
             message == other.message && sources == other.sources && omittedSources == other.omittedSources
@@ -69,6 +73,7 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
         val y = scroll.scrollY
         body.removeAllViews()
         buildSummary()
+        buildRecognitionCopy()
         buildMethods()
         space(body, 16)
         body.addView(text(if (next.sample)
@@ -76,6 +81,33 @@ class ScanDetailsDialog(context: Context, colors: AppDialog.Colors, private val 
             else "Silent or isolated devices may be missing. A device that does not reply is not necessarily offline.",
             12, colors.muted, false))
         scroll.post { scroll.scrollTo(0, y) }
+    }
+
+    private fun buildRecognitionCopy() {
+        if (onCopyRecognition == null) return
+        val current = checkNotNull(snapshot)
+        val available = !current.sample && !current.running && current.hasReport
+        space(body, 16)
+        onTroubleshooting?.let { open ->
+            val reportButton = action("Troubleshooting report", false)
+            reportButton.isEnabled = available; reportButton.alpha = if (available) 1f else .5f
+            reportButton.setOnClickListener { open() }
+            body.addView(reportButton)
+            body.addView(text("Review and share evidence for every device, including unnamed devices and lookup history.", 12, colors.muted, false))
+            space(body, 12)
+        }
+        val button = action("Copy recognition report", false)
+        button.isEnabled = available
+        button.alpha = if (available) 1f else 0.5f
+        button.setOnClickListener { onCopyRecognition?.invoke() }
+        body.addView(button)
+        space(body, 7)
+        body.addView(text(when {
+            current.sample -> "Run a real scan to create a recognition report."
+            current.running -> "Finish or stop this scan before copying its recognition report."
+            !current.hasReport -> "Run a scan to create a recognition report."
+            else -> "Copy a summary of recognition results and checks. Device names, addresses and identifiers are excluded. Nothing is uploaded."
+        }, 12, colors.muted, false))
     }
 
     private fun buildSummary() {

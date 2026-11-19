@@ -59,7 +59,11 @@ internal object MetadataHttp {
     }
 
     fun exchange(socket: Socket, peer: InetAddress, request: LocalMetadata.Request, deadline: Long,
-                 timer: ScheduledExecutorService, active: () -> Boolean): LocalMetadata.Report {
+                 timer: ScheduledExecutorService, active: () -> Boolean): LocalMetadata.Report =
+        exchange(socket, peer, request, deadline, timer, null, active)
+
+    fun exchange(socket: Socket, peer: InetAddress, request: LocalMetadata.Request, deadline: Long,
+                 timer: ScheduledExecutorService, diagnostics: DiagnosticEvidence?, active: () -> Boolean): LocalMetadata.Report {
         var deadlineLimitedTimeout = false
         fun remaining(): Int {
             if (!active() || Thread.currentThread().isInterrupted) throw Failure(Reason.CANCELLED)
@@ -109,6 +113,11 @@ internal object MetadataHttp {
             }
             val body = UpnpDescription.readResponse(bounded)
             remaining()
+            when (request.kind) {
+                LocalMetadata.Kind.ESCL -> diagnostics?.xml(request.kind.source, body)
+                LocalMetadata.Kind.IPP -> diagnostics?.record(request.kind.source, "Response capture", "${body.size} bytes; only requested make/model is decoded; other IPP attributes are not retained")
+                else -> diagnostics?.json(request.kind.source, body, DiagnosticEvidence.paths(request.kind))
+            }
             return LocalMetadata.parse(request.kind, body) ?: throw Failure(Reason.INVALID_METADATA)
         } catch (e: Exception) {
             if (e is Failure) throw e

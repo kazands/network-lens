@@ -1,10 +1,10 @@
 # Current status
 
-**Network Lens 0.3.26 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.27 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release broadens family recognition, adds public Ubiquiti/MikroTik discovery and eSCL scanner details, improves discovery recovery and IPv6 scheduling, and introduces clearer smart-home and remote-control icons. Scanner identity remains separate from the computer hosting it.
+This release adds a whole-network troubleshooting report and smoother device-details scrolling. Reports include unnamed devices, useful returned fields, lookup history and explicit coverage limits. Names and addresses are masked by default; users preview the report before sharing a temporary attachment from memory.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.26.md) · [Recognition coverage](RECOGNITION.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.27.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
 
 ## What remains unverified
 

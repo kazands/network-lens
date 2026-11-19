@@ -20,6 +20,9 @@ def assess(data):
         raise ValueError("Supply 1 to 4096 redacted observations")
     failures = Counter()
     metrics = Counter()
+    outcomes = {field: Counter({key: 0 for key in
+                ("matched", "missing", "different", "not_discovered", "unassessed")})
+                for field in ("manufacturer", "model", "category")}
     expected_hardware, found_hardware, ids = set(), set(), set()
     groups, hardware_groups = defaultdict(set), defaultdict(set)
     for row in rows:
@@ -55,11 +58,17 @@ def assess(data):
         mismatched = False
         for field in ("manufacturer", "model", "category"):
             expected = row["expected"][field].strip().casefold()
+            observed = row["observed"][field].strip().casefold()
             if expected:
                 metrics[field + "_expected"] += 1
-                match = stages["present"] and row["observed"][field].strip().casefold() == expected
+                match = stages["present"] and observed == expected
                 metrics[field + "_matched"] += bool(match)
                 mismatched |= not match
+                outcome = ("not_discovered" if not stages["present"] else
+                           "missing" if not observed else "matched" if match else "different")
+                outcomes[field][outcome] += 1
+            else:
+                outcomes[field]["unassessed"] += 1
         if not stages["present"]:
             failures["not_discovered"] += 1
         elif mismatched:
@@ -79,9 +88,10 @@ def assess(data):
     return {"environment": data["environment"], "apkSha256": data["apkSha256"],
             "observations": len(rows), "expectedHardware": len(expected_hardware),
             "foundHardware": len(found_hardware), "identity": dict(metrics), "failureStages": dict(failures),
+            "identityOutcomes": {field: dict(counts) for field, counts in outcomes.items()},
             "groupsMergingDistinctHardware": sum(len(v) > 1 for v in groups.values()),
             "hardwareSplitAcrossGroups": sum(len(v) > 1 for v in hardware_groups.values()),
-            "limits": "Applies only to the supplied baseline. Unknown stages remain unknown; this is not universal accuracy."}
+            "limits": "Applies only to the supplied baseline. Unknown stages remain unknown; this is not universal accuracy. Different values require review for aliases or incorrect identification; they are not automatically false positives."}
 
 
 def main():

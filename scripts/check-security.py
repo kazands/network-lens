@@ -86,7 +86,9 @@ def main():
     for flag in ('debuggable', 'allowBackup', 'fullBackupContent', 'usesCleartextTraffic'):
         require(app['attributes'].get('android:' + flag) == 0, flag + ' must be explicitly false')
     components = [n for n in app['children'] if n['name'] in ('activity', 'activity-alias', 'service', 'provider', 'receiver')]
-    require(len(components) == 2, 'Only the launcher and private update result receiver are allowed')
+    require(len(components) == 3, 'Only launcher, private update receiver and temporary report provider are allowed')
+    provider = child(app, 'provider')
+    require(provider['attributes'].get('android:name') == '.ReportShareProvider' and provider['attributes'].get('android:exported') == 0 and provider['attributes'].get('android:grantUriPermissions') == 0xffffffff and provider['attributes'].get('android:authorities') == 'io.github.kazands.networklens.reports' and not provider['children'], 'Report provider must be private and grant-only')
     receiver = child(app, 'receiver')
     require(receiver['attributes'].get('android:name') == '.UpdateResultReceiver' and receiver['attributes'].get('android:exported') == 0 and not receiver['children'], 'Update result receiver must be private with no external intent filters')
     activity = child(app, 'activity')

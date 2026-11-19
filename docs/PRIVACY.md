@@ -8,6 +8,14 @@ There are no accounts, analytics, advertisements, background scans or saved devi
 
 Copying device details is explicit and uses Android's clipboard. Treat copied text and screenshots as private network information, and redact them before sharing.
 
+**Copy recognition report** is a separate, explicit clipboard action. It copies counts, fixed diagnostic labels, the app version/build and Android API version. It excludes addresses, device and personal names, raw model/manufacturer strings, identifiers, credentials and raw responses. The app does not save or upload this report. Android manages the clipboard; you choose where to paste it.
+
+## Detailed troubleshooting reports
+
+**Scan details → Troubleshooting report** previews evidence for all devices, including unnamed ones. Names and addresses are masked by default, with an explicit option to include them for support. Useful model, firmware, service and diagnostic fields remain visible; unknown values, serials and credentials are withheld. Device-supplied text can contain custom information, so review before sharing. This is not guaranteed anonymisation.
+
+**Share full report** gives your chosen app a temporary, read-only text attachment streamed from memory. Network Lens does not save it to disk or upload it itself. The temporary copy expires after ten minutes and is cleared by a new scan, a network change detected by Network Lens, or process exit. If another app is open, Network Lens checks for network changes when you return; the attachment may remain available until then or until it expires. The recipient can retain its own copy. See [report coverage and limits](reference/TROUBLESHOOTING-REPORT.md).
+
 ## Internet access for updates
 
 When you choose **Check for updates**, the app contacts public GitHub release endpoints. Downloading an update retrieves the APK from GitHub's release delivery service. This uses the phone's normal internet connection and may use mobile data. Scan results are not included in update requests.

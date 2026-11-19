@@ -3,6 +3,31 @@
 Keep synthetic regressions, Android integration and physical compatibility
 results separate. Associate measurements with the exact APK SHA-256.
 
+## Quick scan triage
+
+Use **Scan details → Copy recognition report** after a real scan finishes or is
+stopped. This clipboard-only summary reports product/family/service counts,
+unmatched reported models, recorded identity/type conflicts, selected per-address
+lookup outcomes and grouped discovery-method outcomes. This phone is excluded;
+IPv4/IPv6 endpoints within a device group are counted together for recognition
+and separately for lookups. The list's search filter does not restrict the report.
+Conflict counts include known product candidates rejected by incompatible retained
+observations, even when the reported models share the same physical device type.
+Compatible aliases and missing manufacturer information alone are not conflicts.
+
+Only fixed labels, enum outcomes and counts are exported. Raw source names,
+free-text reasons, names, addresses, model/manufacturer strings and identifiers
+are not exported. Unknown method names are grouped under a fixed label, and
+unknown lookup statuses stay unclassified. Scanner-service results do not count
+as host-model results. Legacy Apple, EAP and Envisalink statuses are interpreted
+from fixed application text; other readers may have only scan-wide outcomes.
+
+This is diagnostic triage, not the labelled compatibility baseline below. It
+cannot establish missed-device counts, exact-model accuracy or which device an
+aggregate refers to. Its app version/build is not an APK hash: retain the exact
+artifact hash separately for before/after validation. User confirmation and
+targeted device evidence remain necessary to investigate individual cases.
+
 ## Physical compatibility checklist
 
 1. Use only the authorized Pixel 8. Keep Network Lens awake and foreground; stop
@@ -62,11 +87,23 @@ unavailable responses, parsing failures, conflicts and later selection/display
 mismatches. Unproven stages remain unknown. It records field-match denominators,
 distinct known hardware found and grouping merges/splits. These metrics apply
 only to the supplied baseline, not a universal recognition-accuracy rate.
+`identityOutcomes` also separates matched, missing, different and undiscovered
+values for each field. Fields without an expected value are unassessed. A
+different value needs review for aliases or incorrect identification; it is not
+automatically a false positive. These extra counts retain the existing field
+denominators and do not publish per-device values.
 Stage labels locate unavailable information; they do not prove an application
 defect. A correctly rejected malformed response or an unreported manufacturer
 must not be scored as a demand to invent facts. Keep interpreted product identity
 separate from device-reported fields, and leave expectations blank where the
 display contract deliberately keeps an unsupported fact unknown.
+
+## Public-page trial
+
+After recording a current physical baseline, use the optional
+[public-page trial](PUBLIC-WEB-TRIAL.md) to evaluate unresolved endpoints with
+public web services. It is a separate Linux diagnostic, not a new Android scan
+method. Page labels are candidates for review, never automatic hardware identity.
 
 ## Performance
 
@@ -108,3 +145,7 @@ Record presence, family, physical category, exact model and false-positive rate
 separately. Also measure scan duration and peak memory on the authorized phone.
 A missing response is a transport/availability observation, not automatically a
 catalogue miss. Keep physical identifiers and raw evidence out of the repository.
+
+## Device-level support evidence
+
+The aggregate recognition report is still useful for coverage counts. For an individual failure or a whole-network investigation, use the [detailed troubleshooting report](TROUBLESHOOTING-REPORT.md), which includes every retained endpoint and recorded evidence/lookup history. Keep tester attachments private; do not commit them as fixtures.

@@ -59,6 +59,28 @@ class BaselineTests(unittest.TestCase):
         a["stages"]["response"] = False
         with self.assertRaises(ValueError): self.assess([a])
 
+    def test_missing_different_absent_and_unknown_are_separate(self):
+        rows = [self.row(n) for n in range(1, 6)]
+        rows[1]["observed"]["model"] = " "
+        rows[2]["observed"]["model"] = "Another model"
+        rows[3]["stages"] = {"present": False, "requested": None, "response": None,
+                              "parsed": None, "conflict": None}
+        rows[4]["expected"]["model"] = ""
+        report = self.assess(rows)
+        self.assertEqual(report["identityOutcomes"]["model"],
+                         {"matched": 1, "missing": 1, "different": 1,
+                          "not_discovered": 1, "unassessed": 1})
+        self.assertEqual(report["identity"]["model_expected"], 4)
+        self.assertEqual(report["identity"]["model_matched"], 1)
+        # Aggregate output never reproduces model strings or per-device labels.
+        self.assertNotIn("Another model", str(report))
+        self.assertNotIn("hardware-1", str(report))
+
+    def test_case_and_outer_spacing_do_not_create_differences(self):
+        row = self.row()
+        row["observed"]["model"] = " MODEL ONE "
+        self.assertEqual(self.assess([row])["identityOutcomes"]["model"]["matched"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -29,6 +29,10 @@ internal object Recog {
 
     /** Fixed-size scan evidence; display-observation eviction cannot erase a conflict. */
     class Evidence {
+        // A known Apple model is still observed in typeModels when a prior maker
+        // conflict prevents code from being selected. Ordinary non-Apple reports alone
+        // must not count as an Apple identity conflict.
+        internal fun hasRecordedConflict(): Boolean = (code.isNotEmpty() || typeModels.isNotEmpty()) && conflicted
         private var code = ""
         private var observationSource = "mDNS current _device-info._tcp. TXT"
         private val typeModels = linkedMapOf<Category, String>()

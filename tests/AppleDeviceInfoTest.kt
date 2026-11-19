@@ -118,8 +118,10 @@ object AppleDeviceInfoTest {
                 read(peer.getInputStream())
                 peer.getOutputStream().write(frame(plist("Request" to "GetValue", "Key" to "ProductType", "Error" to "GetProhibited")))
             }) { port -> Socket().use { socket ->
-                check(AppleDeviceInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(2), timer, port) { true }.status == AppleDeviceInfo.Status.WITHHELD,
+                val diagnostics = DiagnosticEvidence()
+                check(AppleDeviceInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(2), timer, port, diagnostics) { true }.status == AppleDeviceInfo.Status.WITHHELD,
                     "Service verification survives a denied model request")
+                check(diagnostics.snapshot().any { it.field == "Error" && it.value == "GetProhibited" }, "Exact safe Apple refusal survives in diagnostics")
             } }
             val active = AtomicBoolean(true)
             Socket().use { socket ->

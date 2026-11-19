@@ -7,7 +7,7 @@ internal object GoogleCastModels {
     private fun product(id: String, title: String, category: DeviceCatalog.Category,
                         vararg aliases: String, family: Boolean = false) = DeviceCatalog.Product(
         "google:$id", "Google", title, category,
-        (listOf(title) + aliases).mapTo(HashSet(), DeviceCatalog::key), familyOnly = family)
+        (listOf(title) + aliases).mapTo(HashSet(), DeviceCatalog::key), familyOnly = family, titleSource = DeviceCatalog.TitleSource.CATALOGUE)
 
     private val products = listOf(
         product("nest-mini", "Google Nest Mini", DeviceCatalog.Category.SPEAKER,

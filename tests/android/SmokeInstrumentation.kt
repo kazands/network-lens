@@ -73,7 +73,11 @@ class SmokeInstrumentation : Instrumentation() {
             if ((!(mode.startsWith("session-")) && !(mode.equals("legacy-seed")))) {
                 Store(getTargetContext()).dark(false)
             }
-            if (mode == "smartthings") {
+            if (mode == "recognition-report") {
+                RecognitionReportChecks.run(this, ::check)
+            } else if (mode == "detail-stability") {
+                DetailStabilityChecks.run(this, ::check)
+            } else if (mode == "smartthings") {
                 SmartThingsChecks.run(this, ::check)
             } else if (mode == "envisalink") {
                 EnvisalinkChecks.run(this, ::check)

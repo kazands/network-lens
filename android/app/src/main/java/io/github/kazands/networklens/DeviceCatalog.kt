@@ -17,9 +17,12 @@ internal object DeviceCatalog {
         ROUTER("Router"), RANGE_EXTENDER("Range extender"), SPRINKLER("Sprinkler"), FAUCET("Faucet"),
         SHOWER("Shower"), REMOTE("Remote control"), REMOTE_HUB("Remote-control hub"), UNSPECIFIED("Not classified")
     }
+    // Exempt names only when the title comes from reviewed bundled data, never a peer model.
+    enum class TitleSource { DEVICE, CATALOGUE }
     data class Product(val id: String, val brand: String, val title: String, val category: Category,
                        val models: Set<String>, val redundantNames: Set<String> = emptySet(), val familyOnly: Boolean = false,
-                       val reference: String = "", val manufacturerRequired: Boolean = false, val displayType: String = "") {
+                       val reference: String = "", val manufacturerRequired: Boolean = false, val displayType: String = "",
+                       val titleSource: TitleSource = TitleSource.DEVICE) {
         private fun modelKey(value: String) = key(value).removePrefix(key(brand) + " ")
         fun acceptsModel(value: String): Boolean = key(value) in models ||
             id.startsWith("tplink:") && TpLinkModels.sameModel(id, value) ||
@@ -32,7 +35,7 @@ internal object DeviceCatalog {
     private const val PLAYSTATION_SOURCE = "PlayStation discovery host-type"
     private fun keys(vararg values: String) = values.mapTo(HashSet(), ::key)
     // Exact reported-model aliases and primary references: docs/reference/DEVICE-IDENTITIES.md.
-    private val products = listOf("A.1", "A.3", "A.6", "A.1x", "A.3x", "A.6x").map { model ->
+    private val products = (listOf("A.1", "A.3", "A.6", "A.1x", "A.3x", "A.6x").map { model ->
         Product("vssl:${key(model)}", "VSSL", "VSSL $model", Category.AMPLIFIER,
             keys(model, model.replace(".", ""), "VSSL $model", "VSSL ${model.replace(".", "")}"), manufacturerRequired = true)
     } + listOf(
@@ -48,7 +51,7 @@ internal object DeviceCatalog {
             keys("Smart_Thermostat_Premium", "Smart Thermostat Premium", "ecobee Smart Thermostat Premium", "ECB601"), manufacturerRequired = true),
         Product("samsung:pn59d550", "Samsung", "Samsung PN59D550", Category.TV,
             keys("PN59D550", "PN59D550C1F", "PN59D550C1FXZC"), familyOnly = true, manufacturerRequired = true)
-    )
+    )).map { it.copy(titleSource = TitleSource.CATALOGUE) }
     private fun brand(value: String): String = when (key(value)) {
         "hikvision", "hangzhou hikvision digital technology co., ltd.", "hangzhou hikvision digital technology co.,ltd." -> "hikvision"
         "nvidia", "nvidia corporation" -> "nvidia"
@@ -90,7 +93,7 @@ internal object DeviceCatalog {
         val entry = global.lookup(maker, model) ?: return null
         val type = hardware.lookup(maker, model)
         return Product("catalog:$maker:${key(entry.title)}", entry.brand, entry.title, type?.category ?: Category.UNSPECIFIED,
-            keys(model), familyOnly = entry.source.contains("NIST-CPE@"), reference = entry.source + (type?.let { ";" + it.source } ?: ""))
+            keys(model), familyOnly = entry.source.contains("NIST-CPE@"), reference = entry.source + (type?.let { ";" + it.source } ?: ""), titleSource = TitleSource.CATALOGUE)
     }
     fun fromRecog(model: Recog.Model): Match {
         val category = when (model.category) {
@@ -104,12 +107,22 @@ internal object DeviceCatalog {
         }
         val title = if (model.description.startsWith("Apple ")) model.description else "Apple ${model.description}"
         return Match(Product("recog:${model.code}", "Apple", title, category, keys(model.code, model.description),
-            familyOnly = model.familyOnly), model.source, model.input, model)
+            familyOnly = model.familyOnly, titleSource = TitleSource.CATALOGUE), model.source, model.input, model)
     }
 
     /** Retain at most eight distinct models until the maker/catalogue can qualify their aliases.
      * No model is evicted: conflicts (including overflow) survive display-observation eviction. */
     class Evidence {
+        /** Diagnostic only: compatibility can reject a candidate without setting the sticky flag.
+         * Re-evaluate retained aliases with the current catalogue/maker; do not freeze an
+         * unresolved alias into a conflict merely because its manufacturer arrived later. */
+        internal fun hasRecordedConflict(): Boolean {
+            if (conflicted) return true
+            if (match() != null) return false
+            val candidates = listOfNotNull(registry()?.product, FireTvInfo.product(fireTvType)) +
+                models.mapNotNull(::qualifiedProduct)
+            return candidates.any { !compatible(it) }
+        }
         private var firstModel = ""
         private var modelSource = ""
         private val models = HashSet<String>()

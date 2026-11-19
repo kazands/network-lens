@@ -76,4 +76,4 @@ passed the 32 focused Android checks again. Installed APK hashes were verified
 by the emulator runner. `git diff --check` and the repository hygiene check passed.
 
 Physical hub verification and an exact-generation mapping remain outstanding.
-See [current verification](../VERIFICATION-0.3.26.md) for the release artifacts and checks.
+See [current verification](../archive/VERIFICATION-0.3.26.md) for the release artifacts and checks.

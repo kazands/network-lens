@@ -1,6 +1,6 @@
 # Scan ownership and evidence flow
 
-See [current release verification](../VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
+See [current release verification](../archive/VERIFICATION-0.3.26.md) for exact artifact checks and physical-test limits.
 
 ```mermaid
 flowchart TD
