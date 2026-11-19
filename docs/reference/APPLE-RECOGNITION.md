@@ -1,6 +1,6 @@
 # Apple recognition sources
 
-Apple identity combines a read-only local device-service lookup with Bonjour, AirPlay, RAOP and Companion model fields. The bundled catalogue includes 284 reviewed model codes.
+Apple identity combines a read-only local device-service lookup with Bonjour, AirPlay, RAOP and Companion model fields. The bundled catalogue includes 284 reviewed canonical model codes and 179 unambiguous iPhone/iPad board aliases. Aliases retain their actual reported value and source; they do not add a new discovery request.
 
 ## Direct model lookup
 

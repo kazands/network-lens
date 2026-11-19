@@ -12,6 +12,53 @@ internal object RecognitionEvidenceChecks {
             hint("Model", model, "Synthetic current model", 80)
         }
         for (reverse in listOf(false, true)) {
+            val board = endpoint("192.0.2.70", model = "J271AP").apply {
+                recognizeServiceModel("_device-info._tcp.", mapOf("model" to "J271AP".toByteArray()))
+                link("synthetic:apple-alias")
+            }
+            val product = endpoint("2001:db8::70", model = "iPad13,18").apply {
+                recognizeAppleModel("iPad13,18"); link("synthetic:apple-alias")
+            }
+            val ipad = Device.grouped(if (reverse) listOf(product, board) else listOf(board, product)).single()
+            check(ipad.groupProduct()?.product?.title == "Apple iPad (10th generation) Wi-Fi" && !ipad.recognitionReportGroup().conflict,
+                "Board and ProductType agree across addresses in either grouping order")
+            check(ipad.groupRecognition()?.canonicalCode == "iPad13,18" && ipad.copy().groupProduct()?.product?.id == "recog:iPad13,18",
+                "Apple grouping and snapshots use canonical identity without replacing raw codes")
+            val upnp = endpoint("192.0.2.71", "Google").apply {
+                hint("Model", "Eureka Dongle", "UPnP device description", 90)
+                hint("Model", "Chromecast", "mDNS current _googlecast._tcp. TXT", 80)
+                link("synthetic:cast-alias")
+            }
+            val cast = endpoint("2001:db8::71", model = "Chromecast").apply { link("synthetic:cast-alias") }
+            val group = Device.grouped(if (reverse) listOf(cast, upnp) else listOf(upnp, cast)).single()
+            check(group.groupProduct()?.product?.id == "google:chromecast" && !group.recognitionReportGroup().conflict,
+                "Selected generic UPnP model cannot suppress compatible dual-stack Cast recognition")
+            check(upnp.model == "Eureka Dongle" && group.copy().groupProduct()?.product?.title == "Google Chromecast",
+                "Compatibility preserves raw fields and works in snapshots")
+            upnp.model = "Synthetic manual contradiction"
+            check(upnp.identifiedProduct() == null, "Legacy directly populated fields still constrain recognition")
+        }
+        val noisy = Device().apply {
+            repeat(DiagnosticEvidence.LIMIT) { hint("Name", "Synthetic service $it", "Synthetic current service", 50) }
+            hint("Model", "Synthetic host model", "Synthetic current model", 80)
+            detail(AppleDeviceInfo.SOURCE, "Response read failed")
+        }
+        check(noisy.diagnostics.snapshot().any { it.field == "Model" } &&
+            noisy.diagnostics.snapshot().any { it.field == AppleDeviceInfo.SOURCE } && noisy.diagnostics.omissions() == 2L,
+            "Many names cannot evict late hardware models or fixed-reader outcomes")
+        val printerAlias = endpoint("192.0.2.72", "Brother", "Brother MFC-L2720DW series")
+        check(printerAlias.groupProduct()?.product?.title == "Brother MFC-L2720DW" &&
+            printerAlias.classification().category == DeviceCatalog.Category.PRINTER && DeviceIcon.forGroup(printerAlias).label == "Printer",
+            "Recognised printer model supplies its hardware category and icon")
+        val printServer = endpoint("192.0.2.73").apply { service("_ipp._tcp.") }
+        check(printServer.classification().category == null && DeviceIcon.forGroup(printServer).label == "Printer service",
+            "A print service alone cannot classify its host as printer hardware")
+        val ecoAirPlay = endpoint("192.0.2.74", "ecobee", "ECB601").apply {
+            recognizeServiceModel("_airplay._tcp.", mapOf("model" to "ECB601".toByteArray()))
+        }
+        check(!ecoAirPlay.recognitionReportGroup().conflict && ecoAirPlay.classification().category == DeviceCatalog.Category.THERMOSTAT,
+            "Third-party AirPlay model cannot manufacture an Apple identity conflict")
+        for (reverse in listOf(false, true)) {
             val first = endpoint("192.0.2.110", "ecobee", "Smart_Thermostat_Premium").apply {
                 hint("Manufacturer", "ecobee Inc.", "mDNS current _airplay._tcp. TXT", 80)
                 hint("Model", "ECB601", "mDNS current _airplay._tcp. TXT", 80)

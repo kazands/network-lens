@@ -46,7 +46,7 @@ upload, saved network history or manufacturer inference from IEEE vendor was add
 | Copy/search omitted some source observations | Copy includes source-labelled observations/type evidence and UPnP status; search includes raw observation values and capability names |
 | Apple model mapping required a complete device-info service | Reviewed current Companion Link, AirPlay and RAOP model fields can use the exact mapping with actual-source provenance |
 | TXT-only Bonjour model records could not qualify | A current same-sender, exact-instance complete service can anchor the auxiliary model record without inventing a listening port |
-| Apple table omitted many iPad/iPhone generations | A pinned MIT-licensed AppleDB supplement adds 128 exact released mobile identifiers, retaining the existing conservative Recog mappings |
+| Apple table omitted many iPad/iPhone generations | A pinned MIT-licensed AppleDB supplement adds 128 exact released mobile identifiers and 179 unique mobile board aliases, retaining the existing conservative Recog mappings |
 
 ## Samsung compatibility boundary
 

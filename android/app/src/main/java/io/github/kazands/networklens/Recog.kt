@@ -10,6 +10,7 @@ internal object Recog {
                      val rule: Int, val familyOnly: Boolean,
                      val observationSource: String = "mDNS current _device-info._tcp. TXT",
                      val catalogueSource: String? = null) {
+        val canonicalCode: String get() = AppleModels.canonicalCode(code)
         val source: String get() = if (catalogueSource != null) "$catalogueSource · $observationSource"
             else if (observationSource == "mDNS current _device-info._tcp. TXT")
             "Recog · mdns.device-info.txt · rule $rule · ${RecogModels.REVISION}"
@@ -27,19 +28,23 @@ internal object Recog {
 
     fun lookup(code: String): Model? = if (code.length in 1..64) RecogModels.lookup(code) ?: AppleModels.lookup(code) else null
 
+    fun sameModel(first: String, second: String): Boolean = first == second ||
+        lookup(first)?.let { a -> lookup(second)?.canonicalCode == a.canonicalCode } == true
+
+    fun accepts(model: Model, value: String): Boolean = value == model.description || sameModel(model.code, value)
+
     /** Fixed-size scan evidence; display-observation eviction cannot erase a conflict. */
     class Evidence {
         // A known Apple model is still observed in typeModels when a prior maker
         // conflict prevents code from being selected. Ordinary non-Apple reports alone
         // must not count as an Apple identity conflict.
-        internal fun hasRecordedConflict(): Boolean = (code.isNotEmpty() || typeModels.isNotEmpty()) && conflicted
+        internal fun hasRecordedConflict(): Boolean = typeModels.isNotEmpty() && conflicted
         private var code = ""
         private var observationSource = "mDNS current _device-info._tcp. TXT"
         private val typeModels = linkedMapOf<Category, String>()
         private var makerConflict = false
         private var conflicted = false
-        private var firstReportedModel = ""
-        private var secondReportedModel = ""
+        private val reportedModels = linkedSetOf<String>()
 
         /** Receives only accepted, bounded, source-labelled reports from Device.hint. */
         fun observeReport(field: String, value: String) {
@@ -47,21 +52,14 @@ internal object Recog {
             if (conflicted || !IdentityHints.specific(value)) return
             when (field) {
                 "Manufacturer" -> if (!appleMaker(value)) conflicted = true
-                "Model" -> when {
-                    firstReportedModel.isEmpty() -> firstReportedModel = value
-                    value == firstReportedModel || value == secondReportedModel -> Unit
-                    secondReportedModel.isEmpty() -> secondReportedModel = value
-                    // A match permits only its input code and one description.
-                    // A third distinct report cannot agree with any such pair.
-                    else -> conflicted = true
+                "Model" -> if (value !in reportedModels) {
+                    if (reportedModels.size == 8) conflicted = true else reportedModels.add(value)
                 }
             }
             lookup(code)?.let { if (!reportsAgree(it)) conflicted = true }
         }
 
-        private fun reportsAgree(model: Model): Boolean =
-            (firstReportedModel.isEmpty() || firstReportedModel == model.code || firstReportedModel == model.description) &&
-                (secondReportedModel.isEmpty() || secondReportedModel == model.code || secondReportedModel == model.description)
+        private fun reportsAgree(model: Model): Boolean = reportedModels.all { accepts(model, it) }
 
         fun offer(attributes: Map<String, ByteArray>) = offerField(attributes, "model", "mDNS current _device-info._tcp. TXT")
 
@@ -90,7 +88,7 @@ internal object Recog {
                 typeModels.putIfAbsent(it.category, "${it.source} · ${it.input}")
             }
             if (conflicted) return
-            if (code.isEmpty()) { code = next; observationSource = source } else if (code != next) conflicted = true
+            if (code.isEmpty()) { code = next; observationSource = source } else if (!sameModel(code, next)) conflicted = true
             lookup(code)?.let { if (!reportsAgree(it)) conflicted = true }
         }
 
@@ -107,11 +105,11 @@ internal object Recog {
             }
             HardwareClassification.Fact(mapped, "Apple model catalogue · $source")
         }
-        fun compatible(model: Model): Boolean = !conflicted && (code.isEmpty() || code == model.code) && reportsAgree(model)
+        fun compatible(model: Model): Boolean = !conflicted && (code.isEmpty() || sameModel(code, model.code)) && reportsAgree(model)
         fun copy(): Evidence = Evidence().also {
             it.code = code; it.conflicted = conflicted; it.observationSource = observationSource
             it.typeModels.putAll(typeModels); it.makerConflict = makerConflict
-            it.firstReportedModel = firstReportedModel; it.secondReportedModel = secondReportedModel
+            it.reportedModels.addAll(reportedModels)
         }
     }
     fun appleMaker(value: String): Boolean = DeviceCatalog.key(value) in setOf("apple", "apple inc.", "apple inc", "apple computer, inc.")

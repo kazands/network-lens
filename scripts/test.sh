@@ -4,6 +4,7 @@ cd "$(dirname "$0")/.."
 python3 scripts/setup-kotlin-toolchain.py
 python3 scripts/generate-recog-models.py --check
 python3 scripts/generate-apple-models.py --check
+python3 scripts/test-apple-models.py
 python3 scripts/generate-android-models.py --check
 python3 scripts/generate-product-models.py --check
 python3 scripts/generate-android-hardware.py --check

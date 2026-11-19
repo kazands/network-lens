@@ -39,7 +39,7 @@ replace their physical category.
 
 | Models | Display type / icon |
 | --- | --- |
-| HS100, HS103, HS105, HS110, KP100, KP105, KP115, KP125, EP10, EP25 | Smart plug / plug |
+| HS100, HS103, HS105, HS110, KP100, KP105, KP115, KP125, KP400, EP10, EP25 | Smart plug / plug |
 | HS200, HS210, KS200, KS200M, KS205 | Light switch / switch |
 | HS220, KS220, KS220M, KS225, KS230 | Dimmer switch / switch |
 | P100, P100M, P105, P110, P110M, P115, P125, P125M | Smart plug / plug |
@@ -103,3 +103,5 @@ API 26 and a physical Android scan of this recognition change have not been run.
 Exact release checks are in [0.3.18 verification](../archive/VERIFICATION-0.3.18.md).
 
 Current release-wide checks are recorded in [current release verification](../archive/VERIFICATION-0.3.26.md).
+
+- [TP-Link KP400 outdoor plug](https://www.tp-link.com/uk/home-networking/smart-plug/kp400/): exact model added to the reviewed plug table; regional suffixes remain raw observations.

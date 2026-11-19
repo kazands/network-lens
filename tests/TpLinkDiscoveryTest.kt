@@ -72,7 +72,7 @@ object TpLinkDiscoveryTest {
         check(secret.mac == "02:00:00:00:00:40" && !secret.toString().contains("fixture-secret") && !secret.toString().contains("203.0.113"),"Retain only allowlisted facts; no supplied address redirect")
         check(T.parse(packet(legacy().copyOf(legacy().size+20)).copy(length=legacy().size),TX) == old,"Parse exact datagram length")
         check(T.parse(packet(legacy()).copy(length=99999),TX)==null,"Reject impossible length")
-        for (model in listOf("HS100","HS103","HS105","HS110","KP100","KP105","KP115","KP125","EP10","EP25","P100","P100M","P105","P110","P110M","P115","P125","P125M")) {
+        for (model in listOf("HS100","HS103","HS105","HS110","KP100","KP105","KP115","KP125","KP400","EP10","EP25","P100","P100M","P105","P110","P110M","P115","P125","P125M")) {
             val product = DeviceCatalog.lookup("$model(US)","TP-Link")!!
             check(product.category == DeviceCatalog.Category.OUTLET && product.displayType == "Smart plug","Reviewed plug $model")
         }

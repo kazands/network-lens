@@ -74,8 +74,34 @@ object RecogTest {
                 check(evidence.match() == null && evidence.categories().isEmpty() && copy.match()?.description == title,
                     "Supplemental mapping preserves manufacturer conflicts and independent snapshots")
             }
-            for (bad in listOf(code.lowercase(), " $code", "$code-extra", "$code\n", "A2696", "J271AP"))
+            for (bad in listOf(code.lowercase(), " $code", "$code-extra", "$code\n", "A2696"))
                 check(Recog.lookup(bad) == null, "Only exact reviewed network model identifiers qualify")
+        }
+        val board = Recog.lookup("J271AP")!!
+        check(board.canonicalCode == "iPad13,18" && board.description == Recog.lookup("iPad13,18")!!.description,
+            "A globally unique reviewed board resolves to its canonical ProductType")
+        for (first in listOf("J271AP", "iPad13,18")) {
+            val second = if (first == "J271AP") "iPad13,18" else "J271AP"
+            val aliases = Recog.Evidence()
+            aliases.observeReport("Model", first)
+            aliases.offer(attributes(first))
+            aliases.observeReport("Model", second)
+            aliases.offerAppleModel(second)
+            aliases.observeReport("Model", board.description)
+            check(aliases.match()?.canonicalCode == board.canonicalCode && !aliases.hasRecordedConflict(),
+                "Board, ProductType and description agree in either order")
+            check(aliases.copy().compatible(board), "Canonical compatibility survives a detached snapshot")
+            aliases.offer(attributes("iPad13,19"))
+            check(aliases.match() == null && aliases.hasRecordedConflict(), "Different connectivity variants remain contradictory")
+        }
+        for (makerFirst in listOf(true, false)) {
+            val thermostat = Recog.Evidence()
+            if (makerFirst) thermostat.observeReport("Manufacturer", "ecobee")
+            thermostat.offerService("_airplay._tcp.", attributes("ECB601"))
+            if (!makerFirst) thermostat.observeReport("Manufacturer", "ecobee")
+            check(!thermostat.hasRecordedConflict(), "Non-Apple AirPlay models do not manufacture Apple identity conflicts")
+            thermostat.offer(attributes("iPad13,18"))
+            check(thermostat.hasRecordedConflict() && thermostat.match() == null, "A genuine Apple claim plus a foreign maker still conflicts")
         }
         for ((service, key) in listOf("_companion-link._tcp." to "rpMd", "_airplay._tcp." to "model", "_raop._tcp." to "am")) {
             val evidence = Recog.Evidence()

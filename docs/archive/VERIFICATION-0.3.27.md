@@ -8,7 +8,7 @@ Application ID: `io.github.kazands.networklens`. Version code: **55**.
 Whole-network troubleshooting reports, retained diagnostic fields and lookup history,
 privacy preview and temporary sharing, counts-only recognition summaries, developer
 recognition-baseline/public-web trial tools, and stable device-details scrolling.
-See [changes](CHANGES.md) and [report coverage](reference/TROUBLESHOOTING-REPORT.md).
+See [changes](../CHANGES.md) and [report coverage](../reference/TROUBLESHOOTING-REPORT.md).
 
 A fresh independent Deep code review approved all 47 implementation files with no
 substantive findings. Release preparation then updated version metadata and documentation.
@@ -68,4 +68,4 @@ No GitHub CI was added; verification was performed locally.
 
 Reports expose retained evidence and explicit omissions; they do not capture every
 response byte or identify silent devices. This release does not claim that reporting
-improvements resolve discovery failures. Earlier evidence remains in [the archive](archive/README.md).
+improvements resolve discovery failures. Earlier evidence remains in [the archive](../archive/README.md).

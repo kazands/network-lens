@@ -6,6 +6,29 @@ object GoogleCastModelsTest {
     @JvmStatic fun main(args: Array<String>) {
         check(DeviceCatalog.lookup("Google Nest Mini")?.title == "Google Nest Mini",
             "A current Google Nest Mini model identifies its product without a reported manufacturer")
+        val aliasReports = listOf(Triple("Manufacturer", "Google", "UPnP device description"),
+            Triple("Model", "Eureka Dongle", "UPnP device description"),
+            Triple("Model", "Chromecast", "mDNS current _googlecast._tcp. TXT"))
+        for (order in listOf(listOf(0,1,2), listOf(0,2,1), listOf(1,0,2), listOf(1,2,0), listOf(2,0,1), listOf(2,1,0))) {
+            val e = DeviceCatalog.Evidence()
+            order.forEach { n -> aliasReports[n].let { (f,v,s) -> e.offer(f,v,s) } }
+            check(e.match()?.product?.id == "google:chromecast" && !e.hasRecordedConflict(), "Generic UPnP alias corroborates a current Chromecast model in order $order")
+            check(e.match()!!.source.contains("_googlecast") && e.match()!!.input.lowercase().contains("chromecast"), "Actual identifying model and source are reported")
+            check(e.copy().match() == e.match(), "Alias provenance survives snapshot")
+            e.offer("Model", "Google Home Mini", "Current conflicting model")
+            check(e.match() == null && e.hasRecordedConflict(), "Real conflicting Google products remain rejected")
+        }
+        for (source in listOf("UPnP device description", "Synthetic unrelated source")) {
+            for (maker in listOf("", "Google", "Synthetic other maker")) {
+                val e = DeviceCatalog.Evidence().apply {
+                    offer("Manufacturer", maker, "Current manufacturer")
+                    offer("Model", "Eureka Dongle", source)
+                }
+                check(e.match() == null, "Eureka token alone cannot select a Chromecast")
+                e.offer("Model", "Chromecast", "mDNS current _googlecast._tcp. TXT")
+                check((e.match() != null) == (maker == "Google" && source == "UPnP device description"), "Alias exemption requires reviewed source and reported Google maker")
+            }
+        }
         val cases = listOf(
             Triple("Google Nest Mini", "Google Nest Mini", DeviceCatalog.Category.SPEAKER),
             Triple("Nest Audio", "Google Nest Audio", DeviceCatalog.Category.SPEAKER),

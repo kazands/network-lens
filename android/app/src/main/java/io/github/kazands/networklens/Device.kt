@@ -32,14 +32,14 @@ class Device : Grouping.Endpoint {
     internal val audioPlayers = linkedMapOf<String, AudioPlayers.Player>()
     internal val audioPlayerStatuses: MutableMap<String, String> = object : LinkedHashMap<String, String>() {
         override fun put(key: String, value: String): String? {
-            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition")
+            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
             return super.put(key, value)
         }
     }
     internal var audioReport: AudioZones.Report? = null
     internal var audioStatus = ""
         set(value) {
-            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition")
+            diagnostics.record("Audio lookup", "Lookup outcome", value, "Recorded audio lookup transition", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
             field = value
         }
     internal var audioIdentity = ""
@@ -110,9 +110,9 @@ class Device : Grouping.Endpoint {
     @Synchronized private fun recognitionCompatible(candidate: Recog.Model): Boolean =
         !catalogue.hasFireTvHardwareIdentity() && !catalogue.hasEnvisalinkIdentity() && !catalogue.hasSmartThingsIdentity() && recognition.compatible(candidate) &&
             (manufacturer.isEmpty() || !IdentityHints.specific(manufacturer) || Recog.appleMaker(manufacturer)) &&
-            (model.isEmpty() || !IdentityHints.specific(model) || model == candidate.code || model == candidate.description) &&
+            (model.isEmpty() || !IdentityHints.specific(model) || Recog.accepts(candidate, model)) &&
             hints.observations().none { hint -> IdentityHints.specific(hint.value) && when (hint.field) {
-                "Model" -> hint.value != candidate.code && hint.value != candidate.description
+                "Model" -> !Recog.accepts(candidate, hint.value)
                 "Manufacturer" -> !Recog.appleMaker(hint.value)
                 else -> false
             } }
@@ -124,7 +124,7 @@ class Device : Grouping.Endpoint {
         val endpoints = endpoints()
         val matches = endpoints.mapNotNull { it.locallyRecognized() }
         val candidate = matches.firstOrNull() ?: return null
-        if (matches.any { it.code != candidate.code }) return null
+        if (matches.any { !Recog.sameModel(it.code, candidate.code) }) return null
         return candidate.takeIf { endpoints.all { it.recognitionCompatible(candidate) } }
     }
     @Synchronized internal fun identifiedProduct(): DeviceCatalog.Match? =
@@ -133,11 +133,12 @@ class Device : Grouping.Endpoint {
     @Synchronized private fun productCompatible(match: DeviceCatalog.Match): Boolean {
         match.recog?.let { return recognitionCompatible(it) }
         if (locallyRecognized() != null || !catalogue.compatible(match.product)) return false
-        if (IdentityHints.specific(model) && !match.product.acceptsModel(model)) return false
         // Include manually populated/legacy fields without promoting them into catalogue evidence.
         val selected = DeviceCatalog.Evidence()
         selected.offer("Manufacturer", manufacturer, "Selected reported field")
-        selected.offer("Model", model, "Selected reported field")
+        // A selected observation already in catalogue evidence has its original source
+        // and compatibility checks there. Only legacy/direct fields need this fallback.
+        if (!catalogue.hasModel(model)) selected.offer("Model", model, "Selected reported field")
         return selected.compatible(match.product)
     }
     internal fun groupProduct(): DeviceCatalog.Match? {
@@ -220,7 +221,7 @@ class Device : Grouping.Endpoint {
                 add(entry.field, entry.value, entry.source, entry.disposition,
                     returned || diagnosticPublic(entry.field) || entry.source in setOf("Presence evidence", "Service observation", "Port observation", "Port check", "Audio lookup"))
             }
-            add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal records offered observations independently up to ${DiagnosticEvidence.LIMIT} entries.")
+            add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal retains up to ${DiagnosticEvidence.LIMIT} entries, prioritising identity observations and lookup outcomes over other returned fields, then withheld values. Capacity counts include displaced or rejected events; repeated omitted events can be counted again.")
             TroubleshootingReport.Endpoint(d.ip, listOf(d.hostname, d.mac, d.identity) + d.observations().filter { it.field == "Hostname" }.map { it.value }, facts, d.diagnostics.omissions(),
                 listOf(d.name) + d.observations().filter { it.field == "Name" }.map { it.value })
         } }, summaryFacts)
@@ -295,7 +296,9 @@ class Device : Grouping.Endpoint {
     }
     internal fun capabilities(): List<String> = HardwareClassification.capabilities(endpoints().flatMap { it.services })
     @Synchronized fun hint(field: String?, value: String?, source: String?, priority: Int) {
-        diagnostics.record(source.orEmpty(), field.orEmpty(), value, "Offered to identity selection; priority $priority")
+        diagnostics.record(source.orEmpty(), field.orEmpty(), value, "Offered to identity selection; priority $priority",
+            if (field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware")) DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME
+            else DiagnosticEvidence.Retention.OBSERVATION)
         if (field == "Device type") hardwareType.offer(SafeText.label(value, 160), SafeText.label(source, 128))
         if ((field == "Model" || field == "Manufacturer") && SafeText.label(source, 128).isNotEmpty()) {
             val cleanValue = SafeText.label(value, 160)
@@ -367,7 +370,9 @@ class Device : Grouping.Endpoint {
     }
 
     @Synchronized fun detail(key: String?, value: String?) {
-        diagnostics.record("Device detail", key.orEmpty(), value, "Diagnostic detail; may not affect identity")
+        diagnostics.record("Device detail", key.orEmpty(), value, "Diagnostic detail; may not affect identity",
+            if (key in setOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE, "UPnP description status"))
+                DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME else DiagnosticEvidence.Retention.OBSERVATION)
         val cleanKey = SafeText.label(key, 64)
         val cleanValue = SafeText.label(value, 160)
         if (cleanKey.isEmpty() || cleanValue.isEmpty() || legacySource(cleanKey)) return

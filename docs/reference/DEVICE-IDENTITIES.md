@@ -80,7 +80,7 @@ database or a claim that every firmware advertises these names.
 
 The bundled global table contains **256,338 exact manufacturer/model aliases**,
 **86,540 distinct product titles** and **5,263 brand keys**, plus the existing
-156 Apple Recog codes, 128 supplemental AppleDB mobile codes and the reviewed profiles below. These are catalogue
+156 Apple Recog codes, 128 supplemental AppleDB mobile codes, 179 unambiguous mobile board aliases, and the reviewed profiles below. These are catalogue
 counts, not a claim that a scan can identify every listed product or that every
 alias is a different retail model. The data covers worldwide manufacturers and
 hardware beyond Android: printers, routers, computers/servers, storage devices,
@@ -277,3 +277,35 @@ remote-control hubs use original GPL-3.0-only handset artwork in
 `android/icons-original/`, rendered with the same stroke style. Harmony's exact
 reported model selects the remote-control hub category; a user-assigned name
 alone never does. Neither icon supplies connection type or unreported radios.
+
+## Compatible model reports and physical categories
+
+Recognition checks all retained model observations, rather than requiring the
+first model received to be the one the catalogue recognises. Unknown or genuinely
+contradictory models still suppress an exact match. Raw reports remain unchanged.
+
+- A Google manufacturer plus `Eureka Dongle` from a current UPnP device description
+  is compatible with a separately reported `Chromecast` model. This narrow rule
+  does not identify a device from `Eureka Dongle` alone, or infer an Ultra, Audio,
+  Google TV, generation or resolution variant. Google's [Chromium DIAL
+  implementation](https://chromium.googlesource.com/chromium/src/+/3f612350ee27b570f287fb7e94fcc034e68ee61b/chrome/browser/media/router/discovery/dial/dial_media_sink_service_impl.cc)
+  records that legacy discovery model name; no Chromium code is incorporated.
+- For Brother's MFC, DCP and HL printer model formats, a terminal ` series` can
+  resolve to the exact manufacturer-qualified model already in the bundled
+  catalogue. Unknown codes and arbitrary suffixes do not match. A recognised
+  model gets a Printer category; an IPP service alone remains a printing capability
+  and cannot turn a computer sharing a printer into printer hardware. See
+  [Brother's product specifications](https://support.brother.com/g/b/spec.aspx?c=us&lang=en&prod=mfcl2720dw_us_eu_as).
+- Amazon-qualified `Echo Dot`, `Echo_Dot` and `Amazon Echo Dot` identify the
+  speaker family, without choosing a generation. See [Amazon's Echo Dot
+  description](https://developer.amazon.com/en-US/blogs/alexa/post/Tx20VXYKVQUVLNB/alexa-available-on-two-more-devices-meet-echo-dot-and-amazon-ta).
+
+Apple board aliases use the retained AppleDB snapshot only where a released
+mobile device has exactly one ProductType and the board has only one owner across
+the entire snapshot. They share a canonical identity with the ProductType across
+services and grouped addresses, while preserving the actual input and its source.
+Ambiguous boards, non-mobile boards, retail A-numbers and prefixes are excluded.
+The existing conservative Recog descriptions remain authoritative where present.
+
+Third-party AirPlay model strings alone do not count as Apple identity conflicts.
+A contradictory known Apple model or manufacturer still suppresses recognition.
