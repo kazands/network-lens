@@ -13,13 +13,13 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.30.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
+The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.31.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
 
 A fresh checkout creates a local development signing key. That key cannot update an installation signed by another key. Existing keys must not be replaced to work around an installation error. Public release credentials are never required for ordinary builds or tests.
 
 ## Host tests
 
-`bash scripts/test.sh` checks generated catalogues and coverage policy, compiles the shared Kotlin code, and runs 52 host suites and Python diagnostic tests. Some fixtures open bounded loopback sockets; the runner needs permission to use local sockets. It does not require a phone or scan a household network.
+`bash scripts/test.sh` checks generated catalogues and coverage policy, compiles the shared Kotlin code, and runs 54 host suites and Python diagnostic tests. Some fixtures open bounded loopback sockets; the runner needs permission to use local sockets. It does not require a phone or scan a household network.
 
 Coverage includes protocol parsing, current-response rules, identity conflicts, grouping, retries, scanner/host separation, IPv6 admission, updates and resource ownership. Test counts measure assertions, not supported products or real-world accuracy.
 
@@ -40,6 +40,7 @@ Replace the serial with the exact emulator you started. Instrumentation changes 
 | --- | --- |
 | Recognition and protocols | `device-identities`, `recog`, `local-metadata`, `homekit`, `routed-ipv6` |
 | Focused products | `google-cast`, `fire-tv`, `smartthings`, `envisalink`, `kidde` |
+| Indirect local-name evidence | `network-names` |
 | Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `session-only`, `session-cold` |
 | Interface | `home-user`, `detail-stability`, `recognition-report`, `scan-details`, `typography`, `navigation`, `options` |
 | Updates and performance | `app-updates`, `performance` |

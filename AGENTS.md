@@ -3,7 +3,7 @@
 Network Lens is a focused Kotlin Android Wi-Fi device finder. Keep its product scope simple: user-started foreground scans, one searchable list, detailed source-labelled observations and clear scan status.
 
 - Every scan starts fresh. Keep scan results, preferences and appearance in memory only; no saved history, persistent Wi-Fi fingerprint, analytics or cloud recognition.
-- A current response is required for presence. Treat cached/native advertisements as candidates. Do not add router PTR/DHCP names to scan identity or reuse an IP's prior occupant's details.
+- A current response is required for presence. Treat cached/native advertisements as candidates. Router names remain separate from device-reported identity. A configured on-link private DNS server's reverse name may provide an explicitly tentative family suggestion only after forward confirmation, within the current scan. It must never establish presence, grouping, an exact model or a reported manufacturer, or override current device evidence. Do not reuse an IP's prior occupant's details.
 - Bind all discovery to the selected Wi-Fi and eligible scope. Preserve bounded work, deadlines, retries, cancellation, error reporting and resource cleanup.
 - Missing MAC/model/manufacturer values remain unknown. HomeKit pairing IDs are not hardware MAC addresses. Keep IEEE interface vendor separate from reported manufacturer.
 - Preserve light/dark appearance, scalable text, Lucide device icons, shared Network Lens branding, IPv6 below IPv4 and Back/list-position behavior.

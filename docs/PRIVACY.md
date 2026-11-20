@@ -4,6 +4,8 @@
 
 Discovery uses the selected Wi-Fi and eligible scan range. Recognition uses device responses and bundled offline catalogues. Network Lens does not send scan results to a cloud recognition service.
 
+Optional local name lookups query only a configured on-link private DNS server on the selected Wi-Fi, for endpoints that have already responded. The app does not send these requests directly to public DNS resolvers. Router names remain separate from device-reported identity and are masked in the default troubleshooting report. A local DNS server may apply its own forwarding and logging policy.
+
 There are no accounts, analytics, advertisements, background scans or saved device inventory. Scan results, appearance, filters and range choices stay in memory only. A new scan starts fresh; restarting the process clears the current session.
 
 Copying device details is explicit and uses Android's clipboard. Treat copied text and screenshots as private network information, and redact them before sharing.

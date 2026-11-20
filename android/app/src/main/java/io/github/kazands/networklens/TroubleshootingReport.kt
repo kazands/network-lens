@@ -12,7 +12,7 @@ internal object TroubleshootingReport {
         val endpoints = groups.flatMap { it.endpoints }
         val redaction = Redaction(endpoints.flatMap { it.privateValues + it.address }, endpoints.flatMap { it.names }, includeNames)
         fun fact(f: Fact): String {
-            val value = if (f.publicValue || includeNames && f.field in setOf("IP address", "Network name", "Hostname", "MAC address"))
+            val value = if (f.publicValue || includeNames && f.field in setOf("IP address", "Network name", "Hostname", "MAC address", "Router-reported name"))
                 redaction.text(f.value, f.kind) else if (f.value.isEmpty()) "No retained value" else redaction.label(f.value)
             return "${redaction.text(f.field, schema = true)}: ${value.ifEmpty { "No retained value" }}" +
                 (if (f.source.isEmpty()) "" else " | source: ${redaction.text(f.source)}") +

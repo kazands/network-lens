@@ -1,10 +1,12 @@
 # Current status
 
-**Network Lens 0.3.30 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.31 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release recognises supported Kidde WD-family discovery responses as Kidde Smart Detector, with a safety-detector label and sensor icon. It keeps exact models and sensor capabilities unknown when they are not reported, and distinguishes a HomeKit advertisement from verified compatibility.
+This release adds tentative Hunter Hydrawise and Orbit B-hyve family suggestions from corroborated local network names. It keeps those names separate from device-reported identity, masks them in default troubleshooting reports and uses a smoke-alarm icon for recognised Kidde detectors. No Bluetooth, new permissions or cloud recognition are added.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.30.md) · [Troubleshooting reports](reference/TROUBLESHOOTING-REPORT.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.31.md) · [Irrigation matching limits](reference/IRRIGATION.md)
+
+Hydrawise and B-hyve suggestions depend on an eligible local DNS server and matching names. They do not verify an exact model or manufacturer. Physical B-hyve compatibility still needs testing.
 
 ## What remains unverified
 

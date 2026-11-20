@@ -26,7 +26,7 @@ internal object KiddeChecks {
                 current.invoke(op, d, if (httpFirst) service("_http._tcp.") else service())
                 current.invoke(op, d, if (httpFirst) service() else service("_http._tcp."))
                 check(d.presentation().title == "Kidde Smart Detector" && d.presentation().subtitle == "Safety detector", "Kidde family in either service order")
-                check(d.classification().category == DeviceCatalog.Category.SENSOR && DeviceIcon.forGroup(d).drawable == R.drawable.ic_device_sensor, "Sensor icon without inferred smoke/CO capability")
+                check(d.classification().category == DeviceCatalog.Category.SENSOR && DeviceIcon.forGroup(d).drawable == R.drawable.ic_device_alarm_smoke && DeviceIcon.forGroup(d).label == "Safety detector", "Kidde alarm icon with a safety-detector label")
                 check(d.model == "WD" && d.manufacturer.isEmpty() && d.mac.isEmpty(), "Reported fields preserved; no retail model, manufacturer or MAC invented")
                 check(d.identifiedProduct()!!.product.familyOnly && d.identifiedProduct()!!.source.contains("mDNS current"), "Family-only evidence is source labelled")
                 check(d.capabilities() == listOf("HomeKit advertisement"), "Advertisement is not a HomeKit compatibility promise")

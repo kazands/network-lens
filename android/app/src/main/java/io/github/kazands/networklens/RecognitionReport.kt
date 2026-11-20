@@ -59,6 +59,7 @@ internal object RecognitionReport {
         AppleDeviceInfo.SOURCE -> "Apple device information"
         EapInfo.SOURCE -> "TP-Link EAP public information"
         EnvisalinkInfo.SOURCE -> "Envisalink greeting"
+        LocalNetworkNames.SOURCE -> "Local network names"
         "SSDP / UPnP", "UPnP descriptions" -> "SSDP / UPnP"
         "mDNS type and hostname queries" -> "mDNS / Bonjour"
         "Device port and name checks" -> "Port and name checks"
