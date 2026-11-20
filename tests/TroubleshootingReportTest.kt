@@ -100,6 +100,46 @@ object TroubleshootingReportTest {
             val protected = render(listOf(publicFact("Model", "https://private.invalid/a password=SECRET_123 user@example.invalid 00112233-4455-6677-8899-aabbccddeeff")), listOf("a", "password"), include)
             verify(!protected.contains("SECRET_123") && !protected.contains("private.invalid") && !protected.contains("user@example") && !protected.contains("00112233-4455"), "Secret rules run against original input in both privacy modes")
         }
+        val additionalAddresses = listOf("2001:db8:1234:abcd:1111:2222:3333:4444", "2001:DB8::a", "fe80::abcd%wlan7",
+            "::1", "::", "::ffff:192.0.2.99", "0:0:0:0:0:ffff:192.0.2.99")
+        for (address in additionalAddresses) {
+            val masked = render(listOf(publicFact("Model", "Fixture device [$address]."),
+                TroubleshootingReport.Fact("Notes", "Fixture", "Reader [$address]", publicValue = true)), emptyList())
+            verify(!masked.contains(address), "Additional IPv6 literal masked in identity and source: $address")
+            verify(masked.contains("Fixture device [[private value"), "IPv6 masking preserves useful surrounding model text")
+            val included = render(listOf(publicFact("Model", "Fixture device [$address]")), emptyList(), true)
+            verify(included.contains(address), "Requested address inclusion preserves IPv6 while secret rules stay active")
+        }
+        val notAddresses = render(listOf(publicFact("Firmware", "1.2.3.4"), publicFact("Notes", "1:2:3 12:34:56 ab:cd:ef invalid:address")), emptyList())
+        verify(notAddresses.contains("1.2.3.4") && notAddresses.contains("1:2:3 12:34:56 ab:cd:ef invalid:address"), "Numeric validation preserves versions and colon-separated non-address text")
+        val scoped = render(listOf(publicFact("Notes", "address:fe80::abcd%eth0; remote=2001:db8::99.; code:2001:db8:0:0:0:0:0:1")), emptyList())
+        verify(!scoped.contains("fe80::abcd") && !scoped.contains("2001:db8::99") && !scoped.contains("2001:db8:0:0:0:0:0:1"), "Adjacent delimiters, hex-ending labels and trailing punctuation cannot bypass IPv6 masking")
+        val unicodeNames = render(listOf(publicFact("Notes", "🛜 İSTANBUL ROOM / private-host.local / İstanbul Room")), listOf("istanbul room"))
+        verify(!unicodeNames.contains("İSTANBUL") && !unicodeNames.contains("İstanbul") && !unicodeNames.contains("private-host.local") && unicodeNames.contains("🛜"), "Trie preserves ignore-case matching and UTF-16 offsets")
+        val supplementary = render(listOf(publicFact("Notes", "🛜 \uD801\uDC00 ROOM / \uD801\uDC28 room")), listOf("\uD801\uDC28 room"))
+        verify(!supplementary.contains("\uD801\uDC00") && !supplementary.contains("\uD801\uDC28") && supplementary.contains("🛜"), "Supplementary-letter case variants remain private without corrupting adjacent emoji")
+        val supplementaryFactory = render(listOf(publicFact("Model", "\uD801\uDC00 DEVICE")), listOf("\uD801\uDC28 device"))
+        verify(supplementaryFactory.contains("Model: \uD801\uDC00 DEVICE"), "Supplementary factory-name exemptions agree with the literal matcher")
+        val prefixOrder = render(listOf(publicFact("Notes", "Room Alpha / room / Desk\uD801\uDC28 / Desk\uD801\uDC29")),
+            listOf("Room Alpha", "room", "Desk\uD801\uDC00", "Desk\uD801\uDC01"))
+        verify(!prefixOrder.contains("Room Alpha") && !prefixOrder.contains("Notes: room") && !prefixOrder.contains("Desk"),
+            "Compressed edges support a shorter name inserted later and a supplementary-letter branch")
+        val typedCache = render(listOf(publicFact("Firmware", "1.2.3.4"), publicFact("Notes", "1.2.3.4"), publicFact("Firmware", "1.2.3.4")), emptyList())
+        verify(typedCache.contains("Firmware: 1.2.3.4") && !typedCache.contains("Notes: 1.2.3.4"), "Cached redaction respects value type")
+        val inventory = (1..200).map { n -> TroubleshootingReport.Group("", listOf(TroubleshootingReport.Endpoint(
+            "192.0.2.$n", listOf("fixture-host-$n.local"), (1..20).map { f ->
+                publicFact("Returned field $f", "Synthetic product / Room $n / fixture-host-$n.local")
+            }, 0, listOf("Room $n")))) }
+        val scaled = TroubleshootingReport.create("", inventory, emptyList()).text()
+        verify(scaled.contains("Device 200 / Address 1") && scaled.contains("Synthetic product") &&
+            !scaled.contains("fixture-host-") && !Regex("Room [0-9]").containsMatchIn(scaled), "Indexed matching preserves every endpoint and masks a larger inventory")
+        val longNames = (0 until 8000).map { "Synthetic-" + it.toString(36).padStart(4, '0') + "-" + "q".repeat(128) }
+        val largeDictionary = (0 until 1000).map { n -> TroubleshootingReport.Group("", listOf(TroubleshootingReport.Endpoint(
+            "198.18.${n / 256}.${n % 256}", emptyList(), listOf(publicFact("Notes", "Reported " + longNames[n * 8 + 7])), 0,
+            longNames.subList(n * 8, n * 8 + 8)))) }
+        val compact = TroubleshootingReport.create("", largeDictionary, emptyList()).text()
+        verify(compact.contains("Device 1000 / Address 1") && !compact.contains("Synthetic-") && compact.contains("Reported [private value"),
+            "A large dictionary of long private names remains complete and masked")
         println("PASS · TroubleshootingReportTest · $checks assertions")
     }
 }

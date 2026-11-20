@@ -84,9 +84,13 @@ internal class LanProtocolRunners(private val context: Context, private val net:
                 if(accepting() && !cancelled() && inScope(peer)) resolved(peer,headers)
             }
             repeat(result.sent){health.count(source,"requests")}
+            repeat(result.packets){health.count(source,"packets")}
             repeat(result.unique){health.count(source,"unique replies")}
+            repeat(result.duplicates){health.count(source,"duplicate replies")}
+            repeat(result.limitedPeers){health.count(source,"peers limited")}
+            repeat(result.peers){health.count(source,"senders processed")}
             if(!cancelled()) {
-                if(result.limited)health.truncated(source,"400-packet response limit reached")
+                if(result.limited)health.truncated(source,"SSDP peer or total response limit reached")
                 else if(result.interrupted)health.truncated(source,"Discovery window stopped early")
                 else health.ok(source)
             }

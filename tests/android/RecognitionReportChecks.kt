@@ -104,6 +104,9 @@ internal object RecognitionReportChecks {
                 main {
                     val report = clip()
                     check(report.startsWith("Network Lens recognition report"), "Clipboard contains the actual report")
+                    check((activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.description.extras
+                        ?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) != true,
+                        "Counts-only report is kept separate from sensitive device-detail copies")
                     check(report.contains("Device groups: 5 · address endpoints: 6"), "All groups included despite search filter; this phone excluded")
                     check(report.contains("Product matches: 1") && report.contains("Family or integration matches only: 1"), "Product and family totals are separate")
                     check(report.contains("Groups with recorded identity or type conflicts: 1"), "Actual clipboard includes the model conflict")

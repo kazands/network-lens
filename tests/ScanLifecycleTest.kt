@@ -112,6 +112,58 @@ object ScanLifecycleTest {
         }
         check(dialRequested && emissions==1 && dialResult.sent==10 && now<=TimeUnit.SECONDS.toNanos(12),
             "A DIAL-only receiver is discovered and deduplicated within the bounded recovery window")
+        val quiet = java.net.InetAddress.getByName("198.18.0.3")
+        fun burst(count: Int, unique: Boolean = false, eligible: (java.net.InetAddress) -> Boolean = { true }): Pair<SsdpDiscovery.Result, Set<java.net.InetAddress>> {
+            now=0;var n=0;val accepted=linkedSetOf<java.net.InetAddress>()
+            val noisy=object:SsdpDiscovery.Channel {
+                override fun send(bytes:ByteArray) {}
+                override fun receive(timeoutMillis:Int):SsdpDiscovery.Packet? {
+                    n++
+                    now+=TimeUnit.MILLISECONDS.toNanos(if(n<=count+1) 1 else timeoutMillis.toLong())
+                    if(n>count+1)return null
+                    val payload=if(unique && n<=count) String(bytes).replace("synthetic-ssdp", "synthetic-$n").toByteArray() else bytes
+                    return SsdpDiscovery.Packet(if(n<=count)peer else quiet,payload,payload.size)
+                }
+            }
+            return SsdpDiscovery.discover(noisy,TimeUnit.SECONDS.toNanos(55),{true},eligible,{now}){sender,_->accepted.add(sender)} to accepted
+        }
+        val duplicates=burst(500)
+        check(quiet in duplicates.second && duplicates.first.unique==2 && duplicates.first.sent==10,
+            "One duplicate burst cannot hide another sender or prevent the second search wave")
+        check(duplicates.first.limitedPeers==1 && duplicates.first.limited && duplicates.first.duplicates==SsdpDiscovery.MAX_PEER_PACKETS-1,
+            "Per-peer parse loss is bounded and disclosed separately from duplicate replies")
+        val records=burst(90,unique=true)
+        check(records.first.unique==SsdpDiscovery.MAX_PEER_RECORDS+1 && quiet in records.second && records.first.limitedPeers==1,
+            "A sender with many distinct records cannot consume every peer's admission capacity")
+        val outside=burst(500,eligible={it==quiet})
+        check(outside.second==setOf(quiet) && outside.first.unique==1 && !outside.first.limited,
+            "Out-of-scope traffic does not consume per-peer or useful-response budgets")
+        val flood=burst(SsdpDiscovery.MAX_PACKETS+1)
+        check(flood.first.packets==SsdpDiscovery.MAX_PACKETS && flood.first.limited && quiet !in flood.second,
+            "Sustained floods still stop at the independent raw receive ceiling")
+        fun inventoryTraffic(recordsPerPeer: Int, malformed: Boolean = false): SsdpDiscovery.Result {
+            now=0;var n=0
+            val many=object:SsdpDiscovery.Channel {
+                override fun send(bytes:ByteArray) {}
+                override fun receive(timeoutMillis:Int):SsdpDiscovery.Packet? {
+                    now+=TimeUnit.MILLISECONDS.toNanos(1);n++
+                    val owner=(n-1)/recordsPerPeer
+                    val sender=java.net.InetAddress.getByAddress(byteArrayOf(198.toByte(),18,(owner/256).toByte(),(owner%256).toByte()))
+                    val payload=if(malformed) "malformed synthetic response".toByteArray()
+                        else String(bytes).replace("synthetic-ssdp", "synthetic-$n").toByteArray()
+                    return SsdpDiscovery.Packet(sender,payload,payload.size)
+                }
+            }
+            return SsdpDiscovery.discover(many,TimeUnit.SECONDS.toNanos(55),{true},{true},{now}){_,_->}
+        }
+        val aggregate=inventoryTraffic(4)
+        check(aggregate.unique==SsdpDiscovery.MAX_RECORDS && aggregate.packets==SsdpDiscovery.MAX_RECORDS && aggregate.limited,
+            "Many different senders still obey the global retained-record ceiling")
+        val manyPeers=inventoryTraffic(1,malformed=true)
+        check(manyPeers.peers==SsdpDiscovery.MAX_PEERS && manyPeers.unique==0 && manyPeers.packets==SsdpDiscovery.MAX_PACKETS && manyPeers.limited,
+            "Peer tracking and out-of-cap sender traffic remain independently bounded")
+        check(aggregate.peers==100 && inventoryTraffic(1).peers==SsdpDiscovery.MAX_RECORDS,
+            "Peer fairness does not reduce the previous capacity of 400 distinct useful senders")
         println("PASS · $checks scope, resource ownership, cancellation and metadata scheduling checks")
     }
 }

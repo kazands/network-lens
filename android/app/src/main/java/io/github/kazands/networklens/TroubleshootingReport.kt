@@ -73,36 +73,42 @@ internal object TroubleshootingReport {
         private val labels = linkedMapOf<String, String>()
         private val identifiers = values.filter { it.isNotBlank() }.distinct()
         private val names = names.filter { it.isNotBlank() }.distinct()
+        private val identifierMatcher = Literals(identifiers)
+        private val nameMatcher = Literals(this.names)
+        private val factoryNames = this.names.mapTo(hashSetOf(), ::fold)
+        private data class TextKey(val raw: String, val kind: ValueKind, val schema: Boolean)
+        // Schema, reader names and decisions repeat across endpoints. This cache belongs only
+        // to this report build, is bounded, and never outlives create().
+        private val rendered = HashMap<TextKey, String>()
         init { (identifiers + this.names).forEach { label(it) } }
         fun label(value: String): String = labels.getOrPut(value.lowercase(java.util.Locale.ROOT)) { "[private value ${labels.size + 1}]" }
         private data class Mask(val start: Int, val end: Int, val replacement: String)
         fun text(raw: String, kind: ValueKind = ValueKind.TEXT, schema: Boolean = false): String {
+            val key = TextKey(raw, kind, schema)
+            rendered[key]?.let { return it }
+            val result = render(raw, kind, schema)
+            if (rendered.size < 2048 && raw.length <= 2048) rendered[key] = result
+            return result
+        }
+        private fun render(raw: String, kind: ValueKind, schema: Boolean): String {
             val text = SafeText.label(raw, maxOf(1, raw.length))
             val masks = arrayListOf<Mask>()
             fun pattern(regex: Regex, replacement: (String) -> String) {
                 regex.findAll(text).forEach { masks.add(Mask(it.range.first, it.range.last + 1, replacement(it.value))) }
             }
-            fun literal(value: String) {
-                var start = text.indexOf(value, ignoreCase = true)
-                while (start >= 0) {
-                    val end = start + value.length
-                    // Names must be complete tokens, not letters inside schema labels or product words.
-                    fun word(c: Char) = c.isLetterOrDigit() || c == '_'
-                    if ((start == 0 || !word(text[start - 1]) || !word(value.first())) &&
-                        (end == text.length || !word(text[end]) || !word(value.last())))
-                        masks.add(Mask(start, end, label(value)))
-                    start = text.indexOf(value, start + 1, ignoreCase = true)
-                }
+            fun literals(matcher: Literals) {
+                matcher.find(text) { start, end, value -> masks.add(Mask(start, end, label(value))) }
             }
             if (!includeNames) {
-                identifiers.forEach(::literal)
+                literals(identifierMatcher)
                 // A factory name may equal its reported model. Retain that whole identity value,
                 // but still mask names embedded in other custom model text and all known identifiers.
-                val factoryIdentity = kind == ValueKind.IDENTITY && names.any { text.equals(it, ignoreCase = true) }
+                val factoryIdentity = kind == ValueKind.IDENTITY && fold(text) in factoryNames
                 val version = kind == ValueKind.VERSION && VERSION.matches(text)
-                if (!schema && kind != ValueKind.CATALOGUE && !factoryIdentity && !version) names.forEach(::literal)
+                if (!schema && kind != ValueKind.CATALOGUE && !factoryIdentity && !version) literals(nameMatcher)
                 if (!version) pattern(IPV4, ::label)
                 pattern(MAC, ::label)
+                ipv6(text) { start, end -> masks.add(Mask(start, end, label(text.substring(start, end)))) }
             }
             // Match every rule against the ORIGINAL text. Neither private labels nor other generated
             // replacements can become input to another rule. Merge overlapping masks without leaks.
@@ -121,7 +127,112 @@ internal object TroubleshootingReport {
                 append(text, cursor, text.length)
             }
         }
+        /** Prefix lookup avoids rescanning each fact once for every identifier in the inventory.
+         * Case folding uses code points, including supplementary letters; match offsets still
+         * refer to the original UTF-16 text, never a length-changing lowercase string.
+         * Every overlapping match is retained for the original-text merge below. */
+        private class Literals(values: List<String>) {
+            private class Node(var value: String? = null) { val next = HashMap<Int, Edge>() }
+            private class Edge(val text: String, val node: Node)
+            private val root = Node()
+            init {
+                for (value in values) {
+                    val folded = fold(value)
+                    var node = root
+                    var offset = 0
+                    while (offset < folded.length) {
+                        val key = folded.codePointAt(offset)
+                        val edge = node.next[key]
+                        if (edge == null) {
+                            node.next[key] = Edge(folded.substring(offset), Node(value))
+                            break
+                        }
+                        var common = 0
+                        while (common < edge.text.length && offset + common < folded.length) {
+                            val c = edge.text.codePointAt(common)
+                            if (c != folded.codePointAt(offset + common)) break
+                            common += Character.charCount(c)
+                        }
+                        if (common == edge.text.length) { offset += common; node = edge.node; continue }
+                        // Compressed edges keep the node count proportional to identifiers,
+                        // rather than allocating a map for every character of every hostname.
+                        val branch = Node()
+                        node.next[key] = Edge(edge.text.substring(0, common), branch)
+                        branch.next[edge.text.codePointAt(common)] = Edge(edge.text.substring(common), edge.node)
+                        offset += common
+                        if (offset < folded.length) branch.next[folded.codePointAt(offset)] = Edge(folded.substring(offset), Node(value))
+                        node = branch
+                        break
+                    }
+                    if (offset == folded.length && node.value == null) node.value = value
+                }
+            }
+            fun find(text: String, found: (Int, Int, String) -> Unit) {
+                var start = 0
+                while (start < text.length) {
+                    var node = root
+                    var end = start
+                    while (end < text.length) {
+                        val edge = node.next[foldCodePoint(text.codePointAt(end))] ?: break
+                        var offset = 0
+                        while (offset < edge.text.length && end < text.length) {
+                            val c = text.codePointAt(end)
+                            if (foldCodePoint(c) != edge.text.codePointAt(offset)) break
+                            offset += Character.charCount(edge.text.codePointAt(offset))
+                            end += Character.charCount(c)
+                        }
+                        if (offset != edge.text.length) break
+                        node = edge.node
+                        val value = node.value ?: continue
+                        fun word(c: Char) = c.isLetterOrDigit() || c == '_'
+                        if ((start == 0 || !word(text[start - 1]) || !word(value.first())) &&
+                            (end == text.length || !word(text[end]) || !word(value.last()))) found(start, end, value)
+                    }
+                    start += Character.charCount(text.codePointAt(start))
+                }
+            }
+        }
+        /** Numeric-only validation never resolves a hostname. The lexer bounds candidates to
+         * IPv6's maximum dotted form, with an optional interface scope. No backtracking regex. */
+        private fun ipv6(text: String, found: (Int, Int) -> Unit) {
+            fun numeric(c: Char) = c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' || c == ':' || c == '.'
+            var i = 0
+            while (i < text.length) {
+                if (!numeric(text[i])) { i++; continue }
+                val runStart = i
+                while (i < text.length && numeric(text[i])) i++
+                var end = i
+                while (end > runStart && text[end - 1] == '.') end--
+                // A field label can end in hex letters (e.g. code:2001:db8:...). Check
+                // group boundaries in only the last 45 chars so it cannot hide a valid
+                // address or turn a long malformed run into quadratic parsing work.
+                var start = maxOf(runStart, end - 45)
+                var valid = false
+                while (start <= end - 2) {
+                    if (start == runStart || text[start - 1] == ':' || text[start] == ':' && text[start + 1] == ':') {
+                        val candidate = text.substring(start, end)
+                        if (candidate.count { it == ':' } >= 2 && Address.bytes(candidate) != null) { valid = true; break }
+                    }
+                    start++
+                }
+                if (!valid) continue
+                if (i == end && i < text.length && text[i] == '%') {
+                    var scoped = i + 1
+                    while (scoped < text.length && (text[scoped].isLetterOrDigit() || text[scoped] in "_.~-")) scoped++
+                    if (scoped > i + 1) { end = scoped; i = scoped }
+                }
+                found(start, end)
+            }
+        }
         companion object {
+            private fun foldCodePoint(c: Int) = Character.toLowerCase(Character.toUpperCase(c))
+            private fun fold(value: String): String = buildString {
+                var offset = 0
+                while (offset < value.length) {
+                    val c = value.codePointAt(offset)
+                    appendCodePoint(foldCodePoint(c)); offset += Character.charCount(c)
+                }
+            }
             private val VERSION = Regex("[vV]?[0-9]+(?:\\.[0-9]+){1,7}(?:[-+_][A-Za-z0-9._-]+)?")
             private val URL = Regex("(?i)\\b(?:https?|ftp)://[^\\s]+")
             private val SECRET = Regex("(?i)\\b(?:password|passwd|access_token|refresh_token|authorization|cookie|private_key)\\s*[:=]\\s*[^\\s,;]+")

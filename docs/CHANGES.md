@@ -1,5 +1,15 @@
 # What is new
 
+## 0.3.33 — Safer checks and troubleshooting reports
+
+- Remove the Envisalink TPI probe from normal device checks. **Show technical details → Check for Envisalink** explains the possible integration conflict and starts a fresh scan with that check requested for only the selected address.
+- Mask additional IPv6 addresses embedded in retained report text, including compressed, scoped and IPv4-mapped forms. Preserve useful firmware versions and the explicit option to include names and addresses.
+- Hide sensitive clipboard previews for copied device details and troubleshooting pages on supported Android versions.
+- Build report-name matching once per report and reuse repeated text, reducing preparation work on larger inventories.
+- Give SSDP senders separate processing and record budgets, so a burst from one device does not immediately exhaust discovery for the others. Keep explicit overall time, packet and record limits and report any limit reached.
+
+Physical alarm-integration compatibility and report performance on phones still require testing.
+
 ## 0.3.32 — FibeTV recognition and clearer identity
 
 - Recognise devices reporting manufacturer `ARRIS` and model `FibeTV` as **ARRIS FibeTV**, with a TV receiver label and the useful room name beneath it. This identifies the receiver family without guessing a hardware generation.
@@ -69,6 +79,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.32).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.33).
 
-[Verification for this release](VERIFICATION-0.3.32.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.33.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
