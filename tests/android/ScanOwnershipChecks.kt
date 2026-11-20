@@ -46,7 +46,39 @@ internal object ScanOwnershipChecks {
         } catch (_:CancellationException) {check(socket.isClosed,"A socket registered after scan cancellation is closed immediately")}
         op.cancel()
         cancelledStartup(test, check)
+        cancelledEnrichment(test, check)
         multicastOwnership(test, check)
+    }
+    private fun cancelledEnrichment(test: Instrumentation,check: (Boolean,String)->Unit) {
+        val op=Discovery(test.targetContext,NetworkState())
+        field(op,"enriching").set(op,true)
+        val entered=CountDownLatch(1);val release=CountDownLatch(1);val finished=CountDownLatch(1)
+        val worker=AtomicReference<Thread>();val failure=AtomicReference<Throwable>()
+        val socket=AtomicReference<Socket>();val continued=AtomicInteger()
+        val submit=Discovery::class.java.getDeclaredMethod("submitEnrichment",String::class.java,Runnable::class.java).apply {isAccessible=true}
+        try {
+            check(submit.invoke(op,"Synthetic cancellation",Runnable {
+                // Capture only this fixture worker's uncaught failure so the
+                // negative control would fail an assertion rather than kill Android.
+                worker.set(Thread.currentThread())
+                Thread.currentThread().uncaughtExceptionHandler=Thread.UncaughtExceptionHandler {_,e->failure.set(e)}
+                entered.countDown()
+                try {
+                    while(release.count>0) {try {release.await()} catch (_:InterruptedException) {}}
+                    val value=Socket();socket.set(value)
+                    (field(op,"sockets").get(op) as MutableSet<Socket>).add(value)
+                    continued.incrementAndGet()
+                } finally {finished.countDown()}
+            })==true,"Synthetic enrichment is admitted before cancellation")
+            check(entered.await(2,TimeUnit.SECONDS),"Actual enrichment worker pauses before resource registration")
+            op.cancel();release.countDown()
+            check(finished.await(2,TimeUnit.SECONDS),"Cancelled enrichment exits its action promptly")
+            worker.get()?.join(2000)
+            check(worker.get()?.isAlive==false && failure.get()==null,"Rejected late registration does not escape the enrichment worker")
+            check(socket.get()?.isClosed==true && continued.get()==0,"Cancellation closes the rejected socket and prevents continuation")
+        } finally {
+            op.cancel();release.countDown();worker.get()?.join(2000)
+        }
     }
     private fun cancelledStartup(test: Instrumentation, check: (Boolean,String)->Unit) {
         val entered = CountDownLatch(1)

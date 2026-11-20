@@ -186,15 +186,14 @@ test corrections, and the remaining permission-dialog and physical-test limits.
 The candidate verification history above predates release versioning. See
 [current release verification](../archive/VERIFICATION-0.3.26.md) for the final artifact and checks.
 
-## Envisalink support in 0.3.24
+## Envisalink check removal
 
-A bounded, receive-only TCP 4025 check recognizes the Envisalink DSC TPI family.
-It now requires **Show technical details → Check for Envisalink → Scan and check**
-for a specific device. Ordinary scans do not make this connection. The action
-explains the single-client integration risk and requests a fresh scan; it does
-not save consent for later scans. It does not authenticate or
-send alarm commands. It cannot distinguish the EVL generation or identify a
-generic Honeywell-mode login prompt. See [Envisalink details](ENVISALINK.md).
+Version 0.3.34 removes the dedicated TCP 4025 reader and manual
+**Check for Envisalink** action. Even a brief receive-only connection can occupy
+the alarm interface’s one integration slot. No replacement automatic identity
+method is claimed; an endpoint with no other identifying reports can remain
+unnamed. Generic confirmation of explicitly advertised ports is unchanged.
+See [Envisalink details](ENVISALINK.md) for rationale and historical results.
 
 ## SmartThings support
 

@@ -20,8 +20,7 @@ import java.util.concurrent.atomic.*
 class Discovery @JvmOverloads internal constructor(c: Context, private val net: NetworkState, private val echoFactory: EchoFactory,
     private val networkCheck: NetworkCheck = NetworkCheck { context, network -> network.check(context) },
     private val metadataReader: MetadataReader? = null,
-    private val localNameReader: LocalNameReader? = null,
-    private val envisalinkTarget: String = "") {
+    private val localNameReader: LocalNameReader? = null) {
     interface Listener {
         fun progress(done: Int, total: Int, devices: List<Device>)
         /** Consumers that coalesce updates can defer copying until delivery is needed. */
@@ -35,8 +34,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     internal fun interface LocalNameReader { fun read(ip: String, resolver: InetAddress, deadline: Long, active: () -> Boolean): LocalNetworkNames.Result }
     fun interface NetworkCheck { fun check(context: Context, network: NetworkState) }
     constructor(c: Context, n: NetworkState) : this(c, n, EchoFactory(AndroidIcmp::open))
-    internal constructor(c: Context, n: NetworkState, envisalinkTarget: String) :
-        this(c, n, EchoFactory(AndroidIcmp::open), envisalinkTarget = envisalinkTarget)
 
     private val context = c.applicationContext
     private val store = Store(context)
@@ -63,8 +60,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     @Volatile private var scanDeadline = Long.MAX_VALUE
     private val metadataPlans = MetadataPlans()
     private val appleRequests = ServiceAdmission(32)
-    private val envisalinkRequests = ServiceAdmission(1200)
-    private val envisalinkQueued = AtomicBoolean()
     private val ssdpMatchers = SsdpMatchers()
     private val eapRequests = ServiceAdmission(32)
     private val castReceivers = ConcurrentHashMap.newKeySet<String>()
@@ -215,7 +210,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 if (plan.sweepOmitted) health.truncated("IPv4 checks", "Address sweep not run: network exceeds 1,024 addresses; service discovery continues. Choose a smaller range to check individual addresses.")
                 health.skipped("UPnP descriptions", "No supported description advertised")
                 health.skipped(AppleDeviceInfo.SOURCE, "No open Apple service port observed")
-                health.skipped(EnvisalinkInfo.SOURCE, if (envisalinkTarget.isEmpty()) "Not requested; available in device technical details" else "Selected endpoint not checked")
                 health.skipped(EapInfo.SOURCE, "No HTTP identity candidate observed")
                 health.skipped(LocalNetworkNames.SOURCE, "No eligible current responder checked")
                 for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
@@ -444,7 +438,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         } ?: return null
         if (fresh) freshResponders.add(ip)
         synchronized(d) { d.lastSeen = System.currentTimeMillis(); d.seen = true; d.gateway = ip == net.gateway; d.evidence(evidence) }
-        queueRequestedDetails(d)
         return d
     }
     private fun probe(host: String, connectTimeout: Int, nameTimeout: Int) {
@@ -542,7 +535,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (status.mac.isNotEmpty()) d.identify("nbstat:" + status.mac, 60)
                 }
                 queryDeviceName(d)
-                queueRequestedDetails(d)
             }
         } catch (e: Exception) { blocked(e) }
         finally { socket?.let { datagrams.remove(it); it.close() } }
@@ -1056,14 +1048,15 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun submitEnrichment(source: String, action: Runnable): Boolean = submitEnrichment(DiscoveryWork.Lane.NAMES, source, action)
     private fun submitEnrichment(lane: DiscoveryWork.Lane, source: String, action: Runnable): Boolean = submitEnrichment(lane, source, "", action)
     private fun submitEnrichment(lane: DiscoveryWork.Lane, source: String, owner: String, action: Runnable): Boolean {
-        if (enrichment.submit(lane, owner) { if (enriching && !cancelled.get()) action.run() }) return true
+        if (enrichment.submit(lane, owner) {
+            try { if (enriching && !cancelled.get()) action.run() }
+            // Cancellation can close the resource owner after the admission
+            // check. Its rejected registration already closes the new socket;
+            // this normal terminal signal must not escape an executor worker.
+            catch (_: CancellationException) {}
+        }) return true
         if (!cancelled.get()) health.truncated(source, "Device detail queue limit reached")
         return false
-    }
-    /** Explicit target work must also run without a sweep, independently of normal details. */
-    private fun queueRequestedDetails(d: Device) {
-        if (!currentEnvisalinkPeer(d) || !envisalinkQueued.compareAndSet(false, true)) return
-        submitEnrichment(DiscoveryWork.Lane.DETAILS, EnvisalinkInfo.SOURCE, Runnable { checkEnvisalink(d) })
     }
     private fun queueDetails(d: Device, connectTimeout: Int, nameTimeout: Int) {
         maybeCast(d)
@@ -1173,62 +1166,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         true
     }
 
-    private fun currentEnvisalinkPeer(d: Device): Boolean = enriching && !cancelled.get() && !metadataFinalized.get() &&
-        envisalinkTarget.isNotEmpty() && d.ip == envisalinkTarget && !d.self && !net.owns(d.ip) && !d.ip.contains(':') &&
-        freshResponders.contains(d.ip) && found[d.ip] === d && inScope(peerAddress(d.ip))
-
-    /** Runs in the bounded DETAILS lane. Never pre-connect, retry, authenticate or send TPI data. */
-    private fun checkEnvisalink(d: Device) {
-        if (!currentEnvisalinkPeer(d)) return
-        val source = EnvisalinkInfo.SOURCE
-        when (envisalinkRequests.admit(d.ip, source)) {
-            ServiceAdmission.Result.ADMITTED -> {}
-            ServiceAdmission.Result.LIMIT -> { health.truncated(source, "Endpoint work limit reached"); return }
-            else -> return
-        }
-        synchronized(d) { d.detail(source, "Waiting or checking") }
-        health.workStarted(source)
-        val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(750))
-        try {
-            val report = metadataSocket(peerAddress(d.ip), deadline, { currentEnvisalinkPeer(d) }) { socket ->
-                health.count(source, "connections attempted")
-                EnvisalinkInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts) { currentEnvisalinkPeer(d) }
-            }
-            if (applyEnvisalinkReport(d, report)) health.count(source, when (report) {
-                EnvisalinkInfo.Report.IDENTIFIED -> "families identified"
-                EnvisalinkInfo.Report.UNAVAILABLE -> "service unavailable"
-                else -> "no identifying greeting"
-            })
-        } catch (e: Exception) {
-            blocked(e)
-            synchronized(d) {
-                if (currentEnvisalinkPeer(d) && d.details[source] == "Waiting or checking") {
-                    val failure = AndroidMetadataFailure.classify(e, System.nanoTime() >= deadline)
-                    d.detail(source, failure.reason.detail)
-                    MetadataHttp.recordFailure(health, source, failure, false)
-                }
-            }
-        } finally {
-            synchronized(d) { if (d.details[source] == "Waiting or checking") d.detail(source, "Lookup did not finish") }
-            health.workFinished(source)
-        }
-    }
-    private fun applyEnvisalinkReport(d: Device, report: EnvisalinkInfo.Report): Boolean = synchronized(d) {
-        if (!currentEnvisalinkPeer(d) || d.details[EnvisalinkInfo.SOURCE] != "Waiting or checking") return@synchronized false
-        d.diagnostics.record(EnvisalinkInfo.SOURCE, "Lookup outcome", report.text)
-        if (report == EnvisalinkInfo.Report.UNAVAILABLE) d.details.remove(EnvisalinkInfo.SOURCE)
-        else {
-            d.port(EnvisalinkInfo.PORT)
-            d.detail(EnvisalinkInfo.SOURCE, report.text)
-        }
-        if (report == EnvisalinkInfo.Report.IDENTIFIED) {
-            d.recognizeEnvisalink()
-            d.service(EnvisalinkInfo.SERVICE)
-            d.evidence("Current Envisalink DSC TPI greeting from this address")
-        }
-        true
-    }
-
     private fun requestAppleModel(d: Device) {
         if (!enriching || cancelled.get() || d.self || !freshResponders.contains(d.ip) ||
             found[d.ip] !== d || !inScope(peerAddress(d.ip)) || synchronized(d) { AppleDeviceInfo.PORT !in d.ports }) return
@@ -1309,7 +1246,6 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         if (!enriching || cancelled.get()) return
         freshResponders.add(d.ip)
         synchronized(d) { d.lastSeen = System.currentTimeMillis(); d.seen = true; d.evidence(evidence) }
-        queueRequestedDetails(d)
         if (synchronized(d) { AppleDeviceInfo.PORT in d.ports }) requestAppleModel(d)
         if (synchronized(d) { 80 in d.ports }) requestEapModel(d)
         if (synchronized(d) { 8001 in d.ports }) requestSamsung(d)
@@ -1339,7 +1275,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             }
             d.finishAudioLookups(stopped)
             d.finishNetworkName(stopped)
-            for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE))
+            for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE))
                 if (d.details[source] == "Waiting or checking")
                     d.detail(source, if (stopped) "Stopped before lookup finished" else "Lookup did not finish")
         }
@@ -1964,7 +1900,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 d.hint("Hostname", hostname, "mDNS reverse hostname", 55); d.hint("Name", hostname, "mDNS reverse hostname", 50)
                 d.evidence("Matching mDNS reverse-PTR reply")
             }
-            freshResponders.add(ip); queueRequestedDetails(d)
+            freshResponders.add(ip)
             mdnsQuestions.remove(ip); health.count(MDNS_SOURCE, "hostnames"); lastServiceChange = System.nanoTime()
         }
     }

@@ -1,5 +1,18 @@
 # What is new
 
+## 0.3.34 — A clearer view of your network
+
+- Bring the network, scan action, address-check progress and scan status into one card.
+- Browse individual device cards with larger icons. Search reported details or use quick filters for unnamed devices, network equipment, smart home, computers and media.
+- See grouped IPv4 and IPv6 addresses, copy individual addresses, and expand recognition explanations, audio information and source-labelled observations in place.
+- Use a two-pane list and details layout on wider screens. Keep scalable text, both themes, accessible controls and your list position when returning from details.
+- Move scan details into a bottom sheet and keep update progress and Cancel visible when Wi-Fi changes.
+- Remove the manual Envisalink check and its dedicated TPI reader, which could compete with an alarm integration’s single connection.
+- Keep report sharing cancellable when a recipient stops reading, including on Android 8. Exclude scan text from automatic content capture while preserving screenshots, accessibility and explicit copy/share.
+- Prevent an uncaught worker exception when a scan ends during device-detail work.
+
+The interface now uses Jetpack Compose. Discovery and recognition rules remain in the existing backend; this release does not claim to identify previously silent devices.
+
 ## 0.3.33 — Safer checks and troubleshooting reports
 
 - Remove the Envisalink TPI probe from normal device checks. **Show technical details → Check for Envisalink** explains the possible integration conflict and starts a fresh scan with that check requested for only the selected address.
@@ -79,6 +92,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.33).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.34).
 
-[Verification for this release](VERIFICATION-0.3.33.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.34.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

@@ -10,6 +10,11 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.OpenableColumns
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
+import android.system.StructPollfd
+import java.io.IOException
 import java.io.FileNotFoundException
 import java.util.UUID
 
@@ -26,23 +31,54 @@ class ReportShareProvider : ContentProvider() {
         if (mode != "r") throw FileNotFoundException("Read only")
         val report = current(uri)
         val pipes = ParcelFileDescriptor.createPipe()
-        synchronized(lock) {
-            if (active.size >= 2 || lease !== report) { pipes.forEach { it.close() }; throw FileNotFoundException("Report unavailable; share again") }
-            active.add(pipes[1])
+        try {
+            val fd=pipes[1].fileDescriptor
+            Os.fcntlInt(fd,OsConstants.F_SETFL,Os.fcntlInt(fd,OsConstants.F_GETFL,0) or OsConstants.O_NONBLOCK)
+            synchronized(lock) {
+                if (active.size >= 2 || lease !== report) throw FileNotFoundException("Report unavailable; share again")
+                active.add(pipes[1])
+            }
+        } catch (_: Exception) {
+            pipes.forEach { try {it.close()} catch (_: IOException) {} }
+            throw FileNotFoundException("Report unavailable; share again")
         }
-        val timeout = Runnable { try { pipes[1].close() } catch (_: Exception) {} }
-        handler.postDelayed(timeout, 30000)
-        Thread({
+        val deadline=SystemClock.elapsedRealtime()+30000
+        val writer=Thread({
             try {
-                ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { output ->
-                    report.pages.forEachIndexed { index, page ->
-                        if (index > 0) output.write("\n\n".toByteArray(Charsets.UTF_8))
-                        output.write(page.toByteArray(Charsets.UTF_8))
+                fun write(bytes: ByteArray) {
+                    var offset=0
+                    val poll=StructPollfd().apply {fd=pipes[1].fileDescriptor;events=OsConstants.POLLOUT.toShort()}
+                    while(offset<bytes.size) {
+                        if(SystemClock.elapsedRealtime()>=deadline) throw IOException("Report stream expired")
+                        try {
+                            // A nonblocking write is serialized with revocation, preventing
+                            // an old writer from using a closed/recycled descriptor.
+                            val count=synchronized(lock) {
+                                if(lease !== report || pipes[1] !in active) throw IOException("Report retired")
+                                Os.write(pipes[1].fileDescriptor,bytes,offset,minOf(8192,bytes.size-offset))
+                            }
+                            if(count<=0) throw IOException("Report stream unavailable")
+                            offset+=count
+                        } catch(e: ErrnoException) {
+                            if(e.errno!=OsConstants.EAGAIN) throw e
+                            // Closing a blocking pipe does not wake writers on every Android
+                            // release. Poll bounded intervals instead, even if the UI is busy.
+                            Os.poll(arrayOf(poll),minOf(100L,(deadline-SystemClock.elapsedRealtime()).coerceAtLeast(1L)).toInt())
+                        }
                     }
                 }
-            } catch (_: java.io.IOException) { /* Recipient cancelled or grant expired. No scan data is logged. */ }
-            finally { handler.removeCallbacks(timeout); synchronized(lock) { active.remove(pipes[1]) } }
-        }, "report-share").start()
+                report.pages.forEachIndexed { index,page ->
+                    if(index>0) write("\n\n".toByteArray(Charsets.UTF_8))
+                    write(page.toByteArray(Charsets.UTF_8))
+                }
+            } catch (_: IOException) { /* Recipient cancelled or grant expired. No scan data is logged. */ }
+            catch (_: ErrnoException) { /* Pipe closed or recipient stopped reading. */ }
+            finally { synchronized(lock) {active.remove(pipes[1]);try {pipes[1].close()} catch (_: IOException) {}} }
+        }, "report-share")
+        try {writer.start()} catch(e: RuntimeException) {
+            synchronized(lock) {active.remove(pipes[1]);pipes.forEach {try {it.close()} catch (_: IOException) {}}}
+            throw FileNotFoundException("Report unavailable; share again")
+        }
         return pipes[0]
     }
     override fun insert(uri: Uri, values: ContentValues?): Uri? = throw UnsupportedOperationException("Read only")

@@ -86,26 +86,6 @@ internal object BroadAudioChecks {
             check(stop.audioPlayerStatuses.values.single().contains("Stopped") && apply.invoke(op,stop,plan,result(stop))==false,"Stop seals broader lookup and rejects late reply")
             check(Device().audioPlayers.isEmpty() && Device().audioPlayerStatuses.isEmpty(),"Fresh scan starts without audio state")
         } finally {op.cancel();gate.countDown();work.awaitTermination(3,TimeUnit.SECONDS)}
-        Store(test.targetContext).clear()
-        val activity=test.startActivitySync(Intent(test.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo",true)) as MainActivity
-        val original=Configuration(activity.resources.configuration)
-        fun main(action:()->Unit){var fail:Throwable?=null;test.runOnMainSync{try{action()}catch(e:Throwable){fail=e}};fail?.let{throw it}}
-        try {
-            for(dark in listOf(false,true)) for(scale in listOf(1f,2f)) {
-                main {
-                    activity.resources.updateConfiguration(Configuration(original).apply{fontScale=scale;screenWidthDp=320},activity.resources.displayMetrics)
-                    Store(activity).dark(dark);set(activity,"devices",listOf(fixture!!));set(activity,"selected",fixture);set(activity,"groupedSource",null)
-                    MainActivity::class.java.getDeclaredMethod("render").apply{isAccessible=true}.invoke(activity)
-                }
-                test.waitForIdleSync()
-                main {
-                    val all=texts(activity.window.decorView)
-                    check(all.any{it.text.toString()=="BluOS player information · port 11010"} && all.any{it.text.toString()=="Synthetic amplifier"},"Per-port audio details display in both themes at normal and large text")
-                    all.single{it.text.toString()=="Copy device details"}.performClick()
-                    val copied=(activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
-                    check(copied.contains("port 11000") && copied.contains("port 11010") && !copied.contains(fixture!!.audioPlayers.values.first().id),"Copied audio details preserve both sources and exclude internal IDs")
-                }
-            }
-        } finally {main{activity.resources.updateConfiguration(original,activity.resources.displayMetrics);activity.finish()};Store(test.targetContext).clear()}
+        ComposeFixtureViews.runAudio(test,check,listOf(fixture!!),listOf("port 11000","port 11010"),fixture!!.audioPlayers.values.first().id)
     }
 }

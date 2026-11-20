@@ -23,7 +23,7 @@ def render():
         label=profiles.get(domain,'Evidence only; product interpretation deferred')
         lines.append(f"| {domain} | {kinds} | {label} | {item['reason']} |")
     lines += ['', f'{len(domains)} integration policies; {len(domains & profiles.keys())} family labels; {len(domains - profiles.keys())} explicit deferrals.', '',
-        'Active readers not sourced from these integration rules include Apple device information, TP-Link/Omada/Easy Smart, PlayStation, Envisalink, Ubiquiti/MikroTik, eSCL, SADP and WS-Discovery. See DISCOVERY-COVERAGE.md and NETWORK-EQUIPMENT.md.', '']
+        'Active readers not sourced from these integration rules include Apple device information, TP-Link/Omada/Easy Smart, PlayStation, Ubiquiti/MikroTik, eSCL, SADP and WS-Discovery. See DISCOVERY-COVERAGE.md and NETWORK-EQUIPMENT.md.', '']
     return '\n'.join(lines)
 if __name__ == '__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--write',action='store_true');args=parser.parse_args()

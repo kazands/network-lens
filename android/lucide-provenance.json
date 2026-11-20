@@ -186,6 +186,94 @@
       "sha256": "511bac0e133913cc85cae1314ec4eb03893b548312d325d5cb0bf1f8c629763a",
       "url": "https://github.com/lucide-icons/lucide/blob/main/icons/alarm-smoke.svg",
       "accessed": "2026-11-19"
+    },
+    {
+      "name": "arrow-left",
+      "path": "icons/arrow-left.svg",
+      "git_blob_sha": "b40bff851c85eff44f678eb7984fc6070d7ea721",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/arrow-left.svg",
+      "accessed": "2026-11-20",
+      "sha256": "c5f4b88076108eb1a0d95336e1aa7e7bb1419a3a92af96f6247d88cd3456f933"
+    },
+    {
+      "name": "ellipsis-vertical",
+      "path": "icons/ellipsis-vertical.svg",
+      "git_blob_sha": "1de61600dd58dae78ff16549ce7ab62b54afba5c",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/ellipsis-vertical.svg",
+      "accessed": "2026-11-20",
+      "sha256": "655ee2104d9540cc9377c83f3b9fea628d78d9f4e1cdca7c1b36e952599944d7"
+    },
+    {
+      "name": "chevron-right",
+      "path": "icons/chevron-right.svg",
+      "git_blob_sha": "db62a0c20181edd6173722b2a483e0b85e30f240",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/chevron-right.svg",
+      "accessed": "2026-11-20",
+      "sha256": "2758143d7b2434e4aa7307dfd34405c87909ff4052f21b5f3f40d45224b4f19b"
+    },
+    {
+      "name": "chevron-down",
+      "path": "icons/chevron-down.svg",
+      "git_blob_sha": "e70d30b88399a721cd5d20d0d26756608cf8c42b",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/chevron-down.svg",
+      "accessed": "2026-11-20",
+      "sha256": "66ea878e72ed3488bb3b464c39dfdccee8d1f78e560dccea40e5e12da0e87e87"
+    },
+    {
+      "name": "search",
+      "path": "icons/search.svg",
+      "git_blob_sha": "03e442a5440cff92c219fe3a3c1f2b0788d30701",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/search.svg",
+      "accessed": "2026-11-20",
+      "sha256": "283d371c2e433817bb9c0c8310caa6c77fa4177c0f4f1168d9c83b97af7389dc"
+    },
+    {
+      "name": "x",
+      "path": "icons/x.svg",
+      "git_blob_sha": "e31794349d3eecea1b3ae8e974b68bb8f4becda7",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/x.svg",
+      "accessed": "2026-11-20",
+      "sha256": "4a9cdab38fbb96162e7dace28e33f4ca0e49d8963a6162abc3d4691b7d675117"
+    },
+    {
+      "name": "wifi",
+      "path": "icons/wifi.svg",
+      "git_blob_sha": "e46d6d32cc10ba91fddfe0fe130109fa3a0c44f0",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/wifi.svg",
+      "accessed": "2026-11-20",
+      "sha256": "5c4c795d014fa95d1e1038362df44a0f0f32ded9cb08c833ae72419ebadc9a91"
+    },
+    {
+      "name": "wifi-off",
+      "path": "icons/wifi-off.svg",
+      "git_blob_sha": "6bb8ddfa6c94f9b15b797f484c9921b7e839f0ad",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/wifi-off.svg",
+      "accessed": "2026-11-20",
+      "sha256": "318b290106e55c3505933f434d3663524206c7a44165a89508774fba4fdbaadd"
+    },
+    {
+      "name": "sun",
+      "path": "icons/sun.svg",
+      "git_blob_sha": "3ecadd68c530e3124e6378f32954c27659b79c11",
+      "sha256": "a3955c8b0425fcc5c9ba12d2bdd77fe53b2cd5dd05e7742a56f342e996fb2ef8",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/sun.svg",
+      "accessed": "2026-11-20"
+    },
+    {
+      "name": "moon",
+      "path": "icons/moon.svg",
+      "git_blob_sha": "3c4bc3110eb5f7d4caababf5da4ad51af1145a5b",
+      "sha256": "205b959e940d5841f0ce1d09c933153da9d9c94130a54d5cc0c68c2af1d403da",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/moon.svg",
+      "accessed": "2026-11-20"
+    },
+    {
+      "name": "copy",
+      "path": "icons/copy.svg",
+      "git_blob_sha": "f62ce99c1f34989a5f70cd15192f8adf9140f4ed",
+      "sha256": "ea80e566c7a12628a447cb53179b19aea4f60b9143e2becd0d0f20bf260e5718",
+      "url": "https://github.com/lucide-icons/lucide/blob/main/icons/copy.svg",
+      "accessed": "2026-11-20"
     }
   ]
 }

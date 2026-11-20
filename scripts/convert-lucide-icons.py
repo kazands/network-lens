@@ -13,6 +13,8 @@ ICONS = {'router': 'router', 'smartphone': 'smartphone', 'printer': 'printer',
          'server': 'recorder', 'gamepad-2': 'game_console', 'house-wifi': 'smart_home',
          'alarm-smoke': 'alarm_smoke'}
 ORIGINAL_ICONS = {'remote': 'remote'}
+UI_ICONS = {'arrow-left': 'back', 'ellipsis-vertical': 'more', 'chevron-right': 'chevron_right',
+            'chevron-down': 'chevron_down', 'search': 'search', 'x': 'clear', 'wifi': 'wifi', 'wifi-off': 'wifi_off', 'sun': 'sun', 'moon': 'moon', 'copy': 'copy'}
 ANDROID = 'http://schemas.android.com/apk/res/android'
 ET.register_namespace('android', ANDROID)
 
@@ -47,7 +49,7 @@ def geometry(node):
 
 
 def main():
-    for source, name in (ICONS | ORIGINAL_ICONS).items():
+    for source, name in (ICONS | ORIGINAL_ICONS | UI_ICONS).items():
         original = source in ORIGINAL_ICONS
         folder = 'icons-original' if original else 'lucide-original'
         svg = ET.parse(ROOT / 'android' / folder / (source + '.svg')).getroot()
@@ -57,6 +59,8 @@ def main():
         vector = ET.Element('vector', {
             '{'+ANDROID+'}width': '24dp', '{'+ANDROID+'}height': '24dp',
             '{'+ANDROID+'}viewportWidth': '24', '{'+ANDROID+'}viewportHeight': '24'})
+        if source in ('arrow-left', 'chevron-right'):
+            vector.set('{'+ANDROID+'}autoMirrored', 'true')
         for node in svg:
             ET.SubElement(vector, 'path', {
                 '{'+ANDROID+'}fillColor': '#00000000', '{'+ANDROID+'}strokeColor': '#FFFFFFFF',
@@ -66,8 +70,9 @@ def main():
         notice = ('Network Lens original artwork: GPL-3.0-only. See android/icons-original/README.md.' if original else
                   'Lucide: ISC/MIT; see raw/lucide_license.txt. Converted from vendored SVG; geometry retained.')
         content = '<!-- ' + notice + ' -->\n' + ET.tostring(vector, encoding='unicode') + '\n'
-        (ROOT / 'android/app/src/main/res/drawable' / ('ic_device_' + name + '.xml')).write_text(content)
-    print(f'Converted {len(ICONS)} Lucide and {len(ORIGINAL_ICONS)} original icons to native Android vectors.')
+        prefix = 'ic_ui_' if source in UI_ICONS else 'ic_device_'
+        (ROOT / 'android/app/src/main/res/drawable' / (prefix + name + '.xml')).write_text(content)
+    print(f'Converted {len(ICONS) + len(UI_ICONS)} Lucide and {len(ORIGINAL_ICONS)} original icons to native Android vectors.')
 
 
 if __name__ == '__main__':

@@ -3,8 +3,8 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:colorAccent">#0B6C57</item>
-        <item name="android:windowBackground">#F6F7F3</item>
+        <item name="android:colorAccent">#0B6B51</item>
+        <item name="android:windowBackground">#F5F6F1</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowSoftInputMode">adjustResize</item>
     </style>

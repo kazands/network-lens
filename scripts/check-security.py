@@ -109,24 +109,44 @@ def main():
         require({n['attributes'].get('domain') for n in exclusions} == domains, 'All storage domains must be excluded from ' + mode)
     with zipfile.ZipFile(apk) as archive:
         entries = archive.namelist()
-        require(not any(n.lower().endswith(('.so', '.jks', '.keystore', '.p12', '.key', '.pem')) for n in entries), 'Unexpected native library or key material in APK')
+        require(not any(n.lower().endswith(('.jks', '.keystore', '.p12', '.key', '.pem')) for n in entries), 'Unexpected key material in APK')
+        compose = json.loads((Path(__file__).resolve().parent.parent / 'android/compose-runtime-provenance.json').read_text())
+        native = {x['path']: x['sha256'] for x in compose['nativeLibraries']}
+        require({n for n in entries if n.endswith('.so')} == set(native), 'Unexpected or missing native runtime library')
+        require(all(hashlib.sha256(archive.read(n)).hexdigest() == h for n,h in native.items()), 'Native runtime library checksum mismatch')
+        for name in native:
+            data = archive.read(name)
+            require(data[:4] == b'\x7fELF' and data[4] in (1, 2) and data[5] == 1, 'Unexpected native ELF format')
+            wide = data[4] == 2
+            offset = struct.unpack_from('<Q' if wide else '<I', data, 32 if wide else 28)[0]
+            size, count = struct.unpack_from('<HH', data, 54 if wide else 42)
+            loads = 0
+            for index in range(count):
+                header = offset + index * size
+                if struct.unpack_from('<I', data, header)[0] != 1:
+                    continue
+                loads += 1
+                alignment = struct.unpack_from('<Q' if wide else '<I', data, header + (48 if wide else 28))[0]
+                require(alignment >= 16384 and alignment & (alignment - 1) == 0, 'Native load segments must support 16 KB pages')
+            require(loads > 0, 'Native runtime library has no load segments')
         names = []
         for name in entries:
             if re.fullmatch(r'classes\d*\.dex', name):
                 names.extend(dex_classes(archive.read(name)))
         provenance = json.loads((Path(__file__).resolve().parent.parent / 'android/kotlin-runtime-provenance.json').read_text())
-        runtime = set(provenance['classes'])
+        runtime = set(provenance['classes']) | set(compose['classes']) | set(compose['dexCompanions'])
+        require(hashlib.sha256(archive.read(compose['licenseResource'])).hexdigest() == compose['licenseSha256'], 'Compose runtime license/notices must match reviewed dependencies')
         require(hashlib.sha256(archive.read(provenance['licenseResource'])).hexdigest() == provenance['licenseSha256'], 'Kotlin runtime license/notices must match the reviewed resource')
         def approved(name):
-            if name.startswith('Lio/github/kazands/networklens/') or name in runtime:
+            if name.startswith('Lio/github/kazands/networklens/') or name in runtime or any(name.startswith('L'+p.replace('.', '/')+'/R$') or name == 'L'+p.replace('.', '/')+'/R;' for p in compose['resourceNamespaces']):
                 return True
             parent = name.split('$$ExternalSynthetic', 1)[0] + ';'
             return '$$ExternalSynthetic' in name and parent in runtime
         require(bool(names) and all(approved(n) for n in names), 'Unreviewed application/runtime class')
-        require(not any(n in names for n in ('Lio/github/kazands/networklens/MonitorJob;', 'Lio/github/kazands/networklens/Diagnostics;')), 'Removed monitoring/tool classes must not ship')
+        require(not any(n in names for n in tuple('Lio/github/kazands/networklens/'+name+';' for name in ('MonitorJob','Diagnostics','AppDialog','AppUpdateDialog','ScanDetailsDialog','TroubleshootingDialog','AppTypography','AccessibleActions'))), 'Removed monitoring/tool classes must not ship')
     report = {'status': 'PASS', 'apk': apk.name, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),
-              'scope': 'Packaged component exposure, explicit debug/backup/cleartext flags, cloud/transfer exclusions, class inventory and common private-key/native-library file extensions. Not a vulnerability certification.',
-              'application_class_count': sum(n.startswith('Lio/github/kazands/networklens/') for n in names), 'third_party_class_namespaces': ['kotlin (pinned official standard library)'],
+              'scope': 'Packaged component exposure, explicit debug/backup/cleartext flags, cloud/transfer exclusions, class inventory, pinned native library hashes and common private-key file extensions. Not a vulnerability certification.',
+              'application_class_count': sum(n.startswith('Lio/github/kazands/networklens/') for n in names), 'third_party_class_namespaces': ['Kotlin standard library', 'Pinned AndroidX/Compose and supporting runtime inventory'],
               'kotlin_stdlib_sha256': provenance['sha256'], 'kotlin_stdlib_version': provenance['version'], 'total_class_count': len(names),
               'kotlin_notices_verified': True,
               'exported_components': ['io.github.kazands.networklens.MainActivity (launcher)'],

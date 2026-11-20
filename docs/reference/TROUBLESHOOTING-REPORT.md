@@ -1,5 +1,11 @@
 # Troubleshooting reports
 
+The Compose interface labels the share action **Share complete
+report**. It also fixes cancellation on Android 8: each RAM-only pipe uses
+nonblocking writes, checks revocation between writes and polls for at most
+100 ms at a time. The two-reader limit and 30-second stream deadline remain;
+the deadline no longer depends on the UI thread closing a blocked writer.
+
 Open **Scan details → Troubleshooting report** after a real scan finishes or is stopped. Choose whether to include device names and local addresses, preview the report, then choose **Share full report**. Android opens your chosen receiving app with one text attachment containing every report page. **Copy this page** is a fallback for a support conversation that does not accept attachments.
 
 The report includes every retained device group and address, including unnamed devices and the scanning phone. Search filters do not change its contents. It includes the app/build/API, scan status and coverage, method outcomes, reported identity, current product interpretation, conflicts, services, ports, presence evidence, grouping relationships and recorded lookup outcomes. An identified product is an interpretation, not verified ground truth. A stopped scan remains labelled stopped.
@@ -40,7 +46,7 @@ Device-detail and troubleshooting-page clipboard copies are marked sensitive to 
 
 ## Verification
 
-The implementation passed a fresh independent Deep code review with no substantive findings. Regression coverage includes masked and explicit-name reports, product-title provenance, snapshot isolation, exact omission counts, lookup history, lifecycle invalidation and temporary sharing.
+The earlier report implementation passed an independent Deep code review recorded with its release. The Compose migration and stream-cancellation change require their own verification. Regression coverage includes masked and explicit-name reports, product-title provenance, snapshot isolation, exact omission counts, lookup history, lifecycle invalidation and temporary sharing. Native pipe checks cover two stalled readers, revocation, the full 30-second deadline and reuse of released stream slots.
 
 See [0.3.29 release verification](../archive/VERIFICATION-0.3.29.md) for exact APK hashes, checks and limits. These are synthetic checks; receiving-app compatibility, physical TalkBack, real firmware behaviour and low-memory performance need broader testing.
 

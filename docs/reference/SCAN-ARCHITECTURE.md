@@ -15,6 +15,8 @@ flowchart TD
     H --> G
     G --> I[ScanPresentation: owned snapshots and grouping]
     I --> J[Current-session UI delivery]
+    J --> L[Compose screens and RAM-only UI memory]
+    L -->|Explicit user actions| A
     K[ScanResources: terminal owner] -. owns and stops .-> D
     K -. cleanup .-> E
     K -. closes .-> H
@@ -33,7 +35,10 @@ flowchart TD
   independently of Android. Parsed replies still pass coordinator admission.
 - `ScanResources` owns sockets, multicast-lock leases, protocol threads, executor shutdown, NSD cleanup
   and metadata-plan closure. Closing is terminal and idempotent. Late resource
-  registration closes immediately instead of leaking a socket. Protocol thread
+  registration closes immediately instead of leaking a socket and raises a
+  cancellation signal. The enrichment worker boundary consumes that terminal
+  signal so a registration race cannot become an uncaught worker exception.
+  Protocol thread
   joins share a bounded budget. The coordinator joins its children; the shared,
   bounded NSD handle-acquisition daemon remains process-scoped.
 - `MetadataPlans` owns atomic admission and alternate-target scheduling. Closing
@@ -42,6 +47,11 @@ flowchart TD
 - `ScanPresentation` retains owned endpoint copies and grouping. Consumers get
   detached copies. Operation/generation/terminal/sequence fences still reject
   stale delivery; the Activity filters again against the current network scope.
+- The interface uses Compose with a lazy device list and dedicated
+  list/detail/settings/dialog components. It renders current-session snapshots;
+  only explicit actions reach scanning, updates and export handlers. Layout,
+  filtering and disclosure do not supply identity or presence. UI choices and
+  scroll offsets remain process-local. See [interface migration](INTERFACE.md).
 
 ## Presence and cancellation
 

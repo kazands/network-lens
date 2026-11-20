@@ -8,19 +8,19 @@ See what is on your Wi-Fi. Find responding devices, understand what they are, an
 
 Network Lens is a free, open-source Android app for home users and smart-home enthusiasts. It keeps everyday scanning simple while making addresses, services and discovery evidence available when you need them.
 
-[![Download Network Lens 0.3.33 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.33/Network-Lens-0.3.33.apk)
+[![Download Network Lens 0.3.34 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.34/Network-Lens-0.3.34.apk)
 
 **Android 8.0 or newer · Development preview · No account required**
 
-Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.33)
+Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.34)
 
 ## Find your devices
 
 1. Connect your phone to Wi-Fi and open Network Lens.
 2. Tap **Scan Wi-Fi** and keep the app open while it scans.
-3. Search the results or tap a device to see its identity, addresses and available services.
+3. Search or filter the results, then tap a device to see its identity, addresses and available services.
 
-Recognised products receive useful names and icons. Room names stay visible, and IPv4 and IPv6 addresses can appear together when the evidence supports grouping them. **Show technical details** reveals the original reports and their sources.
+Recognised products receive useful names and icons. Room names stay visible. Compact rows show the preferred address; device details show every grouped address, with IPv6 below IPv4. **Show technical details** reveals the original reports and their sources.
 
 ## Local by design
 

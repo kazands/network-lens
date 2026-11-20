@@ -1,5 +1,23 @@
 # Third-party code and assets
 
+## Jetpack Compose runtime
+
+The interface uses AndroidX Activity Compose 1.13.0 and Compose BOM 2026.11.01
+(Compose UI 1.13.0 / Material 3 1.5.0), with their locked transitive runtime
+dependencies. Original license and copyright notices found in those official
+artifacts are bundled in `app/src/main/res/raw/compose_runtime_notices.txt`.
+AndroidX, KotlinX and Guava use Apache-2.0 terms; JSpecify retains its own
+notice. See the bundled notices for the complete applicable terms.
+
+`compose-runtime-provenance.json` records exact Maven coordinates, archive
+SHA-256 hashes, classes, resource namespaces and native-library hashes. The
+dependency lock and Gradle checksum verification metadata are retained in
+`../scripts/compose-dependencies/`. The direct build verifies that inventory,
+packages the AndroidX graphics-path native library for four ABIs, and merges
+no library manifest components. The Compose compiler is a build tool, not an
+application dependency. Dependency resolution contacts official Google Maven
+and Maven Central during development; the installed UI needs no cloud service.
+
 ## Supplemental Apple mobile model facts
 
 AppleDB device facts are MIT-licensed, Copyright (c) 2022 emiyl. The complete
@@ -79,17 +97,17 @@ Review any data refresh explicitly and retain all upstream notices.
 
 ## Kotlin JVM standard library
 
-Network Lens 0.3.0 uses the official Kotlin JVM standard library 2.3.21. Its Apache 2.0 license and applicable JVM standard-library third-party notices are packaged together in `app/src/main/res/raw/kotlin_license.txt`: GWT-derived collections (Apache 2.0), Guava-derived unsigned arithmetic (Apache 2.0), ThreeTenBP-derived time code (3-clause BSD), and Boost-derived math functions (Boost 1.0). The notices and attribution are copied from the pinned official Kotlin distribution's `license/README.md` and referenced license files. This does not incorporate the Kotlin compiler into the app.
+Network Lens uses the official Kotlin JVM standard library 2.3.21. Its Apache 2.0 license and applicable JVM standard-library third-party notices are packaged together in `app/src/main/res/raw/kotlin_license.txt`: GWT-derived collections (Apache 2.0), Guava-derived unsigned arithmetic (Apache 2.0), ThreeTenBP-derived time code (3-clause BSD), and Boost-derived math functions (Boost 1.0). The notices and attribution are copied from the pinned official Kotlin distribution's `license/README.md` and referenced license files. This does not incorporate the Kotlin compiler into the app.
 
 Source: https://github.com/JetBrains/kotlin/tree/v2.3.21 . `kotlin-runtime-provenance.json` records the exact standard-library hash and class inventory. `scripts/kotlin-toolchain.json` pins the official compiler and D8 build tools; those build tools are not bundled in the APK.
 
-## Lucide device pictograms
+## Lucide device and navigation pictograms
 
-Device pictograms are Lucide Icons. The complete upstream ISC license and the MIT notice for Feather-derived icons are packaged in `app/src/main/res/raw/lucide_license.txt` and in the APK. No Fing assets are included.
+Device and navigation pictograms are Lucide Icons. The complete upstream ISC license and the MIT notice for Feather-derived icons are packaged in `app/src/main/res/raw/lucide_license.txt` and in the APK. No Fing assets are included.
 
 Source: https://github.com/lucide-icons/lucide
 
-The original SVGs are retained in `lucide-original/`. `scripts/convert-lucide-icons.py` converts their existing path, rectangle, circle and line geometry into native Android vectors, preserving the 24-unit grid, 2-unit stroke and rounded caps/joins. Network Lens applies one foreground colour per theme through ImageView. See `lucide-provenance.json` for exact source paths and Git blob identities.
+The original SVGs are retained in `lucide-original/`. `scripts/convert-lucide-icons.py` converts their existing path, rectangle, circle and line geometry into native Android vectors, preserving the 24-unit grid, 2-unit stroke and rounded caps/joins. Network Lens applies one foreground colour per theme through Compose Icon. See `lucide-provenance.json` for exact source paths and Git blob identities.
 
 ## IEEE MAC registry facts
 

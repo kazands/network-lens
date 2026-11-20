@@ -1,5 +1,54 @@
 # Home-user interface wording
 
+## Compose interface — 0.3.34
+
+Version 0.3.34 uses Jetpack Compose throughout: screens, menus, dialogs,
+device rows and scan details. Earlier View-based behavior is retained only in
+the historical sections below.
+
+The scan card brings the network, action, progress and status together. Results
+use a lazy list with stable endpoint keys, larger Lucide icon plates and quick
+filters for unnamed devices, network equipment, smart home, computers and media.
+Search still includes hidden MAC addresses and reported fields. Dual-stack rows
+show their preferred IPv4 address and an additional-address count; IPv6-only
+rows retain their full IPv6 address. Details show every grouped address, IPv4
+before IPv6, with explicit copy controls.
+
+Device details use an identity card, an adaptive quick-facts grid and services
+separate from observed ports. They never pair a service with a port without
+evidence. Raw fields, independent endpoint observations and identity explanations
+remain available through disclosures and complete device copy. Larger text uses
+a single-column facts layout; wide screens can show list and details together.
+An open HTTP port alone does not produce an Open Web UI action.
+
+Scan details is a bottom sheet. Other dialogs retain a 65% dimmed backdrop,
+scrollable bodies and fixed actions. The updater has one stable Compose dialog
+whose content changes with update state. The report preview keeps page controls
+outside the scrolling text. The manual Envisalink action and dedicated TPI
+reader are removed; there is no replacement probe of its single-client service.
+
+`UiMemory` keeps filter, disclosure and scroll choices in RAM. Generation checks
+prevent a retired scroll collector from restoring an old position after a new
+scan, page or search. List restoration keeps an item key and offset, then resolves
+that key in the current results when returning from details or Settings. If the
+item has disappeared, it uses a bounded position in the remaining list.
+`MainActivity` still owns scan lifecycle, network fences,
+updates and exports. Compose receives snapshots and sends `UiAction` events;
+recomposition does not start discovery or update requests. The Activity clears
+saved-state bundles and restores nothing from disk. Search and range input keep
+the private keyboard flag; explicit copies keep sensitive clipboard marking.
+
+Before creating Compose content, `UiPrivacy` disables Compose's virtual-content
+capture feature and excludes the window's view hierarchy from platform content
+capture and autofill. Dialog, popup and bottom-sheet roots apply the same policy.
+This protection does not use `FLAG_SECURE`: user screenshots and accessibility
+semantics remain available. The pinned runtime's experimental capture switch is
+covered by `compose-privacy` regressions and must be rechecked on dependency updates.
+
+See [Compose build and test instructions](../BUILDING.md#compose-dependencies).
+Synthetic emulator checks do not establish physical scrolling performance,
+TalkBack behavior or recognition accuracy.
+
 Home users and enthusiasts are the primary audience; network technicians and IT
 users retain access to the underlying observations. Preserve the established
 Network Lens branding, appearances, icons and native Android navigation.

@@ -13,6 +13,7 @@ mkdir -p "$TEST_DIR/classes" "$TEST_DIR/dex"
 find "$TEST_DIR/classes" "$TEST_DIR/dex" -type f -delete
 python3 scripts/setup-kotlin-toolchain.py
 STDLIB="$PWD/.tools/kotlin-0300/kotlinc/lib/kotlin-stdlib.jar"
+COMPOSE_CLASSPATH="$(cat .tools/compose-build/runtime/classpath.txt)"
 "$TOOLS/aapt2" link -o "$TEST_DIR/resources.apk" --manifest tests/android/AndroidManifest.xml -I "$PLATFORM"
 python3 - <<'PY'
 from pathlib import Path
@@ -23,12 +24,14 @@ if not sources:
     raise SystemExit('Android Kotlin instrumentation sources are missing.')
 Path('.tools/android-tests/kt-sources.txt').write_text(''.join(str(path) + '\n' for path in sources))
 PY
-"$PWD/.tools/kotlin-0300/kotlinc/bin/kotlinc" -no-jdk -no-reflect -jvm-target 1.8 \
+"$PWD/.tools/kotlin-0300/kotlinc/bin/kotlinc" -no-jdk -no-reflect -jvm-target 11 \
     -Xfriend-paths="$PWD/.tools/build/classes.jar" \
-    -classpath ".tools/build/classes.jar:$PLATFORM:$STDLIB" \
+    -classpath ".tools/build/classes.jar:$PLATFORM:$COMPOSE_CLASSPATH" \
     -d "$TEST_DIR/classes" @"$TEST_DIR/kt-sources.txt"
 "${JAVA_BIN}jar" cf "$TEST_DIR/classes.jar" -C "$TEST_DIR/classes" .
-"${JAVA_BIN}java" -cp .tools/kotlin-0300/r8.jar com.android.tools.r8.D8 --min-api 26 --lib "$PLATFORM" --classpath .tools/build/classes.jar --classpath "$STDLIB" --output "$TEST_DIR/dex" "$TEST_DIR/classes.jar"
+CLASSPATH_ARGS=()
+while IFS= read -r JAR; do CLASSPATH_ARGS+=(--classpath "$JAR"); done < .tools/compose-build/runtime/jars.txt
+"${JAVA_BIN}java" -cp .tools/kotlin-0300/r8.jar com.android.tools.r8.D8 --min-api 26 --lib "$PLATFORM" --classpath .tools/build/classes.jar "${CLASSPATH_ARGS[@]}" --output "$TEST_DIR/dex" "$TEST_DIR/classes.jar"
 cp "$TEST_DIR/resources.apk" "$TEST_DIR/unsigned.apk"
 (cd "$TEST_DIR/dex" && zip -q "$TEST_DIR/unsigned.apk" classes.dex)
 "$TOOLS/zipalign" -f -p 4 "$TEST_DIR/unsigned.apk" "$TEST_DIR/aligned.apk"

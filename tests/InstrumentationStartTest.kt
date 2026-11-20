@@ -6,7 +6,7 @@ object InstrumentationStartTest {
     private var checks = 0
     private fun verify(value: Boolean, message: String) { checks++; if (!value) throw AssertionError(message) }
     @JvmStatic fun main(args: Array<String>) {
-        for (mode in listOf("network-names", "kidde", "app-updates", "device-identities", "fibe-tv")) {
+        for (mode in listOf("network-names", "kidde", "app-updates", "device-identities", "fibe-tv", "compose-ui", "compose-typography", "compose-reports", "compose-updates")) {
             val events = arrayListOf<String>()
             try {
                 InstrumentationStart.prepare(mode, {
@@ -30,10 +30,10 @@ object InstrumentationStartTest {
         val events = arrayListOf<String>()
         for (mode in listOf("session-only", "session-cold", "legacy-seed")) {
             InstrumentationStart.prepare(mode, { events.add("guard") }, { events.add("state") })
-            verify(events.isEmpty(), "Existing $mode startup keeps its state intact")
+            verify(events == listOf("guard"), "Existing $mode startup checks its emulator and keeps appearance intact");events.clear()
         }
         InstrumentationStart.prepare("recognition-report", { events.add("guard") }, { events.add("state") })
-        verify(events == listOf("state"), "Unchanged modes retain their existing startup behavior")
+        verify(events == listOf("guard", "state"), "Report mode checks its emulator before state initialization")
         println("PASS · $checks instrumentation startup safety assertions")
     }
 }
