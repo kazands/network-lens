@@ -8,7 +8,7 @@ Optional local name lookups query only a configured on-link private DNS server o
 
 There are no accounts, analytics, advertisements, background scans or saved device inventory. Scan results, appearance, filters and range choices stay in memory only. A new scan starts fresh; restarting the process clears the current session.
 
-Copying device details is explicit and uses Android's clipboard. Treat copied text and screenshots as private network information, and redact them before sharing.
+Copying device details is explicit and uses Android's clipboard. Device details and troubleshooting-page copies are marked sensitive to hide their preview on supported Android versions. This does not prevent pasting or retention by a receiving app. Treat copied text and screenshots as private network information, and redact them before sharing.
 
 **Copy recognition report** is a separate, explicit clipboard action. It copies counts, fixed diagnostic labels, the app version/build and Android API version. It excludes addresses, device and personal names, raw model/manufacturer strings, identifiers, credentials and raw responses. The app does not save or upload this report. Android manages the clipboard; you choose where to paste it.
 

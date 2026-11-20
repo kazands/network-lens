@@ -183,7 +183,8 @@ internal object TroubleshootingChecks {
                 // Render refreshes the palette before creating the native preview.
                 MainActivity::class.java.getDeclaredMethod("render").apply { isAccessible = true }.invoke(activity)
                 dialog = TroubleshootingDialog(activity, method.invoke(activity) as AppDialog.Colors, document, {}, { text ->
-                    (activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Fixture report", text))
+                    MainActivity::class.java.getDeclaredMethod("copyText", String::class.java, String::class.java, Boolean::class.javaPrimitiveType)
+                        .apply { isAccessible = true }.invoke(activity, "Fixture report", text, true)
                 })
                 dialog.show()
             }
@@ -195,8 +196,10 @@ internal object TroubleshootingChecks {
                 texts(dialog.window!!.decorView).single { it.text.toString() == "Next" }.performClick()
                 check(texts(dialog.window!!.decorView).any { it.text.toString().contains("Device 1 / Address 1") }, "Preview advances to actual device evidence")
                 texts(dialog.window!!.decorView).single { it.text.toString() == "Copy this page" }.performClick()
-                val clip = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
-                check(clip.contains("page 2/") && clip.contains("Google Home Mini"), "Clipboard page labelled and includes diagnostic evidence")
+                val clip = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!
+                check(clip.getItemAt(0).text.toString().contains("page 2/") && clip.getItemAt(0).text.toString().contains("Google Home Mini"), "Clipboard page labelled and includes diagnostic evidence")
+                check(clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true,
+                    "Troubleshooting copies suppress Android's sensitive clipboard preview")
             }
             test.waitForIdleSync()
             val image = test.uiAutomation.takeScreenshot()

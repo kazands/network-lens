@@ -28,7 +28,11 @@ are unchanged; adding arbitrary category guesses to that table would reduce trus
 - SSDP has two waves seven seconds apart in a 12-second window. Each wave queries
   ssdp:all, rootdevice, DIAL, Sonos ZonePlayer and Belkin controllee. No app launch
   or control request is sent. IPv4 and interface-scoped IPv6 ff02::c use independent
-  bounded sockets, 400 packets each, and the same guarded description reader.
+  bounded sockets and the same guarded description reader. Each exchange has a
+  4,096-raw-packet ceiling, 512 admitted senders, at most 128 parsed packets and
+  64 retained records per sender, and 400 retained records overall. Duplicates
+  and rejected traffic do not spend the retained-record budget. Per-peer limits
+  do not terminate the other senders' window; reached limits remain visible.
 - A late mDNS recovery request targets up to 32 service types from current
   responding endpoints without a specific model. It adds at most one opportunity
   after the existing two resolution retries, independently for each IP family.

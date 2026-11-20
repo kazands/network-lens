@@ -189,7 +189,10 @@ The candidate verification history above predates release versioning. See
 ## Envisalink support in 0.3.24
 
 A bounded, receive-only TCP 4025 check recognizes the Envisalink DSC TPI family.
-It is independent of the first open general port and does not authenticate or
+It now requires **Show technical details → Check for Envisalink → Scan and check**
+for a specific device. Ordinary scans do not make this connection. The action
+explains the single-client integration risk and requests a fresh scan; it does
+not save consent for later scans. It does not authenticate or
 send alarm commands. It cannot distinguish the EVL generation or identify a
 generic Honeywell-mode login prompt. See [Envisalink details](ENVISALINK.md).
 

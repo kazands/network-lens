@@ -1,14 +1,16 @@
 # Current status
 
-**Network Lens 0.3.32 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.33 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release recognises devices reporting manufacturer **ARRIS** and model **FibeTV** as **ARRIS FibeTV**, with a TV receiver label and the useful room name beneath it. It preserves original fields and sources and does not infer a specific hardware generation.
+This release makes Envisalink alarm-interface checks explicit. Normal scans no longer probe the alarm integration service. **Show technical details → Check for Envisalink** explains the possible integration conflict and starts a fresh scan with one check requested for that address. The device must respond again; the check also works when a large network uses service discovery without an address sweep.
 
-Hydrawise and B-hyve product suggestions based on router names have been removed. Local DNS names remain diagnostic information under **Show technical details** and in troubleshooting reports; they do not supply product identity, primary type, presence or grouping. Names are masked in default troubleshooting reports.
+Troubleshooting reports mask additional IPv6 addresses embedded in retained text and reuse indexed name matching to reduce preparation work. Device-detail and troubleshooting-page copies suppress sensitive clipboard previews on supported Android versions. SSDP gives each sender separate processing limits while retaining overall time, packet and record bounds. Reached limits remain visible in scan details.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.32.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.33.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md)
 
 ## What remains unverified
+
+Physical alarm-integration compatibility and report performance on phones still require testing. Clipboard preview protection does not stop a receiving app from retaining pasted information. These changes do not improve recognition for devices that withhold their identity.
 
 Real /22 timing and affected-device recognition still need physical testing. The scan budget now scales from 55 seconds for a /24 to 100 seconds for a /22, with time reserved for device details. Unfinished checks remain visible; this is not a guarantee of complete discovery.
 

@@ -507,7 +507,7 @@ class MainActivity : Activity() {
                     }, { text ->
                         refreshConnection()
                         if (store.isCurrent(token) && network?.key == current.key && !scanning && !demo) {
-                            (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(ClipData.newPlainText("Troubleshooting report", text))
+                            copyText("Troubleshooting report", text, sensitive = true)
                             toast("Report page copied.")
                         }
                     }).also { it.show() }
@@ -535,8 +535,7 @@ class MainActivity : Activity() {
         }
         val text = RecognitionReport.text(facts, self, state, report.sources, report.omittedSources,
             info?.versionName.orEmpty(), code, Build.VERSION.SDK_INT)
-        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
-            .setPrimaryClip(ClipData.newPlainText("Recognition report", text))
+        copyText("Recognition report", text, sensitive = false)
         toast("Recognition report copied. Paste it into your support conversation.")
     }
     private fun groupsForDisplay(): List<Device> {
@@ -731,7 +730,7 @@ class MainActivity : Activity() {
         body.addView(text("Reported details come from device responses. Local recognition is an interpretation of those details. Missing values stay unknown; neither establishes ownership or security.", 14, muted, false)); space(body, 19)
         val copy = button("Copy device details", true)
         copy.setOnClickListener {
-            (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(ClipData.newPlainText("Device details", deviceText(d)))
+            copyText("Device details", deviceText(d), sensitive = true)
             toast("Device details copied.")
         }
         body.addView(copy)
@@ -792,6 +791,41 @@ class MainActivity : Activity() {
             field(panel, "Local recognition source", match.source, false)
             field(panel, "Recognition input", match.input, false)
         }
+        if (!demo && !endpoint.self && !endpoint.gateway && Address.bytes(endpoint.ip)?.size == 4) {
+            val check = button("Check for Envisalink", false)
+            check.isEnabled = !scanning
+            check.setOnClickListener { envisalinkCheck(endpoint.ip) }
+            panel.addView(check); space(panel, 16)
+        }
+    }
+    private fun envisalinkCheck(ip: String) {
+        refreshConnection()
+        val current = network ?: return
+        val token = store.token()
+        if (demo || scanning || selected?.endpoints()?.none { it.ip == ip && !it.self && !it.gateway } != false) return
+        val plan = try { ScanPlan.create(current.ip, current.prefix, range) } catch (_: IllegalArgumentException) { return }
+        if (plan.range?.contains(ip) != true) { toast("Include this address in Settings → Scan range first."); return }
+        val dialog = optionsDialog("Check alarm interface")
+        dialog.content().addView(dialog.paragraph("Check only $ip for an Envisalink alarm interface during a fresh Wi-Fi scan. The new scan replaces the current results.", 15, ink, false))
+        dialog.gap(dialog.content(), 12)
+        dialog.content().addView(dialog.paragraph("This briefly connects to the alarm integration service on port 4025. It may delay another integration reconnecting. No password, login or alarm command is sent. Cancel if an alarm integration must remain uninterrupted.", 14, muted, false))
+        dialog.secondary("Cancel") { true }.primary("Scan and check") {
+            refreshConnection()
+            if (!destroyed && !demo && !scanning && store.isCurrent(token) && current.sameConnection(network) &&
+                selected?.endpoints()?.any { it.ip == ip && !it.self && !it.gateway } == true) {
+                if (Build.VERSION.SDK_INT >= 37 && checkSelfPermission(LAN_PERMISSION) != PackageManager.PERMISSION_GRANTED)
+                    toast("Allow local network access, then request this check again.")
+                else startDiscovery(ip)
+            }
+            true
+        }.show()
+    }
+    private fun copyText(label: String, value: String, sensitive: Boolean) {
+        val clip = ClipData.newPlainText(label, value)
+        if (sensitive) clip.description.extras = PersistableBundle().apply {
+            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+        }
+        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(clip)
     }
     private fun deviceText(group: Device): String {
         val text = StringBuilder(group.presentation().title)
@@ -840,10 +874,12 @@ class MainActivity : Activity() {
         try { network = NetworkState.current(this) } catch (e: Exception) { message = e.message ?: ""; render(); return }
         startDiscovery()
     }
-    private fun startDiscovery() {
+    private fun startDiscovery() = startDiscovery("")
+    private fun startDiscovery(envisalinkTarget: String) {
+        val chosen = network ?: return
         invalidateTroubleshooting()
         resetListPosition(); store.clear()
-        val chosen = network!!; val token = store.token(); val operation = Discovery(this, chosen); discovery = operation
+        val token = store.token(); val operation = Discovery(this, chosen, envisalinkTarget); discovery = operation
         scanning = true; selected = null; done = 0; total = 0; devices = ArrayList(); message = ""; render()
         operation.scan(range, object : Discovery.Listener {
             override fun progress(n: Int, size: Int, found: List<Device>) { offerScan(operation, token, n, size, found, false, "") }

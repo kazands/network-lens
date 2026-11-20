@@ -272,7 +272,10 @@ internal object DeviceIdentityChecks {
                 capture(test, activity, "details-thermostat-$label")
                 main(test) {
                     texts(activity.window.decorView).single { it.text.toString() == "Copy device details" }.performClick()
-                    val copied = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
+                    val clip = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!
+                    val copied = clip.getItemAt(0).text.toString()
+                    check(clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true,
+                        "Device details copy $label hides the Android clipboard preview")
                     check(copied.contains("Primary device type: Thermostat") && copied.contains("Reported Model · mDNS current _airplay._tcp. TXT: ECB601") &&
                         copied.contains("Services available: AirPlay, AirPlay audio (RAOP), Spotify Connect"), "Copy $label includes raw alias source, primary type and capabilities")
                     activity.onBackPressed()
