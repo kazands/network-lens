@@ -22,6 +22,7 @@ not infer a product from a friendly name or MAC vendor.
 | Current evidence | Primary title | Presentation detail |
 | --- | --- | --- |
 | Sony manufacturer + `PS5`, or an accepted current console reply | Sony PlayStation 5 | Game console; useful custom name beneath it |
+| Reported `ARRIS` manufacturer + `FibeTV` model | ARRIS FibeTV | TV receiver; useful room name retained; hardware generation remains unspecified |
 | Reported `SHIELD Android TV` model | NVIDIA SHIELD TV | Streaming device; no guessed year or Pro edition |
 | Reported `DS-7608NI-I2/8P` model | Hikvision DS-7608NI-I2/8P | Network video recorder |
 | ecobee manufacturer + `Smart_Thermostat_Premium` | ecobee Smart Thermostat Premium | Thermostat and thermostat icon, including when AirPlay/Spotify services are present |
@@ -328,3 +329,9 @@ Known MinimServer/MonitorService2 descriptions from their reviewed publishers an
 The exact `Xserve` label in Bonjour device-info is retained as a presentation hint, not Apple hardware identity: Samba can advertise it for the Finder icon. This exception does not apply to arbitrary model sources or actual Apple model identifiers. [Samba's presentation model discussion](https://lists.samba.org/archive/samba-technical/2019-January/131999.html).
 
 A current shared mDNS host may link IPv4/IPv6 endpoints despite different RAOP and network-adapter identifiers. A RAOP identifier alone never links endpoints. Repeated reports of the same MAC preserve the strongest source evidence, so a later RAOP advertisement cannot erase a confirmed adapter address. A stronger adapter report also replaces a selected RAOP identifier when their addresses differ; the alternate address and source remain in diagnostic evidence. Two conflicting network-adapter MAC reports still prevent grouping regardless of response order; original observations remain available.
+
+## ARRIS FibeTV receiver family
+
+The exact reported manufacturer/model pair `ARRIS` + `FibeTV` resolves to **ARRIS FibeTV**, with a **TV receiver** subtitle and streaming-device icon. The profile requires manufacturer evidence; a friendly name, hostname, router name or Android TV/Cast service alone cannot activate it. It preserves the original manufacturer/model and source observations. Compatible IPv4/IPv6 observations may corroborate the family without filling in fields the other address did not report. Conflicting models or manufacturers suppress the product match.
+
+`FibeTV` is a reported receiver-family label, not proof of a specific VIP model, storage capacity or generation. Bell documents its [Fibe TV receivers](https://support.bell.ca/Fibe_TV/Receivers); this profile deliberately does not select one of those exact retail models. The broader catalogue also contains a Bell Canada FibeTV row. That marketing brand is not substituted for the device's reported ARRIS manufacturer.

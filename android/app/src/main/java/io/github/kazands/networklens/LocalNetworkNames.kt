@@ -27,7 +27,6 @@ internal object LocalNetworkNames {
     }
     data class Result(val status: Status, val name: String = "",
         val returnedNames: List<String> = if (name.isEmpty()) emptyList() else listOf(name), val omittedNames: Int = 0)
-    data class Family(val title: String, val role: String)
     fun interface Channel { fun exchange(query: ByteArray, timeoutMs: Int): ByteArray }
 
     /** A public resolver must never receive local reverse questions or returned private hostnames. */
@@ -79,25 +78,7 @@ internal object LocalNetworkNames {
     }
 
     private val LABEL = Regex("[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?")
-    private val HYDRA = Regex("hydrawise-([0-9a-f]{4})")
-    private val BH1 = Regex("bhyve-bh1-[a-z0-9]{4,32}")
-    private val BHYVE = Regex("bhyve-[a-z0-9][a-z0-9-]{3,47}")
     private fun validName(name: String): Boolean = name.length in 1..253 && name.split('.').all { LABEL.matches(it) } && Address.bytes(name) == null
-
-    /** Narrow, family-only suggestions. Names never manufacture a MAC or exact retail model. */
-    fun family(name: String, mac: String): Family? {
-        if (!validName(name)) return null
-        val label = name.substringBefore('.').lowercase(Locale.ROOT)
-        val hardware = Address.mac(mac).replace(":", "")
-        HYDRA.matchEntire(label)?.let {
-            if (hardware.isNotEmpty() && !hardware.endsWith(it.groupValues[1], true)) return null
-            return Family("Hunter Hydrawise", "Irrigation controller")
-        }
-        if (BH1.matches(label)) return Family("Orbit B-hyve hub", "Irrigation hub")
-        // Other B-hyve names need independently observed Orbit interface evidence.
-        if (BHYVE.matches(label) && hardware.startsWith("446755")) return Family("Orbit B-hyve", "Device family")
-        return null
-    }
 
     internal fun query(name: String, type: Int, id: Int): ByteArray {
         require(validName(name) && type in listOf(1, 28))

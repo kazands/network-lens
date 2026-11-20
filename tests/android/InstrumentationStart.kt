@@ -4,7 +4,7 @@ package io.github.kazands.networklens.test
 internal object InstrumentationStart {
     private val emulatorModes = setOf("app-updates", "audio-zones", "scan-efficiency", "scan-ownership",
         "performance", "local-metadata", "recog", "device-identities", "google-cast", "fire-tv",
-        "envisalink", "smartthings", "kidde", "network-names")
+        "envisalink", "smartthings", "kidde", "network-names", "fibe-tv")
 
     fun prepare(mode: String, requireEmulator: () -> Unit, initializeState: () -> Unit) {
         if (mode in emulatorModes) requireEmulator()

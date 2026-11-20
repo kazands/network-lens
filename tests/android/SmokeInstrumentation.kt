@@ -72,7 +72,9 @@ class SmokeInstrumentation : Instrumentation() {
             }, {
                 Store(getTargetContext()).dark(false)
             })
-            if (mode == "network-names") {
+            if (mode == "fibe-tv") {
+                FibeTvChecks.run(this, ::check)
+            } else if (mode == "network-names") {
                 NetworkNameChecks.run(this, ::check)
             } else if (mode == "recognition-report") {
                 RecognitionReportChecks.run(this, ::check)
@@ -108,6 +110,7 @@ class SmokeInstrumentation : Instrumentation() {
                 AndroidRecognitionChecks.run(this, ::check)
                 GoogleCastIdentityChecks.run(this, ::check)
                 FireTvIdentityChecks.run(this, ::check)
+                FibeTvChecks.run(this, ::check)
                 DeviceIdentityChecks.run(this, ::check)
             } else if (mode == "recog") {
                 RecogChecks.run(this, ::check)

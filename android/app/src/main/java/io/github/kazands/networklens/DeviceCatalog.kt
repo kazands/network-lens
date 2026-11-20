@@ -46,6 +46,8 @@ internal object DeviceCatalog {
             keys("DS-7608NI-I2/8P", "Hikvision DS-7608NI-I2/8P")),
         Product("nvidia:shield-tv", "NVIDIA", "NVIDIA SHIELD TV", Category.TV_PLAYER,
             keys("SHIELD Android TV", "SHIELD TV", "NVIDIA SHIELD Android TV", "NVIDIA SHIELD TV"), keys("SHIELD"), true),
+        Product("arris:fibetv", "ARRIS", "ARRIS FibeTV", Category.TV_PLAYER,
+            keys("FibeTV", "ARRIS FibeTV"), familyOnly = true, manufacturerRequired = true, displayType = "TV receiver"),
         Product("sony:playstation-5", "Sony", "Sony PlayStation 5", Category.CONSOLE,
             keys("PS5", "PlayStation 5", "Sony PlayStation 5"), familyOnly = true),
         Product("ecobee:smart-thermostat-premium", "ecobee", "ecobee Smart Thermostat Premium", Category.THERMOSTAT,

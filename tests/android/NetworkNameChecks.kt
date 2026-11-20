@@ -16,34 +16,31 @@ internal object NetworkNameChecks {
             networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.CONFIRMED, name))
         }
         val hub = device()
-        check(hub.presentation().title == "Likely Orbit B-hyve hub", "Wi-Fi-only B-hyve hub suggestion has explicit uncertainty")
-        check(hub.presentation().subtitle.contains("Router name"), "List exposes indirect source")
-        check(hub.model.isEmpty() && hub.manufacturer.isEmpty() && hub.hostname.isEmpty() && hub.name.isEmpty() && hub.mac.isEmpty(), "No reported identity or MAC invented")
-        check(hub.groupProduct() == null && hub.classification().category == null && hub.recognitionReportGroup().level == RecognitionReport.Level.UNKNOWN, "Suggestion is not a verified product, family or primary type")
-        check(hub.evidence.isEmpty() && hub.links().isEmpty(), "DNS creates neither presence nor grouping")
-        check(hub.copy().presentation() == hub.presentation(), "Scan snapshot preserves suggestion")
+        for (name in listOf("hydrawise-a1b2.home", "bhyve-bh1-abcd.home", "bhyve-controller-abcd.home")) {
+            val d = device(name = name)
+            d.hardware("44:67:55:00:A1:B2", "Synthetic current adapter")
+            check(d.presentation().title == "Unnamed device" && d.presentation().subtitle.isEmpty(), "Router names and interface vendors cannot name irrigation hardware")
+            check(d.groupProduct() == null && d.classification().category == null && d.recognitionReportGroup().level == RecognitionReport.Level.UNKNOWN,
+                "Confirmed DNS does not create a product, family or primary type")
+            check(!d.recognitionSummary().contains("Likely") && !d.recognitionSummary().contains("Hydrawise") && !d.recognitionSummary().contains("B-hyve"),
+                "Recognition explanation contains no router-name product suggestion")
+            check(d.model.isEmpty() && d.manufacturer.isEmpty() && d.hostname.isEmpty() && d.name.isEmpty(), "Router diagnostics leave reported fields unknown")
+            check(d.evidence.isEmpty() && d.links().isEmpty(), "DNS creates neither presence nor grouping")
+            check(d.copy().presentation() == d.presentation() && d.copy().networkNameRows() == d.networkNameRows(), "Snapshot retains diagnostics without adding recognition")
+        }
         val named = device().apply { hint("Name", "Fixture yard", "Current friendly-name fixture", 90) }
-        check(named.presentation().title == "Fixture yard" && named.presentation().subtitle.startsWith("Likely Orbit B-hyve hub"), "Current friendly name remains primary when family evidence is indirect")
-        check(Device.from(hub.json()).networkFamily() == null, "Imported or restored diagnostic JSON cannot establish current DNS evidence")
+        check(named.presentation().title == "Fixture yard" && !named.presentation().subtitle.contains("Orbit"), "Current friendly name stays unchanged without a router suggestion")
+        check(Device.from(hub.json()).networkNameRows().isEmpty(), "Imported or restored diagnostic JSON cannot establish current DNS evidence")
         check(Device().apply { ip = hub.ip }.networkNameRows().isEmpty(), "New scan does not inherit the previous occupant's name")
         check(Device.grouped(listOf(hub, device("198.18.0.21"))).size == 2, "Identical router names cannot join endpoints")
-        val hydra = device(name = "hydrawise-a1b2.home")
-        check(hydra.presentation().title == "Likely Hunter Hydrawise", "Hydrawise family is explicitly tentative")
-        hydra.hardware("00:11:22:33:C3:D4", "Synthetic current adapter")
-        check(hydra.networkFamily() == null, "Current MAC suffix disagreement defeats name suggestion")
         for (first in listOf(false, true)) {
             val d = Device().apply { ip = "198.18.0.22" }
             if (first) d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.CONFIRMED, "hydrawise-a1b2.home"))
-            d.hint("Model", "Synthetic television model", "Current response fixture", 80)
+            d.hint("Manufacturer", "ARRIS", "Current response fixture", 80)
+            d.hint("Model", "FibeTV", "Current response fixture", 80)
             if (!first) d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.CONFIRMED, "hydrawise-a1b2.home"))
-            check(d.networkFamily() == null && !d.presentation().title.startsWith("Likely"), "Stale router name cannot override current model in either order")
+            check(d.presentation().title == "ARRIS FibeTV", "Router names never replace reported identity in either arrival order")
         }
-        val stronger = Device().apply { ip = "2001:db8::20"; link("fixture:same-hardware"); hint("Device type", "Thermostat", "Current response fixture", 80) }
-        hub.link("fixture:same-hardware")
-        check(Device.grouped(listOf(hub, stronger)).single().networkFamily() == null, "Another already-associated address's direct type suppresses suggestion")
-        val alternate = device("2001:db8::21", "other-device.home").apply { link("fixture:conflicting-names") }
-        val indirect = device().apply { link("fixture:conflicting-names") }
-        check(Device.grouped(listOf(indirect, alternate)).single().networkFamily() == null, "A conflicting associated name cannot restore a tentative family")
         val report = TroubleshootingReport.create("Synthetic report", listOf(device().troubleshootingGroup()), emptyList()).text()
         check(report.contains("Router-reported name") && !report.contains("bhyve-bh1-abcd"), "Default troubleshooting report retains outcome and masks router name")
         check(TroubleshootingReport.create("Synthetic report", listOf(device().troubleshootingGroup()), emptyList(), true).text().contains("bhyve-bh1-abcd.home"), "Explicit names-included report contains the lookup evidence")
@@ -51,7 +48,7 @@ internal object NetworkNameChecks {
             networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.NOT_CONFIRMED, returnedNames = listOf("private-fixture-name.home")))
         }
         val masked = TroubleshootingReport.create("Synthetic report", listOf(unmatched.troubleshootingGroup()), emptyList()).text()
-        check(unmatched.networkFamily() == null && masked.contains(LocalNetworkNames.Status.NOT_CONFIRMED.description) && !masked.contains("private-fixture-name.home"), "Unconfirmed names remain private diagnostic evidence")
+        check(unmatched.presentation().unnamed && masked.contains(LocalNetworkNames.Status.NOT_CONFIRMED.description) && !masked.contains("private-fixture-name.home"), "Unconfirmed names remain private diagnostic evidence")
         val checking = Device().apply { networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.CHECKING)); finishNetworkName() }
         check(checking.networkNameRows().first().second == LocalNetworkNames.Status.STOPPED.description, "Queued lookup has terminal outcome on Stop")
 
@@ -86,7 +83,7 @@ internal object NetworkNameChecks {
             check(entered.await(2, TimeUnit.SECONDS), "Current responder admitted to local name lookup")
             queue.invoke(op, current); check(calls.get() == 1, "Repeated service events do not repeat DNS requests")
             op.cancel(); release.countDown()
-            check(current.networkFamily() == null && current.networkNameRows().first().second == LocalNetworkNames.Status.STOPPED.description, "Late completion after Stop cannot install suggestion")
+            check(current.presentation().unnamed && current.networkNameRows().first().second == LocalNetworkNames.Status.STOPPED.description, "Late completion after Stop cannot install DNS evidence")
         } finally { release.countDown(); op.cancel() }
         for (dns in listOf("8.8.8.8", "10.124.45.2", "")) {
             val (other, _, _) = operation(dns)
@@ -112,8 +109,8 @@ internal object NetworkNameChecks {
         try {
             val d = peer(success, true); queue.invoke(success, d)
             val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
-            while (d.networkFamily() == null && System.nanoTime() < end) Thread.sleep(10)
-            check(d.presentation().title == "Likely Orbit B-hyve hub", "Admitted lookup installs a source-labelled suggestion")
+            while (d.networkNameRows().firstOrNull()?.second != LocalNetworkNames.Status.CONFIRMED.description && System.nanoTime() < end) Thread.sleep(10)
+            check(d.networkNameRows().any { it.second == "bhyve-bh1-abcd.home" } && d.presentation().unnamed, "Admitted lookup retains technical evidence without guessing hardware")
             check(d.evidence.isEmpty() && d.links().isEmpty() && d.lastSeen == 0L, "Successful DNS cannot manufacture response evidence or grouping")
             check(success.snapshot().single().presentation() == d.presentation(), "Discovery snapshot delivers indirect evidence to the UI")
         } finally { success.cancel() }

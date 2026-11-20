@@ -10,13 +10,11 @@ A catalogue contains possible names; it cannot identify a device that supplies n
 
 Some reported model codes are shared by several generations. Network Lens keeps the broader family name when the code cannot distinguish them. Contradictory reports can suppress recognition instead of choosing an unsupported answer.
 
-## Router-reported name suggestions
+## Router-reported names
 
-For devices that have already responded, Network Lens can ask a configured on-link private DNS server for a name and check that the name resolves back to the same address. A narrow name pattern may produce **Likely Hunter Hydrawise** or **Likely Orbit B-hyve hub**. Other B-hyve-prefixed names also require independently observed Orbit MAC-vendor evidence and identify only the family.
+For devices that have already responded, Network Lens can ask a configured on-link private DNS server for a name and check that it resolves back to the same address. The result is diagnostic information only: router records can remain stale even when the two lookups agree.
 
-These are tentative suggestions, kept separate from product matches, primary device types and reported manufacturer/model fields. Forward and reverse agreement cannot rule out stale router records. Current model/type/manufacturer evidence suppresses the suggestion. DNS names never establish presence or associate addresses, and no name is reused in a later scan. Lookup outcomes and router-reported names appear in details and troubleshooting reports; names are masked by default.
-
-This uses Wi-Fi only. A B-hyve Bluetooth timer behind a Wi-Fi hub is not a separate Wi-Fi endpoint. Support is evidence-dependent, not universal across all B-hyve hardware or routers. See [irrigation recognition](reference/IRRIGATION.md).
+Router names appear under **Show technical details** and in troubleshooting reports, with masking by default. They never supply a product/family suggestion, list title, reported manufacturer/model, primary type, presence or grouping. The earlier Hydrawise and B-hyve name-based suggestions have been removed. See [local network name diagnostics](reference/IRRIGATION.md).
 
 ## Device type and services
 
@@ -30,7 +28,7 @@ Network Lens keeps service capabilities separate from physical identity. Scanner
 | --- | --- | --- |
 | Apple computers, phones and tablets | Bonjour model fields and a read-only device-service lookup | Private addresses and a reachable port alone cannot establish a model |
 | Google and Android devices | Cast, Android TV and supported model fields | Shared or absent model strings may identify only a family |
-| TVs and streaming devices | Local service descriptions; supported Samsung, Google and Fire TV fields | Availability differs by firmware and power state |
+| TVs and streaming devices | Local service descriptions; reported ARRIS/FibeTV pairs; supported Samsung, Google and Fire TV fields | Availability differs by firmware and power state |
 | Audio systems | VSSL, Sonos, HEOS, MusicCast, BluOS and AirPlay/Cast relationships | A zone or group is not necessarily separate hardware |
 | Smart-home devices | Supported mDNS, SSDP, HomeKit, Matter and vendor announcements | Hub-attached Zigbee/Z-Wave devices and paired-only information may not be exposed over IP |
 | Kidde smart detectors | Matching current Kidde WD-family discovery fields | Family identification only; exact model, smoke/CO capabilities and HomeKit compatibility are not established |
