@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -13,16 +14,23 @@ android {
         applicationId = "io.github.kazands.networklens"
         minSdk = 26
         targetSdk = 37
-        versionCode = 61
-        versionName = "0.3.33"
+        versionCode = 62
+        versionName = "0.3.34"
     }
+    buildFeatures { compose = true }
+    // Match the direct build: optional library startup/profile components are unused.
+    sourceSets.getByName("debug").manifest.srcFile("src/gradle/AndroidManifest.xml")
+    sourceSets.getByName("release").manifest.srcFile("src/gradle/AndroidManifest.xml")
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }
-kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) } }
+kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.compose.material3:material3")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21") {
         // Nullability annotations are compiler metadata; do not package them.
         exclude(group = "org.jetbrains", module = "annotations")

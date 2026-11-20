@@ -3,7 +3,7 @@ package io.github.kazands.networklens
 /** Explanations describe the evidence used; they never supply missing identity fields. */
 internal object RecognitionCopy {
     const val NEXT_SCAN = "If a device is missing or hard to identify, make sure it is awake and connected to this Wi-Fi, then scan again. Some devices do not share identifying details."
-    const val UNNAMED = "This device replied, but we did not receive a usable name or model. Its address below can help you tell it apart from other devices."
+    const val UNNAMED = "This device replied, but we did not receive a usable name or model. Its address can help you tell it apart from other devices."
     fun explanation(match: DeviceCatalog.Match): String = when {
         match.product.id == KiddeInfo.PRODUCT_ID -> "Identified from matching Kidde discovery names and the WD model field. The exact model and sensor capabilities were not reported."
         match.product.id == SmartThingsInfo.PRODUCT_ID -> "Identified from this device’s SmartThings service and matching hub identifier. The exact generation was not verified."

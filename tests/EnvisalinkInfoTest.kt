@@ -1,21 +1,8 @@
 import io.github.kazands.networklens.*
-import java.io.*
-import java.net.*
-import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 object EnvisalinkInfoTest {
     private var checks = 0
     private fun check(ok: Boolean, message: String) { if (!ok) throw AssertionError(message); checks++ }
-    private fun server(handler: (Socket) -> Unit, client: (Int) -> Unit) {
-        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { listener ->
-            listener.soTimeout = 3000
-            val pool = Executors.newSingleThreadExecutor()
-            val task = pool.submit(Callable { listener.accept().use { it.soTimeout = 2000; handler(it) } })
-            try { client(listener.localPort); task.get(4, TimeUnit.SECONDS) }
-            finally { pool.shutdownNow() }
-        }
-    }
     @JvmStatic fun main(args: Array<String>) {
         val valid = "5053CD\r\n".toByteArray()
         check(EnvisalinkInfo.matches(valid), "Documented login greeting including checksum and CRLF")
@@ -35,53 +22,9 @@ object EnvisalinkInfoTest {
         val other = DeviceCatalog.Evidence().apply { offerEnvisalink(); offer("Manufacturer", "Synthetic maker", "Synthetic response") }
         check(other.match() == null && other.categories().isEmpty(), "Conflicting manufacturer suppresses match")
 
-        val timer = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
-        try {
-            server({ peer ->
-                for (b in valid) { peer.getOutputStream().write(b.toInt()); peer.getOutputStream().flush(); Thread.sleep(5) }
-                check(peer.getInputStream().read() == -1, "No application bytes sent, connection promptly closed")
-            }) { port -> Socket().use { socket ->
-                check(EnvisalinkInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(750), timer, port) { true } == EnvisalinkInfo.Report.IDENTIFIED, "Fragmented greeting accepted")
-            } }
-            for (data in listOf("Login:\r\n", "5053CC\r\n", "5051CB\r\n", "HTTP/1.1 200 OK\r\n")) {
-                server({ peer -> peer.getOutputStream().write(data.toByteArray()); check(peer.getInputStream().read() == -1, "No authentication or retry for other service") }) { port ->
-                    Socket().use { check(EnvisalinkInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(750), timer, port) { true } == EnvisalinkInfo.Report.OTHER, "Other service rejected") }
-                }
-            }
-            server({ peer -> check(peer.getInputStream().read() == -1, "Silent peer released after read timeout") }) { port ->
-                Socket().use { check(EnvisalinkInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(750), timer, port) { true } == EnvisalinkInfo.Report.NO_GREETING, "Busy or silent service supplies no identity") }
-            }
-            server({ peer -> check(peer.getInputStream().read() == -1, "Deadline closes stalled connection") }) { port ->
-                var reason: MetadataHttp.Reason? = null
-                Socket().use { try { EnvisalinkInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(80), timer, port) { true } }
-                    catch (e: MetadataHttp.Failure) { reason = e.reason } }
-                check(reason == MetadataHttp.Reason.DEADLINE, "Whole exchange deadline enforced")
-            }
-            val active = AtomicBoolean(true)
-            Socket().use { socket ->
-                server({ peer -> active.set(false); socket.close(); check(peer.getInputStream().read() == -1, "Cancellation releases connection") }) { port ->
-                    var reason: MetadataHttp.Reason? = null
-                    try { EnvisalinkInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(750), timer, port) { active.get() } }
-                    catch (e: MetadataHttp.Failure) { reason = e.reason }
-                    check(reason == MetadataHttp.Reason.CANCELLED, "Cancellation wins over socket failure")
-                }
-            }
-            Socket().use { socket ->
-                var reason: MetadataHttp.Reason? = null
-                try { EnvisalinkInfo.exchange(socket, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(1), timer) { false } }
-                catch (e: MetadataHttp.Failure) { reason = e.reason }
-                check(reason == MetadataHttp.Reason.CANCELLED && !socket.isConnected, "Cancelled check never connects")
-            }
-            val refused = object : Socket() { override fun connect(endpoint: SocketAddress, timeout: Int) { throw ConnectException() } }
-            refused.use { check(EnvisalinkInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(1), timer) { true } == EnvisalinkInfo.Report.UNAVAILABLE, "Closed port is normal absence, not identification") }
-            val denied = object : Socket() { override fun connect(endpoint: SocketAddress, timeout: Int) { throw SecurityException("Synthetic denied") } }
-            denied.use {
-                var threw = false
-                try { EnvisalinkInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime()+TimeUnit.SECONDS.toNanos(1), timer) { true } } catch (_: SecurityException) { threw = true }
-                check(threw, "Permission failure preserved for discovery health")
-            }
-            check(timer.queue.isEmpty(), "No deadline tasks leaked")
-        } finally { timer.shutdownNow() }
+        check(EnvisalinkInfo::class.java.declaredMethods.none { method -> method.parameterTypes.any {
+            java.net.Socket::class.java.isAssignableFrom(it)
+        } }, "Legacy evidence vocabulary has no active socket reader")
         println("Envisalink checks passed: $checks")
     }
 }

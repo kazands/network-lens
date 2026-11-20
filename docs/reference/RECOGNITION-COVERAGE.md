@@ -185,4 +185,4 @@ Family labels preserve useful reported names. Exact model readers and catalogues
 
 174 integration policies; 174 family labels; 0 explicit deferrals.
 
-Active readers not sourced from these integration rules include Apple device information, TP-Link/Omada/Easy Smart, PlayStation, Envisalink, Ubiquiti/MikroTik, eSCL, SADP and WS-Discovery. See DISCOVERY-COVERAGE.md and NETWORK-EQUIPMENT.md.
+Active readers not sourced from these integration rules include Apple device information, TP-Link/Omada/Easy Smart, PlayStation, Ubiquiti/MikroTik, eSCL, SADP and WS-Discovery. See DISCOVERY-COVERAGE.md and NETWORK-EQUIPMENT.md.

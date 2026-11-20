@@ -1,11 +1,6 @@
 package io.github.kazands.networklens
 
-import java.io.IOException
-import java.net.*
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
-
-/** Envisalink DSC TPI 1.09, sections 2.2/3.1. Receive only: never send login or commands. */
+/** Legacy evidence vocabulary. No socket reader or active TPI check is exposed. */
 internal object EnvisalinkInfo {
     const val PORT = 4025
     const val SOURCE = "Envisalink identity check"
@@ -23,43 +18,4 @@ internal object EnvisalinkInfo {
         DeviceCatalog.Category.ALARM_INTERFACE, emptySet(), familyOnly = true, titleSource = DeviceCatalog.TitleSource.CATALOGUE),
         "Envisalink DSC TPI greeting", "5053CD (login request; checksum verified)")
 
-    /** Caller supplies a scoped, tracked socket and closes it on return/cancellation. No retries. */
-    fun exchange(socket: Socket, peer: InetAddress, deadline: Long, timer: ScheduledExecutorService,
-                 port: Int = PORT, active: () -> Boolean): Report {
-        fun remaining(): Int {
-            if (!active() || Thread.currentThread().isInterrupted) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
-            val left = deadline - System.nanoTime()
-            if (left <= 0) throw MetadataHttp.Failure(MetadataHttp.Reason.DEADLINE)
-            // Round up: a sub-millisecond remainder must not become an early read timeout.
-            return minOf(400, 1 + (left - 1) / 1_000_000).toInt()
-        }
-        remaining()
-        val closer = timer.schedule({ try { socket.close() } catch (_: IOException) {} },
-            maxOf(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
-        var connected = false
-        try {
-            socket.connect(InetSocketAddress(peer, port), minOf(250, remaining()))
-            connected = true
-            val input = socket.getInputStream()
-            val bytes = ByteArray(greeting.size)
-            // Fixed eight-byte frame: fragmented reads accepted, no unbounded banner buffering.
-            for (i in bytes.indices) {
-                socket.soTimeout = remaining()
-                val value = input.read()
-                remaining()
-                if (value < 0) return Report.NO_GREETING
-                bytes[i] = value.toByte()
-                if (bytes[i] != greeting[i]) return Report.OTHER
-            }
-            return if (matches(bytes)) Report.IDENTIFIED else Report.OTHER
-        } catch (e: IOException) {
-            remaining()
-            return when (e) {
-                is ConnectException -> Report.UNAVAILABLE
-                is SocketTimeoutException -> if (connected) Report.NO_GREETING else Report.UNAVAILABLE
-                is SocketException -> if (connected) Report.NO_GREETING else throw e
-                else -> throw e
-            }
-        } finally { closer.cancel(false) }
-    }
 }

@@ -32,13 +32,28 @@ if [[ ! -f "$PLATFORM" || ! -x "$BUILD_TOOLS/aapt2" ]]; then echo 'Android SDK p
 BUILD_DIR="$PWD/.tools/build"
 APK_DIR="$PWD/artifacts"
 if [[ "$BUILD_MODE" == release ]]; then BUILD_DIR="$PWD/.tools/build-release"; APK_DIR="$PWD/artifacts/release"; fi
-APK_PATH="$APK_DIR/Network-Lens-0.3.33.apk"
+APK_PATH="$APK_DIR/Network-Lens-0.3.34.apk"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" artifacts
 # Remove only this script's generated output so removed source files cannot survive a rebuild.
 find "$BUILD_DIR/classes" "$BUILD_DIR/generated" "$BUILD_DIR/dex" -type f -delete
+python3 scripts/setup-compose-runtime.py
+COMPOSE_RUNTIME="$PWD/.tools/compose-build/runtime"
+RESOURCE_OVERLAYS=()
+RESOURCE_INDEX=0
+while IFS= read -r RESOURCE_DIR; do
+    [[ -n "$RESOURCE_DIR" ]] || continue
+    RESOURCE_INDEX=$((RESOURCE_INDEX + 1))
+    RESOURCE_ZIP="$BUILD_DIR/compose-res-$RESOURCE_INDEX.zip"
+    "$BUILD_TOOLS/aapt2" compile --dir "$RESOURCE_DIR" -o "$RESOURCE_ZIP"
+    RESOURCE_OVERLAYS+=(-R "$RESOURCE_ZIP")
+done < "$COMPOSE_RUNTIME/resources.txt"
 "$BUILD_TOOLS/aapt2" compile --dir android/app/src/main/res -o "$BUILD_DIR/resources.zip"
 sed 's/<manifest /<manifest package="io.github.kazands.networklens" /' android/app/src/main/AndroidManifest.xml > "$BUILD_DIR/AndroidManifest.xml"
-"$BUILD_TOOLS/aapt2" link -o "$BUILD_DIR/resources.apk" --manifest "$BUILD_DIR/AndroidManifest.xml" -I "$PLATFORM" --java "$BUILD_DIR/generated" "$BUILD_DIR/resources.zip"
+# Deliberately keep only the app's reviewed components. AndroidX startup/profile/emoji
+# initializers are optional and are not merged into the application manifest.
+"$BUILD_TOOLS/aapt2" link --auto-add-overlay --extra-packages "$(cat "$COMPOSE_RUNTIME/packages.txt")" \
+    -o "$BUILD_DIR/resources.apk" --manifest "$BUILD_DIR/AndroidManifest.xml" -I "$PLATFORM" \
+    --java "$BUILD_DIR/generated" "${RESOURCE_OVERLAYS[@]}" -R "$BUILD_DIR/resources.zip"
 python3 scripts/setup-kotlin-toolchain.py
 KOTLIN_DIR="$PWD/.tools/kotlin-0300/kotlinc"
 STDLIB="$KOTLIN_DIR/lib/kotlin-stdlib.jar"
@@ -50,12 +65,17 @@ if [[ -s "$BUILD_DIR/java-sources.txt" ]]; then
     echo 'Production sources must be Kotlin; generated Android R.java is compiled separately.' >&2
     exit 1
 fi
-"$KOTLIN_DIR/bin/kotlinc" -no-jdk -no-reflect -jvm-target 1.8 -classpath "$BUILD_DIR/classes:$PLATFORM:$STDLIB" -d "$BUILD_DIR/classes" @"$BUILD_DIR/kotlin-sources.txt"
+COMPOSE_CLASSPATH="$(cat "$COMPOSE_RUNTIME/classpath.txt")"
+"$KOTLIN_DIR/bin/kotlinc" -no-jdk -no-reflect -jvm-target 11 \
+    -Xplugin="$KOTLIN_DIR/lib/compose-compiler-plugin.jar" \
+    -classpath "$BUILD_DIR/classes:$PLATFORM:$COMPOSE_CLASSPATH" -d "$BUILD_DIR/classes" @"$BUILD_DIR/kotlin-sources.txt"
 "${JAVA_BIN}jar" cf "$BUILD_DIR/classes.jar" -C "$BUILD_DIR/classes" .
-"${JAVA_BIN}java" -cp .tools/kotlin-0300/r8.jar com.android.tools.r8.D8 --min-api 26 --lib "$PLATFORM" --output "$BUILD_DIR/dex" "$BUILD_DIR/classes.jar" "$STDLIB"
+mapfile -t RUNTIME_JARS < "$COMPOSE_RUNTIME/jars.txt"
+"${JAVA_BIN}java" -Xmx2g -cp .tools/kotlin-0300/r8.jar com.android.tools.r8.D8 --min-api 26 --lib "$PLATFORM" --output "$BUILD_DIR/dex" "$BUILD_DIR/classes.jar" "${RUNTIME_JARS[@]}"
 cp "$BUILD_DIR/resources.apk" "$BUILD_DIR/unsigned.apk"
 (cd "$BUILD_DIR/dex" && zip -q "$BUILD_DIR/unsigned.apk" classes*.dex)
-"$BUILD_TOOLS/zipalign" -f -p 4 "$BUILD_DIR/unsigned.apk" "$BUILD_DIR/aligned.apk"
+(cd "$COMPOSE_RUNTIME/native" && zip -q -0 -r "$BUILD_DIR/unsigned.apk" lib)
+"$BUILD_TOOLS/zipalign" -f -P 16 4 "$BUILD_DIR/unsigned.apk" "$BUILD_DIR/aligned.apk"
 KEYSTORE="$PWD/.tools/network-lens-development.jks"
 PASSWORD_FILE="$PWD/.tools/network-lens-signing-password"
 if [[ "$BUILD_MODE" == release ]]; then
@@ -65,6 +85,7 @@ else
     "$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias network-lens --ks-pass "file:$PASSWORD_FILE" --out "$APK_PATH" "$BUILD_DIR/aligned.apk"
 fi
 "$BUILD_TOOLS/apksigner" verify --verbose "$APK_PATH"
+"$BUILD_TOOLS/zipalign" -c -P 16 4 "$APK_PATH"
 python3 scripts/check-permissions.py "$APK_PATH" --aapt "$BUILD_TOOLS/aapt" --output "$APK_DIR/permissions-audit.json"
 python3 scripts/check-security.py "$APK_PATH" --aapt "$BUILD_TOOLS/aapt" --output "$APK_DIR/security-audit.json"
 sha256sum "$APK_PATH" > "$APK_PATH.sha256"

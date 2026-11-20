@@ -21,12 +21,19 @@ bundled offline catalogues and local discovery.
 
 ## Update-screen behavior
 
-The update screen prepares update content before showing the dialog and retains
-the same text and action views during download progress. An unrelated refresh of
-the page behind it no longer dismisses and recreates the update window. Appearance
-or configuration changes still rebuild it with the correct theme and text size.
-Actions change when the update step or installer-confirmation availability
-changes. Transfer, verification, cancellation and installation rules are unchanged.
+The Compose interface uses one
+state-driven Compose dialog. Progress updates retain its window and action
+nodes; transfer, verification and installation still use the existing updater.
+Its synthetic UI checks cover every step in both themes and at 200% text size.
+Wi-Fi loss, connection replacement and IPv6 scope changes leave the update
+window open, including progress, Cancel and a verified download's Install action.
+Any transfer failure remains visible in that window. Network-specific dialogs
+and troubleshooting exports still retire with their connection. Leaving the app continues
+to stop active update checks, downloads and staging.
+Unrelated page refreshes do not dismiss and recreate the update window.
+Appearance and text scaling update through Compose. Actions change when the
+update step or installer-confirmation availability changes. Transfer, verification,
+cancellation and installation rules are unchanged.
 
 All in-app dialogs now use a distinct surface and a stronger dimmed backdrop.
 Release notes are not
@@ -87,7 +94,7 @@ The 0.3.20 regression checks also exercise installer-session opening failures on
 the main thread. Storage, permission and installer errors leave a recoverable
 message, abandon the session and cancel its pending callback.
 
-See [current release verification](../VERIFICATION-0.3.33.md) for artifact-specific
+See [current release verification](../VERIFICATION-0.3.34.md) for artifact-specific
 checks and [BUILDING.md](../BUILDING.md) for commands. Earlier live in-app update
 journeys are recorded with the corresponding release notes and assets, including
 [the original updater release](../archive/VERIFICATION-0.3.17.md). A signed in-place emulator

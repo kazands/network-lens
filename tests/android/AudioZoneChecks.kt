@@ -63,26 +63,6 @@ internal object AudioZoneChecks {
             check(apply.invoke(op,stopped,r)==false && stopped.audioStatus.contains("Stopped"),"Stop seals queued audio lookups and rejects late reports")
             check(Device().audioReport==null && Device().audioRows.isEmpty(),"New scan devices start without audio mapping")
         } finally {op.cancel();gate.countDown();work.awaitTermination(3,TimeUnit.SECONDS)}
-        Store(test.targetContext).clear()
-        val activity=test.startActivitySync(Intent(test.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("demo",true)) as MainActivity
-        val original=Configuration(activity.resources.configuration)
-        fun main(action:()->Unit){var fail:Throwable?=null;test.runOnMainSync{try{action()}catch(e:Throwable){fail=e}};fail?.let{throw it}}
-        try {
-            for(dark in listOf(false,true)) for(scale in listOf(1f,2f)) {
-                main {
-                    activity.resources.updateConfiguration(Configuration(original).apply{fontScale=scale;screenWidthDp=320},activity.resources.displayMetrics)
-                    Store(activity).dark(dark);set(activity,"devices",fixtures);set(activity,"selected",fixtures.first());set(activity,"groupedSource",null)
-                    MainActivity::class.java.getDeclaredMethod("render").apply{isAccessible=true}.invoke(activity)
-                }
-                test.waitForIdleSync()
-                main {
-                    val all=texts(activity.window.decorView)
-                    check(all.any{it.text.toString()=="Audio system"} && all.any{it.text.toString()=="Zone 2 · 198.18.0.4"},"Audio mapping visible in both themes and text scales")
-                    all.single{it.text.toString()=="Copy device details"}.performClick()
-                    val copied=(activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.getItemAt(0).text.toString()
-                    check(copied.contains("VSSL zone status") && copied.contains("Zone 2 · 198.18.0.4") && !copied.contains(r.hardware),"Copied mapping retains source and zones, excludes chassis key")
-                }
-            }
-        } finally {main{activity.resources.updateConfiguration(original,activity.resources.displayMetrics);activity.finish()};Store(test.targetContext).clear()}
+        ComposeFixtureViews.runAudio(test,check,fixtures,listOf("VSSL zone status","Zone 2 · 198.18.0.4"),r.hardware)
     }
 }

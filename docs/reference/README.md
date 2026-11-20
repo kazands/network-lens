@@ -32,9 +32,10 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 
 - [Scan ownership and evidence flow](SCAN-ARCHITECTURE.md)
 - [Home-user interface wording](INTERFACE.md)
+- [Compose migration verification](../COMPOSE-VERIFICATION.md)
 - [Recognition and performance baselines](RECOGNITION-BASELINE.md)
 - [In-app updates](APP-UPDATES.md)
 - [Application identity and updates](APPLICATION-IDENTITY.md)
 - [Release signing](RELEASE-SIGNING.md)
 
-Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.33 verification](../VERIFICATION-0.3.33.md).
+Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.34 verification](../VERIFICATION-0.3.34.md).

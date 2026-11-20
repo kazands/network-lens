@@ -5,6 +5,11 @@ Original source code, documentation and original artwork: GPL-3.0-only.
 See LICENSE for the complete GNU General Public License version 3.
 
 Third-party material is not relicensed by this notice:
+- AndroidX / Jetpack Compose, KotlinX and supporting UI runtime libraries:
+  upstream license and copyright notices are bundled unmodified in
+  android/app/src/main/res/raw/compose_runtime_notices.txt. Exact artifact
+  versions, SHA-256 digests, classes and native libraries are recorded in
+  android/compose-runtime-provenance.json.
 - Reviewed Amazon device-type fact adapted from ioBroker.alexa2: MIT.
   Exact source/modifications: android/fire-tv-provenance.json; bundled credit
   and license: android/app/src/main/res/raw/fire_tv_type_notice.txt.

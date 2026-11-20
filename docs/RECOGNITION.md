@@ -35,9 +35,11 @@ Network Lens keeps service capabilities separate from physical identity. Scanner
 | TP-Link equipment and smart devices | Kasa, Omada/EAP and Easy Smart discovery | Models and firmware expose different local responses |
 | Other network equipment | Public Ubiquiti discovery and passive MikroTik announcements | The device must expose supported discovery on the selected network |
 | Printers and scanners | IPP and advertised eSCL capabilities | An attached peripheral must not replace the computer hosting it |
-| Consoles and alarm interfaces | Supported PS5 replies and Envisalink greetings | No login, control commands or inferred generation |
+| Consoles | Supported PS5 replies | No login, control commands or inferred generation |
 
 All 174 bundled Home Assistant integration domains have an explicit interpretation policy. These labels improve family-level results; they do not guarantee exact models. See the [generated coverage inventory](reference/RECOGNITION-COVERAGE.md) and [protocol references](reference/README.md) for precise rules.
+
+Network Lens no longer offers the dedicated Envisalink TPI check because even a receive-only connection can compete with an alarm integration. See [the Envisalink reference](reference/ENVISALINK.md).
 
 ## Why devices can remain unnamed
 

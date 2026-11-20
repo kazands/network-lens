@@ -162,51 +162,32 @@ internal object TroubleshootingChecks {
         check(blocked, "Retired report cannot be reopened")
         val stalledUri = ReportShareProvider.publish(activity.packageName, TroubleshootingReport.Document(List(64) { "X".repeat(12000) }))
         val stalledReader = resolver.openInputStream(stalledUri)!!
+        val secondReader = resolver.openInputStream(stalledUri)!!
         var drained = false
         try {
             SystemClock.sleep(100)
+            var limited=false
+            try {resolver.openInputStream(stalledUri)?.close()} catch(_:java.io.FileNotFoundException) {limited=true}
+            check(limited,"Two stalled report streams retain the concurrent-reader bound")
             ReportShareProvider.clear()
             val limit = SystemClock.elapsedRealtime() + 1500
             while (!drained && SystemClock.elapsedRealtime() < limit) {
                 drained = Thread.getAllStackTraces().keys.none { it.name == "report-share" && it.isAlive }
                 if (!drained) SystemClock.sleep(25)
             }
-        } finally { stalledReader.close() }
+        } finally { stalledReader.close();secondReader.close() }
         check(drained, "Revoking a stalled recipient drains the writer thread without waiting for its reader")
-        val original = Configuration(activity.resources.configuration)
-        for (scale in listOf(1f, 2f)) for (dark in listOf(false, true)) {
-            lateinit var dialog: TroubleshootingDialog
-            main {
-                activity.resources.updateConfiguration(Configuration(original).apply { fontScale = scale }, activity.resources.displayMetrics)
-                Store(activity).dark(dark)
-                val method = MainActivity::class.java.getDeclaredMethod("dialogColors").apply { isAccessible = true }
-                // Render refreshes the palette before creating the native preview.
-                MainActivity::class.java.getDeclaredMethod("render").apply { isAccessible = true }.invoke(activity)
-                dialog = TroubleshootingDialog(activity, method.invoke(activity) as AppDialog.Colors, document, {}, { text ->
-                    MainActivity::class.java.getDeclaredMethod("copyText", String::class.java, String::class.java, Boolean::class.javaPrimitiveType)
-                        .apply { isAccessible = true }.invoke(activity, "Fixture report", text, true)
-                })
-                dialog.show()
+        val timeoutUri=ReportShareProvider.publish(activity.packageName,TroubleshootingReport.Document(List(64) {"X".repeat(12000)}))
+        val timeoutReaders=listOf(resolver.openInputStream(timeoutUri)!!,resolver.openInputStream(timeoutUri)!!)
+        val started=SystemClock.elapsedRealtime()
+        try {
+            var running=true
+            while(running && SystemClock.elapsedRealtime()-started<33000) {
+                SystemClock.sleep(50)
+                running=Thread.getAllStackTraces().keys.any {it.name=="report-share" && it.isAlive}
             }
-            test.waitForIdleSync(); SystemClock.sleep(200)
-            main {
-                val share = texts(dialog.window!!.decorView).single { it.text.toString() == "Share full report" }
-                val rect = Rect()
-                check(share.getGlobalVisibleRect(rect) && rect.height() >= (48 * activity.resources.displayMetrics.density).toInt(), "Share remains visible and accessible in theme/text-size matrix")
-                texts(dialog.window!!.decorView).single { it.text.toString() == "Next" }.performClick()
-                check(texts(dialog.window!!.decorView).any { it.text.toString().contains("Device 1 / Address 1") }, "Preview advances to actual device evidence")
-                texts(dialog.window!!.decorView).single { it.text.toString() == "Copy this page" }.performClick()
-                val clip = (activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip!!
-                check(clip.getItemAt(0).text.toString().contains("page 2/") && clip.getItemAt(0).text.toString().contains("Google Home Mini"), "Clipboard page labelled and includes diagnostic evidence")
-                check(clip.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE) == true,
-                    "Troubleshooting copies suppress Android's sensitive clipboard preview")
-            }
-            test.waitForIdleSync()
-            val image = test.uiAutomation.takeScreenshot()
-            val folder = File(activity.getExternalFilesDir(null), "recognition-report-api${Build.VERSION.SDK_INT}").apply { mkdirs() }
-            File(folder, "troubleshooting-${scale}-${dark}.png").outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }; image.recycle()
-            main { dialog.dismiss() }
-        }
-        main { activity.resources.updateConfiguration(original, activity.resources.displayMetrics) }
+            check(!running && SystemClock.elapsedRealtime()-started>=29000,"Both stalled writers enforce the 30-second deadline without recipient reads or a revocation")
+            resolver.openInputStream(timeoutUri)!!.use {check(it.read()=='X'.code,"A timed-out stream releases its slot while the unexpired report remains shareable")}
+        } finally {ReportShareProvider.clear();timeoutReaders.forEach {it.close()}}
     }
 }
