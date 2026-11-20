@@ -64,7 +64,8 @@ class DeviceIcon private constructor() {
                     DeviceCatalog.Category.LOCK -> Spec(R.drawable.ic_device_lock, category.label)
                     DeviceCatalog.Category.OUTLET -> Spec(R.drawable.ic_device_plug, category.label)
                     DeviceCatalog.Category.SWITCH -> Spec(R.drawable.ic_device_switch, category.label)
-                    DeviceCatalog.Category.SENSOR -> Spec(R.drawable.ic_device_sensor, category.label)
+                    DeviceCatalog.Category.SENSOR -> if (group.groupProduct()?.product?.id == KiddeInfo.PRODUCT_ID)
+                        Spec(R.drawable.ic_device_alarm_smoke, "Safety detector") else Spec(R.drawable.ic_device_sensor, category.label)
                     DeviceCatalog.Category.FAN, DeviceCatalog.Category.AIR_PURIFIER -> Spec(R.drawable.ic_device_fan, category.label)
                     DeviceCatalog.Category.HEATER, DeviceCatalog.Category.AIR_CONDITIONER,
                     DeviceCatalog.Category.HUMIDIFIER, DeviceCatalog.Category.DEHUMIDIFIER -> Spec(R.drawable.ic_device_thermostat, category.label)

@@ -10,6 +10,14 @@ A catalogue contains possible names; it cannot identify a device that supplies n
 
 Some reported model codes are shared by several generations. Network Lens keeps the broader family name when the code cannot distinguish them. Contradictory reports can suppress recognition instead of choosing an unsupported answer.
 
+## Router-reported name suggestions
+
+For devices that have already responded, Network Lens can ask a configured on-link private DNS server for a name and check that the name resolves back to the same address. A narrow name pattern may produce **Likely Hunter Hydrawise** or **Likely Orbit B-hyve hub**. Other B-hyve-prefixed names also require independently observed Orbit MAC-vendor evidence and identify only the family.
+
+These are tentative suggestions, kept separate from product matches, primary device types and reported manufacturer/model fields. Forward and reverse agreement cannot rule out stale router records. Current model/type/manufacturer evidence suppresses the suggestion. DNS names never establish presence or associate addresses, and no name is reused in a later scan. Lookup outcomes and router-reported names appear in details and troubleshooting reports; names are masked by default.
+
+This uses Wi-Fi only. A B-hyve Bluetooth timer behind a Wi-Fi hub is not a separate Wi-Fi endpoint. Support is evidence-dependent, not universal across all B-hyve hardware or routers. See [irrigation recognition](reference/IRRIGATION.md).
+
 ## Device type and services
 
 A device may offer several services on different ports. Those services do not necessarily describe its physical purpose. An identified thermostat can offer audio playback; a computer can share a scanner; a speaker group can be a virtual playback target.

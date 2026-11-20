@@ -54,6 +54,40 @@ class Device : Grouping.Endpoint {
             if (stopped) "Stopped before lookup finished" else "Lookup did not finish"
     }
     private var hints = IdentityHints()
+    private var localNetworkName: LocalNetworkNames.Result? = null
+    @Synchronized internal fun networkName(result: LocalNetworkNames.Result) {
+        localNetworkName = result
+        diagnostics.record(LocalNetworkNames.SOURCE, "Lookup outcome", result.status.description,
+            "Optional indirect name lookup; never presence proof", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+        for (name in result.returnedNames) diagnostics.record(LocalNetworkNames.SOURCE, "Router-reported name", name,
+            "Private network name; not device-reported identity")
+        if (result.omittedNames > 0) diagnostics.record(LocalNetworkNames.SOURCE, "Router names omitted by capacity", result.omittedNames.toString(),
+            "Up to four returned names retained; no suggestion when ambiguous", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+    }
+    @Synchronized internal fun networkNameRows(): List<Pair<String, String>> = localNetworkName?.let {
+        listOf(LocalNetworkNames.SOURCE to it.status.description) +
+            it.returnedNames.map { name -> "Router-reported name" to name } +
+            if (it.omittedNames > 0) listOf("Router names omitted by capacity" to it.omittedNames.toString()) else emptyList()
+    } ?: emptyList()
+    @Synchronized internal fun finishNetworkName(stopped: Boolean = true) {
+        if (localNetworkName?.status == LocalNetworkNames.Status.CHECKING)
+            networkName(LocalNetworkNames.Result(if (stopped) LocalNetworkNames.Status.STOPPED else LocalNetworkNames.Status.UNFINISHED))
+    }
+    internal fun networkFamily(): LocalNetworkNames.Family? {
+        val peers = endpoints()
+        // Indirect suggestions yield to reported identity/type evidence, including conflicts.
+        if (groupProduct() != null || classification().let { it.category != null || it.conflicted } ||
+            peers.any { d -> synchronized(d) { d.self || d.gateway || IdentityHints.specific(d.model) ||
+                IdentityHints.specific(d.manufacturer) || IdentityHints.specific(d.kind) || d.matchedFamilies.isNotEmpty() ||
+                d.observations().any { it.field in setOf("Model", "Manufacturer", "Device type") && IdentityHints.specific(it.value) } } }) return null
+        val names = peers.mapNotNull { d -> synchronized(d) {
+            d.localNetworkName?.takeIf { it.status == LocalNetworkNames.Status.CONFIRMED }?.let { result ->
+                result.name to LocalNetworkNames.family(result.name, if (d.hardwareAddressMayBeOtherInterface()) "" else d.mac)
+            }
+        } }
+        if (names.any { it.second == null }) return null
+        return names.mapNotNull { it.second }.distinct().singleOrNull()
+    }
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
     private val matchedFamilies = sortedSetOf<String>()
@@ -174,6 +208,8 @@ class Device : Grouping.Endpoint {
             add("IP address", d.ip, public = false)
             add("Address family", if (d.ip.contains(':')) "IPv6" else "IPv4")
             add("Network name", d.name, public = false); add("Hostname", d.hostname, public = false)
+            for ((label, value) in d.networkNameRows()) add(label, value, LocalNetworkNames.SOURCE,
+                "Indirect evidence; excluded from reported identity and grouping", public = label != "Router-reported name")
             add("MAC address", d.mac, d.macSource, public = false)
             add("IEEE interface vendor", MacVendors.lookup(d.mac), decision = "Interface vendor only; not reported manufacturer")
             add("Manufacturer", d.manufacturer); add("Model", d.model); add("Reported device type", d.kind)
@@ -225,13 +261,14 @@ class Device : Grouping.Endpoint {
             d.diagnostics.losses().forEach { (kind, count) -> add("Diagnostic omitted events: " + kind.name.lowercase().replace('_', ' '), count.toString()) }
             add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal retains up to ${DiagnosticEvidence.LIMIT} entries, prioritising identity observations and lookup outcomes over other returned fields, then withheld values. Capacity counts include displaced or rejected events; repeated omitted events can be counted again.")
             TroubleshootingReport.Endpoint(d.ip, listOf(d.hostname, d.mac, d.identity) + d.observations().filter { it.field == "Hostname" }.map { it.value }, facts, d.diagnostics.omissions(),
-                listOf(d.name) + d.observations().filter { it.field == "Name" }.map { it.value })
+                listOf(d.name) + d.localNetworkName?.returnedNames.orEmpty() + d.observations().filter { it.field == "Name" }.map { it.value })
         } }, summaryFacts)
     }
     private fun diagnosticPublic(field: String): Boolean = field in setOf("Model", "Manufacturer", "Device type", "OS", "Firmware", "Port", "Response capture", "Lookup outcome", AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE, "UPnP description status", "Scanning identity", "Discovery families", "Network equipment identity request", "Kidde discovery") ||
         field.lowercase().let { it.contains("model") || it.contains("manufacturer") || it.contains("firmware") || it.contains("platform") || it.contains("protocol version") || it.startsWith("matter ") }
 
     internal fun recognitionSummary(): String {
+        networkFamily()?.let { return "Likely ${it.title}, suggested by a router-reported name. Local DNS agrees in both directions, but router names can be stale. Exact product and model are unverified." }
         val endpoints=endpoints()
         return RecognitionStatus.explain(groupProduct()!=null, classification().conflicted,
             endpoints.any { synchronized(it) { IdentityHints.specific(it.model) } },
@@ -278,6 +315,11 @@ class Device : Grouping.Endpoint {
         val labels = DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
         val families = endpoints().flatMap { synchronized(it) { it.matchedFamilies.toList() } }.distinct()
         val family = DiscoveryMatchers.preferredFamily(families)
+        networkFamily()?.let {
+            return if (labels.unnamed) labels.copy(title = "Likely " + it.title,
+                subtitle = it.role + " · Router name suggestion", unnamed = false)
+            else labels.copy(subtitle = "Likely " + it.title + " · Router name suggestion")
+        }
         return if (labels.unnamed && !classification.conflicted && family != null && endpoints().none { it.familiesOverflow })
             labels.copy(title = family.label, subtitle = labels.subtitle.ifEmpty { "Device family; model not available" }, unnamed = false) else labels
     }
@@ -434,6 +476,7 @@ class Device : Grouping.Endpoint {
                 .put("lastSeen", lastSeen).put("latency", latency).put("self", self).put("gateway", gateway)
                 .put("ports", JSONArray(ports)).put("services", JSONArray(services)).put("evidence", JSONArray(evidence))
                 .put("details", JSONObject(details)).put("groupLinks", JSONArray(groupLinks))
+            out.put("localNetworkName", JSONArray(networkNameRows().map { (label, value) -> JSONObject().put("label", label).put("value", value) }))
             val observations = JSONArray()
             for (h in hints.observations()) observations.put(JSONObject().put("field", h.field).put("value", h.value)
                 .put("source", h.source).put("priority", h.priority))
@@ -457,6 +500,7 @@ class Device : Grouping.Endpoint {
         copy.seen = seen; copy.self = self; copy.gateway = gateway
         copy.groupLinks.addAll(groupLinks); copy.ports.addAll(ports); copy.services.addAll(services)
         copy.evidence.addAll(evidence); copy.details.putAll(details); copy.hints = hints.copy()
+        copy.localNetworkName = localNetworkName
         copy.recognition = recognition.copy()
         copy.catalogue = catalogue.copy()
         copy.hardwareType = hardwareType.copy()

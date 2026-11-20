@@ -10,7 +10,8 @@ ICONS = {'router': 'router', 'smartphone': 'smartphone', 'printer': 'printer',
          'toggle-left': 'switch', 'thermometer': 'thermostat', 'activity': 'sensor',
          'bell-ring': 'doorbell', 'fan': 'fan', 'laptop': 'laptop',
          'monitor': 'monitor', 'tablet': 'tablet', 'tv-minimal-play': 'tv_player',
-         'server': 'recorder', 'gamepad-2': 'game_console', 'house-wifi': 'smart_home'}
+         'server': 'recorder', 'gamepad-2': 'game_console', 'house-wifi': 'smart_home',
+         'alarm-smoke': 'alarm_smoke'}
 ORIGINAL_ICONS = {'remote': 'remote'}
 ANDROID = 'http://schemas.android.com/apk/res/android'
 ET.register_namespace('android', ANDROID)

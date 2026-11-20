@@ -12,7 +12,8 @@ class ReverseDns private constructor() {
         @JvmField val status: Status,
         @JvmField val name: String,
         @JvmField val identifier: String,
-        @JvmField val reason: String
+        @JvmField val reason: String,
+        val names: List<String> = emptyList()
     )
 
     companion object {
@@ -70,6 +71,7 @@ class ReverseDns private constructor() {
                     u16(b, pos[0]) != 12 || u16(b, pos[0] + 2) != 1) return INVALID
                 pos[0] += 4
                 var best = ""
+                val names = sortedSetOf(String.CASE_INSENSITIVE_ORDER)
                 var identifier = ""
                 for (i in 0 until records) {
                     val owner = name(b, length, pos)
@@ -85,7 +87,7 @@ class ReverseDns private constructor() {
                         val value = name(b, length, valuePos)
                         if (valuePos[0] != end) return INVALID
                         if (value.isNotEmpty() && !value.equals(expected, true)) {
-                            if (hostname(value)) { if (before(value, best)) best = value }
+                            if (hostname(value)) { names.add(value); if (before(value, best)) best = value }
                             else if (before(value, identifier)) identifier = value
                         }
                     }
@@ -96,15 +98,15 @@ class ReverseDns private constructor() {
                 if (rcode == 3) return if (best.isEmpty() && identifier.isEmpty()) Result(Status.NEGATIVE, "", "", "") else INVALID
                 if (rcode != 0) return Result(Status.ERROR, "", "", "DNS server returned error " + rcode)
                 return Result(if (best.isEmpty() && identifier.isEmpty()) Status.NEGATIVE else Status.POSITIVE,
-                    SafeText.label(best, 160), SafeText.label(identifier, 160), "")
+                    SafeText.label(best, 160), SafeText.label(identifier, 160), "", names.toList())
             } catch (_: IllegalArgumentException) { return INVALID }
             catch (_: IndexOutOfBoundsException) { return INVALID }
         }
 
-        private fun u16(b: ByteArray, i: Int): Int =
+        internal fun u16(b: ByteArray, i: Int): Int =
             ((b[i].toInt() and 255) shl 8) or (b[i + 1].toInt() and 255)
 
-        private fun name(b: ByteArray, length: Int, pos: IntArray): String {
+        internal fun name(b: ByteArray, length: Int, pos: IntArray): String {
             var cursor = pos[0]
             var next = -1
             var steps = 0

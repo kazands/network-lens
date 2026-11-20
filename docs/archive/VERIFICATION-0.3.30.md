@@ -8,8 +8,8 @@ Application ID: `io.github.kazands.networklens`. Version code: **58**.
 Supported Kidde WD-family advertisements now identify a **Kidde Smart Detector**
 with a **Safety detector** subtitle and sensor icon. Matching requires current,
 same-endpoint service, instance, hostname and model evidence. Exact retail models
-and sensor capabilities remain unknown. See [changes](CHANGES.md),
-[matching boundaries](reference/KIDDE.md) and [current limits](STATUS.md).
+and sensor capabilities remain unknown. See [changes](../CHANGES.md),
+[matching boundaries](../reference/KIDDE.md) and [current limits](../STATUS.md).
 
 Independent Deep kaz-code-review identified two minor issues: duplicate model
 keys lost during decoding, and a grouped proxy endpoint restoring an unqualified
@@ -28,7 +28,7 @@ candidate; all 51 non-signature entries match between development and public bui
 - Candidate API 37 checks passed: `kidde` 39, `device-identities` 1,277,
   `homekit` 69, `split-mdns` 24 and `recognition-report` 235: 1,644 assertions.
   These are candidate results, separate from the versioned checks below.
-  [Candidate notes](reference/KIDDE.md#implementation-candidate-checks--2026-11-19)
+  [Candidate notes](../reference/KIDDE.md#implementation-candidate-checks--2026-11-19)
   record the initial emulator and fixture failures and successful reruns.
 - Versioned development, public-signed and instrumentation builds passed,
   including packaged permission/security audits and pinned signing-identity checks.

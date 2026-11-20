@@ -19,7 +19,8 @@ import java.util.concurrent.atomic.*
 /** User-started, bounded inventory scan. No Internet endpoint or background scheduler. */
 class Discovery @JvmOverloads internal constructor(c: Context, private val net: NetworkState, private val echoFactory: EchoFactory,
     private val networkCheck: NetworkCheck = NetworkCheck { context, network -> network.check(context) },
-    private val metadataReader: MetadataReader? = null) {
+    private val metadataReader: MetadataReader? = null,
+    private val localNameReader: LocalNameReader? = null) {
     interface Listener {
         fun progress(done: Int, total: Int, devices: List<Device>)
         /** Consumers that coalesce updates can defer copying until delivery is needed. */
@@ -30,6 +31,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         @Throws(IOException::class) fun open(network: NetworkState, target: InetAddress): IcmpEcho.Channel
     }
     internal fun interface MetadataReader { fun read(peer: InetAddress, request: LocalMetadata.Request, deadline: Long, active: () -> Boolean): LocalMetadata.Report }
+    internal fun interface LocalNameReader { fun read(ip: String, resolver: InetAddress, deadline: Long, active: () -> Boolean): LocalNetworkNames.Result }
     fun interface NetworkCheck { fun check(context: Context, network: NetworkState) }
     constructor(c: Context, n: NetworkState) : this(c, n, EchoFactory(AndroidIcmp::open))
 
@@ -67,6 +69,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val audioRequests = ConcurrentHashMap.newKeySet<String>()
     private val metadataTimeouts = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     private val multicastNames = ServiceAdmission(128)
+    private val localNames = ServiceAdmission(LocalNetworkNames.LIMIT)
     private val wsPeers = ServiceAdmission(64)
     private val wsRecords = ServiceAdmission(256, 8)
     private val descriptions = DescriptionQueue(32, 3)
@@ -210,6 +213,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 health.skipped(AppleDeviceInfo.SOURCE, "No open Apple service port observed")
                 health.skipped(EnvisalinkInfo.SOURCE, "No eligible current IPv4 endpoint checked")
                 health.skipped(EapInfo.SOURCE, "No HTTP identity candidate observed")
+                health.skipped(LocalNetworkNames.SOURCE, "No eligible current responder checked")
                 for (kind in LocalMetadata.Kind.values()) health.skipped(kind.source, "No supported metadata service advertised")
                 observePhoneAddresses(net.addresses)
                 listener.progressSnapshot(0, total, ::snapshot)
@@ -982,8 +986,66 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         return out
     }
     private fun queryDeviceName(d: Device) {
-        // Router PTR/DHCP records can outlive clients; use current peer mDNS only.
         queueMdnsName(d)
+        queueLocalName(d)
+    }
+    /** Indirect names stay outside reported identity, current presence and address grouping. */
+    private fun queueLocalName(d: Device) {
+        if (!enriching || cancelled.get() || d.self || d.gateway || !freshResponders.contains(d.ip) || !inScope(peerAddress(d.ip))) return
+        // Unsupported DNS configurations consume no lookup capacity or scan-completion budget.
+        // Only a configured, on-link private resolver. Never the system/default resolver or public DNS.
+        val resolver = net.dns.split(',').asSequence().map { it.trim() }.mapNotNull { value ->
+            Address.bytes(value)?.let { peerAddress(value) }
+        }.firstOrNull { net.local(it) && LocalNetworkNames.privateResolver(it.hostAddress.orEmpty()) }
+        if (resolver == null) { d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.NO_RESOLVER)); return }
+        when (localNames.admit(d.ip, "DNS")) {
+            ServiceAdmission.Result.ADMITTED -> Unit
+            ServiceAdmission.Result.LIMIT -> {
+                d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.LIMIT_REACHED))
+                health.truncated(LocalNetworkNames.SOURCE, "Local name lookup limit reached")
+                return
+            }
+            else -> return
+        }
+        d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.CHECKING))
+        val submitted = submitEnrichment(DiscoveryWork.Lane.NAMES, LocalNetworkNames.SOURCE, d.ip, Runnable {
+            health.workStarted(LocalNetworkNames.SOURCE)
+            var socket: DatagramSocket? = null
+            try {
+                networkCheck.check(context, net)
+                val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(LocalNetworkNames.TIMEOUT_MS.toLong()))
+                val active = { enriching && !cancelled.get() && !Thread.currentThread().isInterrupted }
+                val result = localNameReader?.read(d.ip, resolver, deadline, active) ?: run {
+                    val selected = DatagramSocket(null).also { socket = it; datagrams.add(it) }
+                    selectedNetwork().bindSocket(selected)
+                    selected.bind(InetSocketAddress(0)); selected.connect(resolver, 53)
+                    LocalNetworkNames.lookup(d.ip, java.security.SecureRandom().nextInt(65536), deadline, active,
+                        LocalNetworkNames.Channel { query, timeout ->
+                            selected.soTimeout = timeout
+                            selected.send(DatagramPacket(query, query.size))
+                            val bytes = ByteArray(4097)
+                            val packet = DatagramPacket(bytes, bytes.size)
+                            selected.receive(packet)
+                            bytes.copyOf(packet.length)
+                        })
+                }
+                synchronized(lifecycle) {
+                    if (enriching && !cancelled.get() && freshResponders.contains(d.ip) && inScope(peerAddress(d.ip))) {
+                        d.networkName(result)
+                        health.count(LocalNetworkNames.SOURCE, result.status.name.lowercase(Locale.ROOT))
+                    }
+                }
+            } catch (_: Exception) {
+                if (enriching && !cancelled.get()) {
+                    d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.FAILED))
+                    health.count(LocalNetworkNames.SOURCE, "failed")
+                }
+            } finally {
+                socket?.let { it.close(); datagrams.remove(it) }
+                health.workFinished(LocalNetworkNames.SOURCE)
+            }
+        })
+        if (!submitted) d.networkName(LocalNetworkNames.Result(LocalNetworkNames.Status.LIMIT_REACHED))
     }
     private fun submitEnrichment(source: String, action: Runnable): Boolean = submitEnrichment(DiscoveryWork.Lane.NAMES, source, action)
     private fun submitEnrichment(lane: DiscoveryWork.Lane, source: String, action: Runnable): Boolean = submitEnrichment(lane, source, "", action)
@@ -1265,6 +1327,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 else -> {}
             }
             d.finishAudioLookups(stopped)
+            d.finishNetworkName(stopped)
             for (source in arrayOf(AppleDeviceInfo.SOURCE, EapInfo.SOURCE, EnvisalinkInfo.SOURCE))
                 if (d.details[source] == "Waiting or checking")
                     d.detail(source, if (stopped) "Stopped before lookup finished" else "Lookup did not finish")

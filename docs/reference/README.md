@@ -21,6 +21,7 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 - [SmartThings hub recognition](SMARTTHINGS.md)
 - [Envisalink recognition](ENVISALINK.md)
 - [Kidde smart detectors](KIDDE.md) — current WD-family fingerprint, evidence limits and tests.
+- [Wi-Fi irrigation recognition](IRRIGATION.md) — tentative Hydrawise and B-hyve name evidence.
 - [TP-Link plug and switch discovery](TP-LINK.md)
 - [Omada and EAP network equipment discovery](OMADA.md)
 - [Public equipment identity](NETWORK-EQUIPMENT.md)
@@ -36,4 +37,4 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 - [Application identity and updates](APPLICATION-IDENTITY.md)
 - [Release signing](RELEASE-SIGNING.md)
 
-Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.30 verification](../VERIFICATION-0.3.30.md).
+Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.31 verification](../VERIFICATION-0.3.31.md).

@@ -1,7 +1,8 @@
 # Kidde smart detector recognition
 
 A matching current advertisement identifies **Kidde Smart Detector**, with a
-**Safety detector** subtitle and the existing sensor icon. This is a WD-family
+**Safety detector** subtitle and Lucide's `alarm-smoke` icon. The pictogram does not
+establish reported smoke/CO capabilities. This is a WD-family
 interpretation, not an exact retail-model or smoke/CO capability claim. The raw
 reported model remains `WD`; missing manufacturer and MAC fields remain unknown.
 Useful friendly names remain visible, while technical Kidde identifiers stay in
@@ -79,7 +80,7 @@ machine's read-only discovery checks. Exact retail-model detection remains unsup
   `homekit` 69, `split-mdns` 24, and `recognition-report` 235 (1,644 assertions).
   The runner verified the installed application hash. The development APK still
   carries version 0.3.29. These candidate results are separate from the
-  [versioned 0.3.30 release checks](../VERIFICATION-0.3.30.md).
+  [versioned 0.3.30 release checks](../archive/VERIFICATION-0.3.30.md).
 - An initial emulator startup failure occurred before app tests. After restart,
   a mixed-case grouping link in the new synthetic fixture caused two modes to
   stop; the fixture was corrected to use discovery's canonical lowercase link,

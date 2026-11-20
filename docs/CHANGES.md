@@ -1,5 +1,15 @@
 # What is new
 
+## 0.3.31 — Wi-Fi irrigation recognition
+
+- Suggest Hunter Hydrawise and supported Orbit B-hyve families when a responding device’s local network name is corroborated by reverse and forward lookups.
+- Label these suggestions **Likely** and keep router names separate from device-reported identity. Stronger product evidence takes precedence.
+- Include local-name lookup outcomes in troubleshooting reports, with names masked by default.
+- Avoid reporting a local-name check as unfinished when no eligible DNS server is available.
+- Give recognised Kidde smart detectors the Lucide smoke-alarm icon.
+
+This uses Wi-Fi only, without Bluetooth, new permissions or cloud recognition. Family suggestions depend on names supplied by the local network; they do not verify an exact model. Physical B-hyve compatibility remains unverified.
+
 ## 0.3.30 — Kidde smart detector recognition
 
 - Identify supported Kidde WD-family devices from matching live discovery records, with a useful name and sensor icon.
@@ -54,6 +64,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.30).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.31).
 
-[Verification for this release](VERIFICATION-0.3.30.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.31.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
