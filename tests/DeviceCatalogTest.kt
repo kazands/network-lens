@@ -9,6 +9,30 @@ object DeviceCatalogTest {
             check(echo.category == DeviceCatalog.Category.SPEAKER && echo.familyOnly && echo.title == "Amazon Echo Dot", "Echo Dot identifies speaker family without inventing generation")
             check(DeviceCatalog.lookup(code) == null && DeviceCatalog.lookup(code, "Synthetic maker") == null, "Echo model requires its manufacturer")
         }
+        for (model in listOf("FibeTV", " fIbEtV ", "ARRIS FibeTV")) {
+            val receiver = DeviceCatalog.lookup(model, "ARRIS")!!
+            check(receiver.title == "ARRIS FibeTV" && receiver.displayType == "TV receiver" && receiver.category == DeviceCatalog.Category.TV_PLAYER && receiver.familyOnly,
+                "Reported ARRIS/FibeTV identifies a receiver family without guessing a hardware generation")
+            check(DeviceCatalog.lookup(model) == null && DeviceCatalog.lookup(model, "Fixture other maker") == null,
+                "FibeTV profile requires its reported ARRIS manufacturer")
+            for (makerFirst in listOf(false, true)) {
+                val evidence = DeviceCatalog.Evidence()
+                val reports = listOf(Triple("Manufacturer", "ARRIS", "Synthetic UPnP manufacturer"), Triple("Model", model, "Synthetic reported model"))
+                (if (makerFirst) reports else reports.reversed()).forEach { (field, value, source) -> evidence.offer(field, value, source) }
+                check(evidence.match()?.product == receiver && evidence.copy().match()?.product == receiver, "ARRIS model and maker work in both arrival orders and copies")
+                check(evidence.categories().any { it.category == DeviceCatalog.Category.TV_PLAYER }, "Reported receiver supplies its physical type")
+                val labels = DevicePresentation.labels("Fixture lounge", "", model, "Casting device", receiver, false, false)
+                check(labels.title == "ARRIS FibeTV" && labels.subtitle == "TV receiver · Fixture lounge", "Receiver identity retains the useful room name and overrides its casting service")
+                evidence.offer("Manufacturer", "Fixture conflicting maker", "Synthetic conflicting response")
+                check(evidence.match() == null, "Conflicting manufacturer cannot borrow the ARRIS profile")
+            }
+        }
+        val namedReceiver = DeviceCatalog.Evidence().apply {
+            offer("Manufacturer", "ARRIS", "Synthetic maker"); offer("Name", "FibeTV", "Synthetic friendly name")
+        }
+        check(namedReceiver.match() == null, "FibeTV friendly name plus manufacturer is not a reported model")
+        for (model in listOf("FibeTV Pro", "FibeTV 4K", "FibeTV VIP9999"))
+            check(DeviceCatalog.lookup(model, "ARRIS") == null, "Unknown FibeTV variants do not inherit a retail SKU")
         val cases = listOf("DS-7608NI-I2/8P" to "Hikvision DS-7608NI-I2/8P",
             "SHIELD Android TV" to "NVIDIA SHIELD TV", "PS5" to "Sony PlayStation 5", "Harmony Hub" to "Logitech Harmony Hub")
         for ((code, title) in cases) {

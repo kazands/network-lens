@@ -553,8 +553,7 @@ class MainActivity : Activity() {
                 val recognition = d.identifiedProduct()
                 val all = (labels.title + " " + labels.subtitle + " " + group.title() + " " + d.title() + " " + d.ip + " " + d.mac + " " + d.hostname + " " + d.model + " " + d.manufacturer + " " + MacVendors.lookup(d.mac) + " " + d.services + " " +
                     recognition?.product?.title.orEmpty() + " " + recognition?.product?.category?.label.orEmpty() + " " +
-                    group.capabilities().joinToString(" ") + " " + d.observations().joinToString(" ") { it.value } + " " +
-                    d.networkNameRows().joinToString(" ") { it.second }).lowercase(Locale.ROOT)
+                    group.capabilities().joinToString(" ") + " " + d.observations().joinToString(" ") { it.value }).lowercase(Locale.ROOT)
                 if (all.contains(term)) { shown.add(group); break }
             }
         }
@@ -760,7 +759,6 @@ class MainActivity : Activity() {
     }
     private fun populateReportedFacts(panel: LinearLayout, endpoint: Device) {
         val facts = panel; val missing = ArrayList<String>()
-        for ((label, value) in endpoint.networkNameRows()) if (label == "Router-reported name") detailRow(facts, label, value)
         if (endpoint.name.isNotEmpty()) detailRow(facts, "Network name", endpoint.name)
         val identity = arrayOf(arrayOf("Hostname", endpoint.hostname, "hostname"), arrayOf("Manufacturer", endpoint.manufacturer, "manufacturer"), arrayOf("Model", endpoint.model, "model"), arrayOf("Service-reported type", endpoint.kind, "device type"))
         for (item in identity) { if (item[1].isEmpty()) missing.add(item[2]) else detailRow(facts, item[0], item[1]) }
@@ -776,7 +774,7 @@ class MainActivity : Activity() {
     }
     private fun populateEvidence(panel: LinearLayout, endpoint: Device) {
         populateReportedFacts(panel, endpoint)
-        for ((label, value) in endpoint.networkNameRows()) if (label != "Router-reported name") detailRow(panel, label, value)
+        for ((label, value) in endpoint.networkNameRows()) detailRow(panel, label, value)
         val lookups = endpoint.metadataLookupRows()
         if (lookups.isNotEmpty()) {
             space(panel, 12); panel.addView(text("Device information lookups", 16, ink, true))

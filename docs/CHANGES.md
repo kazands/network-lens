@@ -1,5 +1,10 @@
 # What is new
 
+## 0.3.32 — FibeTV recognition and clearer identity
+
+- Recognise devices reporting manufacturer `ARRIS` and model `FibeTV` as **ARRIS FibeTV**, with a TV receiver label and the useful room name beneath it. This identifies the receiver family without guessing a hardware generation.
+- Remove Hydrawise and B-hyve product suggestions based on router names. Those names remain diagnostic information under technical details and in troubleshooting reports.
+
 ## 0.3.31 — Wi-Fi irrigation recognition
 
 - Suggest Hunter Hydrawise and supported Orbit B-hyve families when a responding device’s local network name is corroborated by reverse and forward lookups.
@@ -64,6 +69,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.31).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.32).
 
-[Verification for this release](VERIFICATION-0.3.31.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.32.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

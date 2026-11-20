@@ -73,21 +73,6 @@ class Device : Grouping.Endpoint {
         if (localNetworkName?.status == LocalNetworkNames.Status.CHECKING)
             networkName(LocalNetworkNames.Result(if (stopped) LocalNetworkNames.Status.STOPPED else LocalNetworkNames.Status.UNFINISHED))
     }
-    internal fun networkFamily(): LocalNetworkNames.Family? {
-        val peers = endpoints()
-        // Indirect suggestions yield to reported identity/type evidence, including conflicts.
-        if (groupProduct() != null || classification().let { it.category != null || it.conflicted } ||
-            peers.any { d -> synchronized(d) { d.self || d.gateway || IdentityHints.specific(d.model) ||
-                IdentityHints.specific(d.manufacturer) || IdentityHints.specific(d.kind) || d.matchedFamilies.isNotEmpty() ||
-                d.observations().any { it.field in setOf("Model", "Manufacturer", "Device type") && IdentityHints.specific(it.value) } } }) return null
-        val names = peers.mapNotNull { d -> synchronized(d) {
-            d.localNetworkName?.takeIf { it.status == LocalNetworkNames.Status.CONFIRMED }?.let { result ->
-                result.name to LocalNetworkNames.family(result.name, if (d.hardwareAddressMayBeOtherInterface()) "" else d.mac)
-            }
-        } }
-        if (names.any { it.second == null }) return null
-        return names.mapNotNull { it.second }.distinct().singleOrNull()
-    }
     private var recognition = Recog.Evidence()
     private var catalogue = DeviceCatalog.Evidence()
     private val matchedFamilies = sortedSetOf<String>()
@@ -268,7 +253,6 @@ class Device : Grouping.Endpoint {
         field.lowercase().let { it.contains("model") || it.contains("manufacturer") || it.contains("firmware") || it.contains("platform") || it.contains("protocol version") || it.startsWith("matter ") }
 
     internal fun recognitionSummary(): String {
-        networkFamily()?.let { return "Likely ${it.title}, suggested by a router-reported name. Local DNS agrees in both directions, but router names can be stale. Exact product and model are unverified." }
         val endpoints=endpoints()
         return RecognitionStatus.explain(groupProduct()!=null, classification().conflicted,
             endpoints.any { synchronized(it) { IdentityHints.specific(it.model) } },
@@ -315,11 +299,6 @@ class Device : Grouping.Endpoint {
         val labels = DevicePresentation.labels(name, hostname, model, DeviceIcon.categoryLabel(this), displayProduct, self, gateway)
         val families = endpoints().flatMap { synchronized(it) { it.matchedFamilies.toList() } }.distinct()
         val family = DiscoveryMatchers.preferredFamily(families)
-        networkFamily()?.let {
-            return if (labels.unnamed) labels.copy(title = "Likely " + it.title,
-                subtitle = it.role + " · Router name suggestion", unnamed = false)
-            else labels.copy(subtitle = "Likely " + it.title + " · Router name suggestion")
-        }
         return if (labels.unnamed && !classification.conflicted && family != null && endpoints().none { it.familiesOverflow })
             labels.copy(title = family.label, subtitle = labels.subtitle.ifEmpty { "Device family; model not available" }, unnamed = false) else labels
     }

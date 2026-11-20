@@ -1,12 +1,12 @@
 # Current status
 
-**Network Lens 0.3.31 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.32 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
-This release adds tentative Hunter Hydrawise and Orbit B-hyve family suggestions from corroborated local network names. It keeps those names separate from device-reported identity, masks them in default troubleshooting reports and uses a smoke-alarm icon for recognised Kidde detectors. No Bluetooth, new permissions or cloud recognition are added.
+This release recognises devices reporting manufacturer **ARRIS** and model **FibeTV** as **ARRIS FibeTV**, with a TV receiver label and the useful room name beneath it. It preserves original fields and sources and does not infer a specific hardware generation.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.31.md) · [Irrigation matching limits](reference/IRRIGATION.md)
+Hydrawise and B-hyve product suggestions based on router names have been removed. Local DNS names remain diagnostic information under **Show technical details** and in troubleshooting reports; they do not supply product identity, primary type, presence or grouping. Names are masked in default troubleshooting reports.
 
-Hydrawise and B-hyve suggestions depend on an eligible local DNS server and matching names. They do not verify an exact model or manufacturer. Physical B-hyve compatibility still needs testing.
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.32.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md)
 
 ## What remains unverified
 

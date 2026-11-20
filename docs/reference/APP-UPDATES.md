@@ -87,7 +87,7 @@ The 0.3.20 regression checks also exercise installer-session opening failures on
 the main thread. Storage, permission and installer errors leave a recoverable
 message, abandon the session and cancel its pending callback.
 
-See [current release verification](../VERIFICATION-0.3.31.md) for artifact-specific
+See [current release verification](../VERIFICATION-0.3.32.md) for artifact-specific
 checks and [BUILDING.md](../BUILDING.md) for commands. Earlier live in-app update
 journeys are recorded with the corresponding release notes and assets, including
 [the original updater release](../archive/VERIFICATION-0.3.17.md). A signed in-place emulator

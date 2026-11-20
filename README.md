@@ -8,11 +8,11 @@ See what is on your Wi-Fi. Find responding devices, understand what they are, an
 
 Network Lens is a free, open-source Android app for home users and smart-home enthusiasts. It keeps everyday scanning simple while making addresses, services and discovery evidence available when you need them.
 
-[![Download Network Lens 0.3.31 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.31/Network-Lens-0.3.31.apk)
+[![Download Network Lens 0.3.32 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.32/Network-Lens-0.3.32.apk)
 
 **Android 8.0 or newer · Development preview · No account required**
 
-Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.31)
+Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.32)
 
 ## Find your devices
 
@@ -26,7 +26,7 @@ Recognised products receive useful names and icons. Room names stay visible, and
 
 Recognition runs on your phone using local responses and bundled catalogues. There is no cloud recognition, account, advertising or analytics. Scans are user-started; results and settings stay in memory, with no saved inventory or scan history. Checking for an app update contacts GitHub only when you ask.
 
-Local DNS can also supply a separately labelled router name for devices that responded during the scan. Narrow Hydrawise and Orbit B-hyve patterns may appear as a **Likely** family suggestion after reverse and forward lookups agree. Router names can be stale; suggestions do not verify a model or manufacturer. This feature uses Wi-Fi only.
+Local DNS can supply a separately labelled router name for technical details and troubleshooting reports. Router names can be stale and are never used for product recognition, list titles, manufacturer/model fields or address grouping.
 
 ## Know what the result means
 
