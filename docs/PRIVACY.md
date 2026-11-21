@@ -18,6 +18,10 @@ Copying device details is explicit and uses Android's clipboard. Device details 
 
 **Share full report** gives your chosen app a temporary, read-only text attachment streamed from memory. Network Lens does not save it to disk or upload it itself. The temporary copy expires after ten minutes and is cleared by a new scan, a network change detected by Network Lens, or process exit. If another app is open, Network Lens checks for network changes when you return; the attachment may remain available until then or until it expires. The recipient can retain its own copy. See [report coverage and limits](reference/TROUBLESHOOTING-REPORT.md).
 
+## Unreleased public-reader diagnostics
+
+Network Lens can record selected HTTP server/title/authentication-realm labels, SSH software labels and presented certificate CN/organisation/DNS/IP names for current responding devices. These are unverified service clues, not hardware identity. They stay in RAM and appear in technical details and explicit device-detail copies. Troubleshooting reports mask them by default; **Include device names, local addresses and public service labels** explicitly includes the selected labels, which can contain personal information. Cookies, authentication nonces, raw certificates, certificate serial-number fields, private keys and raw response bodies are not retained. No credentials or application requests are sent by the certificate observer; ordinary HTTPS retains platform certificate verification.
+
 ## Internet access for updates
 
 When you choose **Check for updates**, the app contacts public GitHub release endpoints. Downloading an update retrieves the APK from GitHub's release delivery service. This uses the phone's normal internet connection and may use mobile data. Scan results are not included in update requests.

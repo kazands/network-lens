@@ -12,7 +12,7 @@ internal object TroubleshootingReport {
         val endpoints = groups.flatMap { it.endpoints }
         val redaction = Redaction(endpoints.flatMap { it.privateValues + it.address }, endpoints.flatMap { it.names }, includeNames)
         fun fact(f: Fact): String {
-            val value = if (f.publicValue || includeNames && f.field in setOf("IP address", "Network name", "Hostname", "MAC address", "Router-reported name"))
+            val value = if (f.publicValue || includeNames && (f.field in setOf("IP address", "Network name", "Hostname", "MAC address", "Router-reported name") || selectedPublicLabel(f.field)))
                 redaction.text(f.value, f.kind) else if (f.value.isEmpty()) "No retained value" else redaction.label(f.value)
             return "${redaction.text(f.field, schema = true)}: ${value.ifEmpty { "No retained value" }}" +
                 (if (f.source.isEmpty()) "" else " | source: ${redaction.text(f.source)}") +
@@ -22,14 +22,14 @@ internal object TroubleshootingReport {
             append("Network Lens troubleshooting report · format 1\n")
             append("Includes all ${groups.size} device groups / ${groups.sumOf { it.endpoints.size }} address endpoints, including this phone. Search filters do not affect this report.\n")
             append(if (includeNames) "Names and local addresses included by request. " else "Names, addresses and unique identifiers replaced with report-local labels. ")
-            append("Review before sharing: device-supplied model, firmware and service text can contain custom information. Credentials and unreviewed raw field values are not included.\n\n")
+            append("Review before sharing: device-supplied model, firmware and service text can contain custom information. Credentials and unreviewed raw field values are not included. Selected public HTTP/SSH/certificate labels can contain private names and are included only with the names option.\n\n")
             context.forEach { append(fact(it)).append('\n') }
             append("\nAggregate summary (excludes this phone)\n").append(summary.substringBefore("\nPrivacy:"))
             append("\nEvidence coverage and limitations\n")
             append("This is retained scan evidence, not every byte received and not a complete inventory of silent devices.\n")
             append("Additional capture: mDNS TXT fields; JSON identity responses for Cast, Samsung, Shelly, WLED and Spotify; UPnP/eSCL XML; Apple QueryType/GetValue fields. Unknown values, arrays, XML attributes and sensitive identifiers may be withheld, with notices. Invalid or oversized bodies are not saved.\n")
-            append("Other protocol readers retain their decoded observations and available outcomes, not unused raw payload fields. IPP requests only make/model. HTTP headers, packet contents, TLS certificates and raw audio/vendor responses are not retained. No claim that an absent field was never returned.\n")
-            append("HTTP metadata history lists each candidate attempt; legacy and audio readers list recorded state transitions. Retries internal to a transport and discarded packets may have only scan-level counters. No record means not recorded, not necessarily not attempted.\n")
+            append("Other protocol readers retain their decoded observations and available outcomes, not unused raw payload fields. IPP requests only make/model. Selected HTTP server/title/authentication-realm labels, SSH software labels and presented certificate CN/organization/DNS/IP names are recorded separately as unverified clues. Cookies, authentication nonces, raw packets/certificates, keys, certificate serials and raw audio/vendor responses are not retained. No claim that an absent field was never returned.\n")
+            append("HTTP metadata history lists each candidate attempt and available queue wait, start budget and request timing. Public readers have a separate bounded journal; a reused equipment root request is identified. Legacy and audio readers list recorded state transitions. Retries internal to a transport and discarded packets may have only scan-level counters. No record means not recorded, not necessarily not attempted.\n")
             append("Each endpoint has a bounded diagnostic journal; exact duplicates are coalesced. Overflow counts are rejected record events, not unique fields. Existing UI/catalogue/parser caps remain in effect. Ports are observed/checked ports, not an exhaustive port scan.\n")
             append("Identity observations list selected versus alternate values. Returned payload fields are listed separately; they are not proof that recognition used them. Child/scanner/playback-group identity is not physical host identity.\n")
         })
@@ -57,7 +57,13 @@ internal object TroubleshootingReport {
         }
         return Document(pages)
     }
+    private val PUBLIC_CERT_FIELD=Regex("""Public response: TLS (?:DNS|IP) name [1-8] \(unverified\)""")
     /** Exact reviewed field names only; arbitrary device text is not a reason to bypass masking. */
+    private fun selectedPublicLabel(field: String): Boolean = field in setOf(
+        "Public response: HTTP server label","Public response: HTTP page title","Public response: HTTP authentication realm",
+        "Public response: SSH software label","Public response: TLS common name (unverified)","Public response: TLS organization (unverified)") ||
+        PUBLIC_CERT_FIELD.matches(field)
+
     fun valueKind(field: String): ValueKind {
         val key = field.substringAfterLast('/').removePrefix("TXT ").removeSuffix(" (advertised)").lowercase(java.util.Locale.ROOT)
         return when (key) {

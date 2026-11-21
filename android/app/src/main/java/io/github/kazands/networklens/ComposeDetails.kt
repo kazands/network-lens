@@ -158,7 +158,7 @@ internal object UiDetails {
         if(missing.isNotEmpty()) add("Not reported" to missing.joinToString(", "))
         val vendor=MacVendors.lookup(d.mac);if(vendor.isNotEmpty()) { add("MAC vendor (IEEE registry)" to vendor);add("About MAC vendors" to "The registered organization may identify an interface supplier rather than the product brand.") }
         if(d.lastSeen>0) add("Last response" to time(d.lastSeen))
-        addAll(d.networkNameRows());addAll(d.metadataLookupRows())
+        addAll(d.networkNameRows());addAll(d.metadataLookupRows());addAll(d.publicIdentityRows())
         add("How this endpoint was found" to d.evidence.joinToString("\n").ifEmpty {"Session observation"})
         add("Advertised services" to d.services.joinToString("\n").ifEmpty {"None observed"})
         add("Observed / advertised ports" to d.ports.toString())

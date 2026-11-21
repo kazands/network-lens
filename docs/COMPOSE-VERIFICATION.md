@@ -2,7 +2,7 @@
 
 This records the pre-release Compose candidates, labelled **0.3.33 / build
 61** during implementation. They are distinct from the public 0.3.33 APK.
-[Version 0.3.34 verification](VERIFICATION-0.3.34.md) identifies the release
+[Version 0.3.34 verification](archive/VERIFICATION-0.3.34.md) identifies the release
 binaries and their checks. Results below are historical synthetic runs on
 isolated x86_64 emulators, never household scans or a physical phone.
 

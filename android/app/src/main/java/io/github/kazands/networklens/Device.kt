@@ -100,6 +100,13 @@ class Device : Grouping.Endpoint {
     private var hardwareType = HardwareClassification.Evidence()
     internal var metadataLookups = MetadataLookups()
         private set
+    internal var publicIdentity = PublicIdentity.Journal()
+        private set
+    internal fun publicIdentityRows(): List<Pair<String,String>> = publicIdentity.snapshot().flatMap { entry ->
+        val source="${entry.request.kind.source} · port ${entry.request.port}"
+        listOf(source to listOf(entry.outcome(),entry.timing()).filter {it.isNotEmpty()}.joinToString("; ")) +
+            entry.result?.fields.orEmpty().map {(label,value)-> "$label · $source" to value}
+    }
 
     /** Evaluated from this endpoint's current observations, never a grouped neighbour's identity. */
     @Synchronized internal fun metadataLookupRows(): List<Pair<String, String>> = metadataLookups.snapshot().map { lookup ->
@@ -114,7 +121,7 @@ class Device : Grouping.Endpoint {
             }.map { it.source }.distinct().take(3)
             if (sources.isNotEmpty()) notes.add(field + " available from " + sources.joinToString(", "))
         }
-        label to (listOf(lookup.description()) + notes).joinToString("\n")
+            label to (listOf(lookup.description()) + listOf(lookup.timing()).filter { it.isNotEmpty() } + notes).joinToString("\n")
     }
 
     @Synchronized fun observations(): MutableList<IdentityHints.Hint> = hints.observations()
@@ -213,8 +220,16 @@ class Device : Grouping.Endpoint {
             val history = d.metadataLookups.history()
             if (history.isEmpty()) add("HTTP identity lookup history", "No attempts recorded; does not prove none were attempted")
             history.forEachIndexed { n, it -> add("Lookup ${n+1}", it.description(), it.kind.source,
-                "port ${it.port}; ${if(it.secure) "TLS" else "plain HTTP"}; state ${it.state}; elapsed ${it.elapsedMs?.let { ms -> "${ms}ms" } ?: "not recorded"}") }
+                "port ${it.port}; ${if(it.secure) "TLS" else "plain HTTP"}; state ${it.state}; " + it.timing().ifEmpty { "timing not recorded" }) }
             add("Lookup history overflow", d.metadataLookups.omissions().toString())
+            for (entry in d.publicIdentity.snapshot()) {
+                val source="${entry.request.kind.source} · port ${entry.request.port}"
+                add("Public lookup outcome",entry.outcome(),source,entry.timing())
+                entry.result?.software?.let {add("Public software service",it.label,source,"Software service only; no hardware inference")}
+                for ((label,value) in entry.result?.fields.orEmpty()) add("Public response: $label",value,source,
+                    "Peer-supplied clue; not a verified model, manufacturer or grouping link",public=label in PublicIdentity.PUBLIC_FIELDS)
+            }
+            add("Public lookup journal overflow",d.publicIdentity.omitted().toString())
             for ((key, value) in d.details) add(key, value, "Retained device detail", public = diagnosticPublic(key))
             if (d.audioStatus.isNotEmpty()) add("Audio lookup", d.audioStatus)
             d.audioPlayerStatuses.values.forEach { add("Audio lookup", it) }
@@ -284,7 +299,7 @@ class Device : Grouping.Endpoint {
             else -> RecognitionReport.Level.UNKNOWN
         }
         val lookups = endpoints.flatMap { endpoint -> synchronized(endpoint) {
-            endpoint.metadataLookups.snapshot().map(RecognitionReport::metadata) + listOfNotNull(
+            endpoint.metadataLookups.snapshot().map(RecognitionReport::metadata) + endpoint.publicIdentity.snapshot().map(RecognitionReport::public) + listOfNotNull(
                 endpoint.details[AppleDeviceInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.APPLE, it) },
                 endpoint.details[EapInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.EAP, it) },
                 endpoint.details[EnvisalinkInfo.SOURCE]?.let { RecognitionReport.legacy(RecognitionReport.Protocol.ENVISALINK, it) })
@@ -485,6 +500,7 @@ class Device : Grouping.Endpoint {
         copy.hardwareType = hardwareType.copy()
         copy.matchedFamilies.addAll(matchedFamilies); copy.familiesOverflow = familiesOverflow
         copy.metadataLookups = metadataLookups.copy()
+        copy.publicIdentity = publicIdentity.copy()
         copy.audioReport = audioReport?.copy(members = audioReport!!.members.toList())
         copy.audioPlayers.putAll(audioPlayers)
         copy.audioPlayerStatuses.putAll(audioPlayerStatuses)

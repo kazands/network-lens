@@ -59,6 +59,15 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val excludedIpv6: MutableSet<String> = ConcurrentHashMap.newKeySet()
     @Volatile private var scanDeadline = Long.MAX_VALUE
     private val metadataPlans = MetadataPlans()
+    private val publicReaders by lazy { PublicIdentityDiscovery(health, ::currentPublicPeer, {scanDeadline},
+        {source,owner,task -> submitEnrichment(DiscoveryWork.Lane.PUBLIC,source,owner,task)},
+        {networkCheck.check(context,net)}, {d,request,deadline ->
+            metadataSocket(peerAddress(d.ip),deadline,{currentPublicPeer(d)}) {socket ->
+                PublicIdentityReader.exchange(socket,peerAddress(d.ip),request,deadline,metadataTimeouts) {currentPublicPeer(d)}
+            }
+        }, ::requestEapModel) }
+    private fun currentPublicPeer(d: Device): Boolean = enriching && !cancelled.get() && !metadataFinalized.get() &&
+        !d.self && !net.owns(d.ip) && found[d.ip]===d && freshResponders.contains(d.ip) && inScope(peerAddress(d.ip))
     private val appleRequests = ServiceAdmission(32)
     private val ssdpMatchers = SsdpMatchers()
     private val eapRequests = ServiceAdmission(32)
@@ -1078,6 +1087,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 }
                 val retry = synchronized(d) { d.hostname.isEmpty() || d.mac.isEmpty() }
                 if (retry && enriching && !cancelled.get()) enrichNetBios(d.ip, d, minOf(400, nameTimeout + 180))
+                publicReaders.offer(d)
             } finally { health.workFinished(source) }
         })) health.workFinished(source)
     }
@@ -1117,7 +1127,9 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun currentEapPeer(d: Device): Boolean = enriching && !cancelled.get() && !d.self &&
         freshResponders.contains(d.ip) && found[d.ip] === d && inScope(peerAddress(d.ip)) && synchronized(d) { 80 in d.ports }
 
-    private fun requestEapModel(d: Device) {
+    private fun requestEapModel(d: Device) { synchronized(d) {
+        // Keep equipment admission and the shared root reservation atomic with
+        // public-reader preparation, including calls from other scan workers.
         if (!currentEapPeer(d)) return
         val source = EapInfo.SOURCE
         synchronized(d) { d.detail("Network equipment identity request", EapInfo.TRANSPORT) }
@@ -1127,23 +1139,35 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             health.truncated(source, "32-device identity check limit reached"); return
         }
         if (admission != ServiceAdmission.Result.ADMITTED) return
+        val publicRequest=PublicIdentity.Request(PublicIdentity.Kind.HTTP,80)
+        if(!d.publicIdentity.queue(publicRequest)) {
+            d.diagnostics.record(source,"Lookup outcome","Not attempted: existing root request retained",
+                "No duplicate root-page request",DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+            return
+        }
         synchronized(d) { d.detail(source, "Waiting or checking") }
         health.workStarted(source)
         if (!submitEnrichment(DiscoveryWork.Lane.METADATA, source, d.ip, Runnable {
-            val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(2))
+            val started=System.nanoTime()
+            val deadline = minOf(scanDeadline, started + TimeUnit.SECONDS.toNanos(2))
             try {
+                if(!d.publicIdentity.begin(publicRequest,started,deadline)) return@Runnable
                 val model = EapInfo.read(peerAddress(d.ip), deadline, metadataTimeouts, { currentEapPeer(d) }, {
                     net.check(context)
                     val socket = Socket(); sockets.add(socket)
                     try { selectedNetwork().bindSocket(socket); health.count(source, "requests"); socket }
                     catch (e: Exception) { sockets.remove(socket); socket.close(); throw e }
-                }, { sockets.remove(it) })
+                }, { sockets.remove(it) }, {page ->
+                    publicReaders.observe(d,publicRequest,PublicIdentity.Result(page.outcome,page.fields + mapOf(
+                        "HTTP response status" to page.status.toString(),"HTTP body capture" to ("Reused existing equipment root request; "+if(page.prefixLimited) "body prefix limit reached; remainder not read" else "selected fields only")),page.software))
+                })
                 if (applyEapReport(d, model)) health.count(source, if (model == null) "no EAP identity" else "models received")
             } catch (e: Exception) {
                 if (currentEapPeer(d)) {
                     blocked(e)
                     val failure = AndroidMetadataFailure.classify(e, System.nanoTime() >= deadline)
                     synchronized(d) { d.detail(source, failure.reason.detail) }
+                    d.publicIdentity.finish(publicRequest,PublicIdentity.State.FAILED,reason=failure.reason)
                     MetadataHttp.recordFailure(health, source, failure, false)
                 }
             } finally {
@@ -1152,9 +1176,10 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             }
         })) {
             synchronized(d) { d.detail(source, "Not attempted: work queue limit reached") }
+            d.publicIdentity.finish(publicRequest,PublicIdentity.State.LIMITED)
             health.workFinished(source)
         }
-    }
+    } }
     private fun applyEapReport(d: Device, model: String?): Boolean = synchronized(d) {
         if (!currentEapPeer(d) || d.details[EapInfo.SOURCE] != "Waiting or checking") return@synchronized false
         d.detail(EapInfo.SOURCE, if (model == null) "No supported EAP identity reported" else "Public model received")
@@ -1250,6 +1275,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         if (synchronized(d) { 80 in d.ports }) requestEapModel(d)
         if (synchronized(d) { 8001 in d.ports }) requestSamsung(d)
         if (inScope(peerAddress(d.ip))) { queryDeviceName(d); maybeCast(d) }
+        publicReaders.offer(d)
     }
     private fun maybeCast(d: Device) {
         if (!enriching || cancelled.get() || !freshResponders.contains(d.ip) || !castReceivers.contains(d.ip)) return
@@ -1263,8 +1289,16 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun finishMetadataLookups(stopped: Boolean) {
         if (!metadataFinalized.compareAndSet(false, true)) return
         metadataPlans.close()
+        publicReaders.close()
         for (d in found.values) synchronized(d) {
             d.metadataLookups.finish(stopped)
+            d.publicIdentity.close(stopped)
+            for(entry in d.publicIdentity.snapshot()) when(entry.state) {
+                PublicIdentity.State.INCOMPLETE -> health.truncated(entry.request.kind.source,"Public lookup did not finish")
+                PublicIdentity.State.STOPPED -> health.truncated(entry.request.kind.source,"Scan stopped")
+                PublicIdentity.State.LIMITED -> health.truncated(entry.request.kind.source,"Public-reader work limit reached")
+                else -> {}
+            }
             for (entry in d.metadataLookups.snapshot()) when (entry.state) {
                 MetadataLookups.State.FAILED -> MetadataHttp.recordFailure(health, entry.kind.source,
                     MetadataHttp.Failure(entry.reason ?: MetadataHttp.Reason.REQUEST_FAILED, entry.httpStatus), false)
@@ -1327,7 +1361,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     val candidate = plan.next(System.nanoTime(), scanDeadline) { d.metadataLookups.incomplete(request.kind) } ?: break
                     val deadline = plan.deadline()
                     if (!inScope(peer) || !freshResponders.contains(d.ip) || found[d.ip] !== d) break
-                    if (!d.metadataLookups.beginCandidate(candidate)) break
+                    if (!d.metadataLookups.beginCandidate(candidate, System.nanoTime(), deadline, plan.queuedAt(candidate))) break
                     try {
                         networkCheck.check(context, net)
                         // At most two targets, each with one transient retry, sharing the original deadline.
@@ -2039,6 +2073,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         if (service.port == 80) requestEapModel(d)
         if (service.port == 8001 && LocalServices.tcpConfirmation(service.type)) requestSamsung(d)
         if (AudioZoneInfo.vsslCandidate(service)) requestAudio(d, AudioZones.Kind.VSSL, "")
+        publicReaders.offer(d)
     }
     private fun applyService(d: Device, service: MdnsPacket.Service, prefix: String) {
         synchronized(d) {

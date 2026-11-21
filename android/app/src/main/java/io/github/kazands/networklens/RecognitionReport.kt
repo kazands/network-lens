@@ -12,13 +12,14 @@ internal object RecognitionReport {
     enum class Protocol(val label: String) {
         APPLE("Apple device information"), EAP("TP-Link EAP public information"), ENVISALINK("Envisalink greeting"),
         SAMSUNG("Samsung TV"), SHELLY("Shelly"), WLED("WLED"), SPOTIFY("Spotify Connect"),
-        IPP("IPP printer"), ESCL("eSCL scanner service"), CAST("Google Cast")
+        IPP("IPP printer"), ESCL("eSCL scanner service"), CAST("Google Cast"),
+        HTTP("Public web information"), TLS("Presented TLS certificate"), SSH("SSH service information"), LLMNR("Direct LLMNR hostname")
     }
     enum class Outcome(val label: String) {
         MODEL("Model received"), SUCCESS("Response received without a host model"),
         NO_IDENTITY("No identifying response"), UNAVAILABLE("Service unavailable"), FAILED("Failed"),
         LIMITED("Not attempted: work limit"), STOPPED("Stopped"), INCOMPLETE("Unfinished"),
-        QUEUED("Still marked as queued"), OTHER("Outcome not classified")
+        QUEUED("Still marked as queued"), NOT_NEEDED("Not attempted: stronger identity available"), OTHER("Outcome not classified")
     }
     data class Lookup(val protocol: Protocol, val outcome: Outcome, val reason: MetadataHttp.Reason? = null)
     data class Group(val level: Level, val modelWithoutMatch: Boolean, val conflict: Boolean,
@@ -32,6 +33,17 @@ internal object RecognitionReport {
         MetadataLookups.State.STOPPED -> Outcome.STOPPED
         MetadataLookups.State.INCOMPLETE -> Outcome.INCOMPLETE
     }, entry.reason)
+
+    fun public(entry: PublicIdentity.Entry): Lookup = Lookup(Protocol.valueOf(entry.request.kind.name), when(entry.state) {
+        PublicIdentity.State.QUEUED -> Outcome.QUEUED
+        PublicIdentity.State.OBSERVED -> Outcome.SUCCESS
+        PublicIdentity.State.NO_RESPONSE -> Outcome.NO_IDENTITY
+        PublicIdentity.State.FAILED -> Outcome.FAILED
+        PublicIdentity.State.LIMITED -> Outcome.LIMITED
+        PublicIdentity.State.STOPPED -> Outcome.STOPPED
+        PublicIdentity.State.INCOMPLETE -> Outcome.INCOMPLETE
+        PublicIdentity.State.NOT_NEEDED -> Outcome.NOT_NEEDED
+    },entry.reason)
 
     /** These legacy readers record fixed app-generated status text, never arbitrary peer errors. */
     fun legacy(protocol: Protocol, value: String): Lookup {
@@ -63,8 +75,9 @@ internal object RecognitionReport {
         "SSDP / UPnP", "UPnP descriptions" -> "SSDP / UPnP"
         "mDNS type and hostname queries" -> "mDNS / Bonjour"
         "Device port and name checks" -> "Port and name checks"
+        "Public identity readers" -> "Public identity readers"
         "IPv4 checks", "ICMP echo", "IPv6 service checks", "Service address checks" -> "Presence checks"
-        else -> LocalMetadata.Kind.values().firstOrNull { it.source == source }?.let { Protocol.valueOf(it.name).label }
+        else -> PublicIdentity.Kind.entries.firstOrNull {it.source==source}?.source ?: LocalMetadata.Kind.values().firstOrNull { it.source == source }?.let { Protocol.valueOf(it.name).label }
             ?: if (source.startsWith("mDNS ")) "mDNS / Bonjour" else "Other discovery methods"
     }
     private fun state(value: String): String = when (value.substringBefore(" · ")) {

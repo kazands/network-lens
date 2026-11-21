@@ -444,6 +444,7 @@ class MainActivity : ComponentActivity() {
             if (d.audioStatus.isNotEmpty()) text.append("\nAudio lookup: ").append(d.audioStatus)
             for ((label, value) in d.audioRows) text.append("\n").append(label).append(": ").append(value)
             for ((source, result) in d.metadataLookupRows()) text.append("\n").append(source).append(": ").append(result)
+            for ((source, result) in d.publicIdentityRows()) text.append("\n").append(source).append(": ").append(result)
             for (hint in d.observations()) text.append("\nReported ").append(hint.field).append(" · ").append(hint.source).append(": ").append(hint.value)
             for (fact in d.classification().facts) text.append("\nDevice type evidence · ").append(fact.source).append(": ").append(fact.category.label)
             d.details["UPnP description status"]?.let { text.append("\nUPnP description status: ").append(it) }

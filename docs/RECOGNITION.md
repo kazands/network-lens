@@ -22,6 +22,14 @@ A device may offer several services on different ports. Those services do not ne
 
 Network Lens keeps service capabilities separate from physical identity. Scanner names and models stay with the scanning service. Audio groups and zones do not automatically become separate physical devices. Missing manufacturer, model and MAC values stay unknown, and an IEEE network-interface supplier is not treated as a reported manufacturer.
 
+For unresolved current responders, bounded public web, certificate and SSH checks
+can provide additional service clues. Corroborated Home Assistant, Pi-hole,
+Tasmota and OctoPrint pages can identify software services without identifying
+their host hardware. A direct local hostname response can supply a reported
+name. Selected clues and lookup timing are available in technical details; a
+generic title, server label or certificate name cannot establish a hardware
+model. See [public identity readers](reference/PUBLIC-IDENTITY.md).
+
 ## Coverage at a glance
 
 | Device family | Available evidence | Main limit |

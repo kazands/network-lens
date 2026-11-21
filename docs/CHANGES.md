@@ -1,5 +1,16 @@
 # What is new
 
+## 0.3.35 — More clues for unnamed devices
+
+- Check public web information, presented certificate names and SSH greetings when a responding device has no supported product or specific model. Selected clues appear under **Show technical details**.
+- Recognise corroborated Home Assistant, Pi-hole, Tasmota and OctoPrint web services. Software labels stay separate from the identity of the hardware hosting them.
+- Try a direct local hostname lookup for unresolved responders without a hostname. Router DNS names remain diagnostic information only.
+- Show queue wait, remaining time at request start and request duration for supported identity readers.
+- Include public-reader outcomes and selected clues in device-detail copies and troubleshooting reports. Clues are masked by default; the names-and-public-labels option explicitly includes them for troubleshooting.
+- Reuse equipment root-page requests and keep work, parsing, cancellation and report capture bounded.
+
+Some devices do not expose useful public information and can remain unnamed. Physical recognition gains have not been measured. Scans remain user-started, with results held in memory and no cloud recognition. SNMP remains follow-up work; the IPv6 multicast experiment is not enabled in normal scans.
+
 ## 0.3.34 — A clearer view of your network
 
 - Bring the network, scan action, address-check progress and scan status into one card.
@@ -92,6 +103,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.34).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.35).
 
-[Verification for this release](VERIFICATION-0.3.34.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.35.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
