@@ -65,4 +65,4 @@ Physical Pixel/ARM64 execution, scrolling, gesture navigation, TalkBack, the opt
 
 The reported Google Play Protect classification remains unresolved. Emulator installation and signature verification do not establish Google clearance. Keep Play Protect enabled.
 
-This interface release does not establish improved recognition for silent devices, complete household discovery or physical /22 timing. It adds no permissions, cloud recognition, saved inventory, background monitoring or device-control commands. Earlier candidate results remain in [Compose implementation verification](COMPOSE-VERIFICATION.md); they are separate from this version's checks.
+This interface release does not establish improved recognition for silent devices, complete household discovery or physical /22 timing. It adds no permissions, cloud recognition, saved inventory, background monitoring or device-control commands. Earlier candidate results remain in [Compose implementation verification](../COMPOSE-VERIFICATION.md); they are separate from this version's checks.

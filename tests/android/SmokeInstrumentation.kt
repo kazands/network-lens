@@ -101,6 +101,8 @@ class SmokeInstrumentation : Instrumentation() {
                 "scan-ownership" -> ScanOwnershipChecks.run(this,::check)
                 "performance" -> PerformanceChecks.run(this,::check)
                 "local-metadata" -> MetadataChecks.run(this,::check)
+                "public-identity" -> PublicIdentityChecks.run(this,::check)
+                "ipv6-public-trial" -> Ipv6PublicTrialChecks.run(this,::check)
                 "recog" -> RecogChecks.run(this,::check)
                 "fibe-tv" -> FibeTvChecks.run(this,::check)
                 "network-names" -> NetworkNameChecks.run(this,::check)

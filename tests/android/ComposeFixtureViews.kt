@@ -12,7 +12,11 @@ internal object ComposeFixtureViews {
             d.start();d.fixture(fixtures)
             for(group in Device.grouped(fixtures)) {
                 d.search(group.ip)
-                d.main {check(d.words().contains(group.presentation().title),"Compose search retains the supported product/family title")}
+                // IP search is a substring filter: .2 can also match .20 and .21.
+                // Narrow viewports compose only visible rows. Bring this actual
+                // row into view before asserting its title, as clickTag does.
+                d.revealTag("device:${group.ip}")
+                d.main {check(d.words().contains(group.presentation().title),"Compose search retains the supported product/family title for ${group.ip}")}
                 d.clickTag("device:${group.ip}")
                 d.main {
                     check(d.words().contains(group.presentation().title),"Compose details retain the supported identity")

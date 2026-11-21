@@ -105,8 +105,8 @@ import java.util.Locale
             UiModal.REPORT_OPTIONS -> {
                 var include by remember {mutableStateOf(false)}
                 ModalFrame("Troubleshooting report",action,actions={ Button(onClick={action(UiAction.PrepareReport(include))}) {Text("Preview report")};TextButton(onClick={action(UiAction.CloseModal)}) {Text("Cancel")} }) {
-                    Text("Includes every device, returned observations and recorded lookup history. By default, personal names and addresses are replaced with labels. Unreviewed response values and credentials are withheld. Review the preview before sharing.")
-                    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=include,role=Role.Checkbox,onValueChange={include=it}),verticalAlignment=Alignment.CenterVertically) { Checkbox(checked=include,onCheckedChange=null);Text("Include device names and local addresses",modifier=Modifier.weight(1f)) }
+                    Text("Includes every device, returned observations and recorded lookup history. By default, personal names and addresses are replaced with labels. Public page titles, authentication realms and certificate names may contain personal information; they are masked by default. Unreviewed values and credentials are withheld. Review the preview before sharing.")
+                    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=include,role=Role.Checkbox,onValueChange={include=it}),verticalAlignment=Alignment.CenterVertically) { Checkbox(checked=include,onCheckedChange=null);Text("Include device names, local addresses and public service labels",modifier=Modifier.weight(1f)) }
                     Text("The shared file is held in memory for up to 10 minutes. The receiving app may save it. Starting a new scan or detecting a network change removes the temporary copy. If another app is open, Network Lens checks for network changes when you return.",style=MaterialTheme.typography.bodySmall)
                 }
             }

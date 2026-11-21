@@ -8,7 +8,10 @@ internal class MetadataLookups {
     data class Entry(val kind: LocalMetadata.Kind, val port: Int, val secure: Boolean,
                      val state: State = State.QUEUED, val reason: MetadataHttp.Reason? = null,
                      val httpStatus: Int? = null, val model: Boolean = false, val manufacturer: Boolean = false,
-                     val startedNanos: Long = 0, val elapsedMs: Long? = null) {
+                     val startedNanos: Long = 0, val elapsedMs: Long? = null,
+                     val queuedNanos: Long = 0, val queueWaitMs: Long? = null, val budgetAtStartMs: Long? = null) {
+        fun timing(): String = listOfNotNull(queueWaitMs?.let { "queue wait ${it}ms" },
+            budgetAtStartMs?.let { "budget at start ${it}ms" }, elapsedMs?.let { "request elapsed ${it}ms" }).joinToString("; ")
         fun description(): String = when (state) {
             State.QUEUED -> "Waiting or checking"
             State.SUCCESS -> if (kind == LocalMetadata.Kind.ESCL) "Succeeded; scanner information is shown separately" else "Succeeded" + (if (!model) "; model not reported" else "") +
@@ -30,23 +33,27 @@ internal class MetadataLookups {
     @Synchronized fun history(): List<Entry> = attempts.toList() + entries.values.toList()
     @Synchronized fun omissions(): Int = omittedAttempts
 
-    @Synchronized fun queue(request: LocalMetadata.Request): Boolean {
+    @Synchronized fun queue(request: LocalMetadata.Request, now: Long = System.nanoTime()): Boolean {
         if (closed || entries.containsKey(request.kind)) return false
-        entries[request.kind] = Entry(request.kind, request.port, request.secure)
+        entries[request.kind] = Entry(request.kind, request.port, request.secure, queuedNanos = now)
         return true
     }
     /** Called by the single admitted worker, after the previous candidate failed. */
-    @Synchronized fun beginCandidate(request: LocalMetadata.Request): Boolean {
+    @Synchronized fun beginCandidate(request: LocalMetadata.Request, now: Long = System.nanoTime(),
+                                    deadline: Long = Long.MAX_VALUE, queuedAt: Long? = null): Boolean {
         if (closed) return false
-        val prior = entries[request.kind] ?: return queue(request)
+        val prior = entries[request.kind] ?: run { queue(request, queuedAt ?: now); entries.getValue(request.kind) }
+        fun started(entry: Entry): Entry = entry.copy(startedNanos = now,
+            queueWaitMs = ((now - (queuedAt ?: entry.queuedNanos)) / 1_000_000).coerceAtLeast(0),
+            budgetAtStartMs = if (deadline == Long.MAX_VALUE) null else ((deadline - now) / 1_000_000).coerceAtLeast(0))
         if (prior.state == State.QUEUED) {
             if (prior.port != request.port || prior.secure != request.secure) return false
-            if (prior.startedNanos == 0L) entries[request.kind] = prior.copy(startedNanos = System.nanoTime())
+            if (prior.startedNanos == 0L) entries[request.kind] = started(prior)
             return true
         }
         if (prior.state != State.FAILED) return false
         archive(prior)
-        entries[request.kind] = Entry(request.kind, request.port, request.secure, startedNanos = System.nanoTime())
+        entries[request.kind] = started(Entry(request.kind, request.port, request.secure, queuedNanos = queuedAt ?: now))
         return true
     }
     private fun update(kind: LocalMetadata.Kind, transform: (Entry) -> Entry) {

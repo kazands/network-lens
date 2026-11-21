@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 internal class MetadataCandidates {
     enum class Offer { START, WAIT, DUPLICATE, LIMIT, CLOSED, REJECTED }
     private val seen = LinkedHashSet<LocalMetadata.Request>()
+    private val queued = HashMap<LocalMetadata.Request, Long>()
     private val pending = ArrayDeque<LocalMetadata.Request>()
     private var running = false
     private var closed = false
@@ -17,7 +18,7 @@ internal class MetadataCandidates {
         if (original != null && (request.kind != original.kind || request.secure != original.secure)) return Offer.REJECTED
         if (request in seen) return Offer.DUPLICATE
         if (seen.size >= 2) return Offer.LIMIT
-        seen.add(request); pending.addLast(request)
+        seen.add(request); queued[request] = now; pending.addLast(request)
         if (running) return Offer.WAIT
         running = true; return Offer.START
     }
@@ -29,5 +30,6 @@ internal class MetadataCandidates {
         return pending.removeFirst()
     }
     @Synchronized fun deadline(): Long = deadline
+    @Synchronized fun queuedAt(request: LocalMetadata.Request): Long? = queued[request]
     @Synchronized fun close() { closed = true; pending.clear(); running = false }
 }

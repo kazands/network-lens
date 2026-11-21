@@ -39,17 +39,37 @@ authorized, currently confirmed target. Do not save household input to a file.
 }
 ```
 
-At most 16 distinct endpoints are accepted. Ports 80/8080 use HTTP and 443/8443
+At most 16 distinct endpoint/protocol selections are accepted. The optional `protocol` is `http` (default), `tls` (certificate observation on 443/8443/8009) or `ssh` (greeting only on 22). The certificate observer uses a separate in-memory handshake, sends no application request and makes no trust claim; it does not weaken the HTTP reader. SSH sends no banner, credentials or commands. Certificate decoding uses local OpenSSL through standard input/output, with no certificate/key file. Both observers cap network reads and deadlines.
+
+Certificate subject selection uses a bounded forward scan of canonical RFC2253
+output, not a backtracking expression. The whole subject is limited to 2,048
+UTF-16 code units and each decoded CN/organisation label to 160. Unsupported,
+duplicate or overlong attributes produce an omission notice; malformed subjects
+produce no subject labels. The app reader follows the same selection rules.
+
+Alternative names are selected by their encoded DNS/IP types in the certificate,
+following [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280.html#section-4.2.1.6),
+rather than searching OpenSSL's display text. URI/email values cannot supply DNS
+names even when they contain `DNS:`, `IP Address:` or commas. This selector reads
+at most 64 extensions and 128 alternative-name entries from the existing 32 KiB
+certificate bound, retaining at most eight names of at most 160 characters each.
+Invalid structure or omitted selected names produce a fixed diagnostic notice.
+It does not validate certificate trust; normal HTTPS verification is unchanged.
+
+For HTTP, Ports 80/8080 use HTTP and 443/8443
 use HTTPS with normal certificate and IP verification. Each endpoint receives
 one `GET /`, with a two-second network deadline and a 32-second overall request
-budget. Response bodies are limited to 64 KiB and total HTTP wire reads to
+budget. Response bodies are limited to an 8 KiB prefix and total HTTP wire reads to
 96 KiB. No DNS, redirects, cookies, credentials, scripts, linked resources,
 additional endpoints or TLS fallback are used. Interface binding must succeed;
 there is no unbound fallback. Local requests may appear in device access logs.
 
 The report contains aggregate outcomes only. `public_labels` means a page title
-or server header was available; it does **not** mean an identity was found.
-Use `--review` only for an authorized in-memory review of those untrusted labels.
+or server/realm label was available; it does **not** mean an identity was found.
+Authentication-required responses can retain a selected realm without reading the login body. Certificate and SSH label counts remain separate from public-page counts. Use `--review` only for an authorized in-memory review of those untrusted labels.
+`certificate_labels_available` counts certificates with at least one retained CN,
+organisation or DNS/IP name. A decoded certificate with no selected names still
+has its observation outcome counted, but contributes zero to label availability.
 Do not redirect, save or commit that terminal output: titles can contain personal
 names. Raw bodies, cookies and addresses are not written to the report. Review
 labels are bounded and terminal control characters are removed.
@@ -69,5 +89,7 @@ is not an improved Android result. Re-measure on the phone only after any reader
 is integrated and tested against a separately identified APK.
 
 Current validation is synthetic and loopback-only. No physical accuracy gain is
-claimed. Run `python3 scripts/test-public-web-trial.py` for isolated checks; the
-same tests are included in `scripts/test.sh`.
+claimed. Run `python3 scripts/test-public-web-trial.py` for isolated checks; OpenSSL
+is needed for the real-certificate interoperability check, which is explicitly
+reported as skipped when unavailable. The same tests are included in
+`scripts/test.sh`.

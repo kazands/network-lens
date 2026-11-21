@@ -16,6 +16,7 @@ Open the device and expand **Show technical details**. Look at the reported mode
 - **Model reported but product unknown:** the local interpretation may not cover that value.
 - **Conflicting reports:** the app avoids selecting an unsupported identity. Include both sources when reporting the issue.
 - **Only an audio, casting or Matter service:** that capability may not identify the physical device.
+- **Public web, certificate or SSH clues:** these can identify a service or provide useful troubleshooting text without identifying the host hardware. Check the queue wait, request timing and outcome before concluding that a device returned no information.
 
 Do Not Disturb is not enough evidence to explain a missing identity. Power state, local service availability and the actual response matter. Test awake and sleeping states separately rather than assuming the cause.
 
@@ -52,7 +53,7 @@ Do not uninstall the existing app merely to retry a blocked update.
 
 ## Report a recognition problem
 
-For device-level investigation, use **Scan details → Troubleshooting report**. It includes every device and address, including unnamed devices, returned evidence and recorded lookup history. Preview it, then choose **Share full report** to send one text attachment through an app you select. Names and addresses are masked by default; enable their inclusion only when needed for private support. [What is included, withheld or not retained](reference/TROUBLESHOOTING-REPORT.md).
+For device-level investigation, use **Scan details → Troubleshooting report**. It includes every device and address, including unnamed devices, returned evidence and recorded lookup history. Preview it, then choose **Share full report** to send one text attachment through an app you select. Names, addresses and selected public service labels are masked by default. The explicit names-and-public-labels option can include private information; enable it only when needed for private support. [What is included, withheld or not retained](reference/TROUBLESHOOTING-REPORT.md).
 
 
 After a scan finishes or is stopped, open **Scan details → Copy recognition report** and paste the summary into your support conversation. It includes aggregate recognition counts and lookup outcomes, with no device names, addresses, model strings, serials or credentials. It does not upload anything. Sample results and scans still in progress cannot be copied this way.

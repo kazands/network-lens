@@ -1,6 +1,6 @@
 # Historical records
 
-These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.34.md) for today’s behavior and checks.
+These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.35.md) for today’s behavior and checks.
 
 - [IMPLEMENTATION VERIFICATION](IMPLEMENTATION-VERIFICATION.md)
 - [METADATA FOLLOWUP](METADATA-FOLLOWUP.md)
@@ -42,3 +42,5 @@ These are dated verification reports and investigations, retained for traceabili
 - [0.3.32 verification](VERIFICATION-0.3.32.md) — reported FibeTV identity and removal of router-name product guesses.
 
 - [0.3.33 verification](VERIFICATION-0.3.33.md) — safer scan checks and troubleshooting reports, before the Compose migration.
+
+- [0.3.34 verification](VERIFICATION-0.3.34.md) — Compose interface and report-stream safeguards.

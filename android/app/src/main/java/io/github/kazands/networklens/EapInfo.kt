@@ -56,7 +56,7 @@ internal object EapInfo {
     }
     /** Factory returns a registered, selected-network-bound socket; every returned socket is closed. */
     fun read(peer: InetAddress, deadline: Long, timer: ScheduledExecutorService, active: () -> Boolean,
-             open: () -> Socket, release: (Socket) -> Unit): String? {
+             open: () -> Socket, release: (Socket) -> Unit, onPublicRoot: ((PublicHttpInfo.Report)->Unit)? = null): String? {
         fun check() {
             if (!active() || Thread.currentThread().isInterrupted) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
             if (System.nanoTime() >= deadline) throw MetadataHttp.Failure(MetadataHttp.Reason.DEADLINE)
@@ -78,8 +78,13 @@ internal object EapInfo {
                         override fun read(): Int { check(); return raw.read() }
                         override fun read(b: ByteArray, off: Int, count: Int): Int { check(); return raw.read(b, off, count) }
                     }
-                    val result = UpnpDescription.readResponse(input) { headers ->
+                    val result = if(identity) UpnpDescription.readResponse(input) { headers ->
                         if (!headers["server"].orEmpty().matches(Regex("TP-LINK HTTPD/[0-9.]+"))) throw OtherService()
+                    } else {
+                        val page=PublicHttpInfo.read(input)
+                        check();onPublicRoot?.invoke(page)
+                        if(!page.eapEligible) throw OtherService()
+                        ByteArray(0)
                     }
                     check(); return result
                 } finally { closer.cancel(false) }
@@ -98,7 +103,8 @@ internal object EapInfo {
             } finally { try { socket.close() } finally { release(socket) } }
         }
         return try {
-            if (!eligiblePage(exchange(false))) null else parse(exchange(true))
+            exchange(false)
+            parse(exchange(true))
         } catch (_: OtherService) { null }
         catch (_: UpnpDescription.HttpStatusException) { null } // Normal nonmatching web service. No redirects/auth retries.
         catch (e: Exception) {

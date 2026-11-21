@@ -27,6 +27,7 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 - [Public equipment identity](NETWORK-EQUIPMENT.md)
 - [Audio zones and physical hardware](AUDIO-ZONES.md)
 - [Local device metadata](LOCAL-METADATA.md)
+- [Public identity readers — unreleased](PUBLIC-IDENTITY.md)
 
 ### Architecture, validation and distribution
 
@@ -38,4 +39,4 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 - [Application identity and updates](APPLICATION-IDENTITY.md)
 - [Release signing](RELEASE-SIGNING.md)
 
-Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.34 verification](../VERIFICATION-0.3.34.md).
+Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.35 verification](../VERIFICATION-0.3.35.md).
