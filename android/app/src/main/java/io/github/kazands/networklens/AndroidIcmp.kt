@@ -13,22 +13,21 @@ class AndroidIcmp private constructor() {
     companion object {
         @JvmStatic @Throws(IOException::class)
         fun open(net: NetworkState, target: InetAddress?): IcmpEcho.Channel {
-            val ipv6 = target is Inet6Address
             val selectedNetwork = net.network
-            if (target == null || !net.admitted(target) || selectedNetwork == null || (!ipv6 && net.ip.isEmpty())) {
+            if (target !is Inet4Address || !net.local(target) || selectedNetwork == null || net.ip.isEmpty()) {
                 throw IcmpEcho.Failure(IcmpEcho.Problem.SETUP, "Target is outside the selected Wi-Fi")
             }
             var fd: FileDescriptor? = null
             var complete = false
             try {
-                val descriptor = Os.socket(if (ipv6) OsConstants.AF_INET6 else OsConstants.AF_INET,
-                    OsConstants.SOCK_DGRAM, if (ipv6) OsConstants.IPPROTO_ICMPV6 else OsConstants.IPPROTO_ICMP)
+                val descriptor = Os.socket(OsConstants.AF_INET,
+                    OsConstants.SOCK_DGRAM, OsConstants.IPPROTO_ICMP)
                 fd = descriptor
                 selectedNetwork.bindSocket(descriptor)
-                Os.bind(descriptor, InetAddress.getByName(if (ipv6) "::" else net.ip), 0)
+                Os.bind(descriptor, InetAddress.getByName(net.ip), 0)
                 Os.fcntlInt(descriptor, OsConstants.F_SETFL,
                     Os.fcntlInt(descriptor, OsConstants.F_GETFL, 0) or OsConstants.O_NONBLOCK)
-                val peer = if (ipv6) InetAddress.getByName(net.scoped(target)) else target
+                val peer = target
                 Os.connect(descriptor, peer, 0)
                 val id = (Os.getsockname(descriptor) as InetSocketAddress).port
                 val channel = SocketChannel(descriptor, id, peer)

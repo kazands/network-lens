@@ -6,7 +6,8 @@ Network Lens is a focused Kotlin Android Wi-Fi device finder. Keep its product s
 - A current response is required for presence. Treat cached/native advertisements as candidates. Router PTR/DHCP names are diagnostic evidence only; never use them to infer a product, family, manufacturer, primary type, presence or grouping. Do not reuse an IP's prior occupant's details.
 - Bind all discovery to the selected Wi-Fi and eligible scope. Preserve bounded work, deadlines, retries, cancellation, error reporting and resource cleanup.
 - Missing MAC/model/manufacturer values remain unknown. HomeKit pairing IDs are not hardware MAC addresses. Keep IEEE interface vendor separate from reported manufacturer.
-- Preserve light/dark appearance, scalable text, Lucide device icons, shared Network Lens branding, IPv6 below IPv4 and Back/list-position behavior.
+- LAN discovery admits IPv4 endpoints only. Do not add direct IPv6 probes or routed accessory discovery. Preserve IPv6 literal parsing/redaction in untrusted metadata and ordinary platform networking for HTTPS updates.
+- Preserve light/dark appearance, scalable text, Lucide device icons, shared Network Lens branding and Back/list-position behavior.
 - Tests use synthetic identifiers. Do not save or commit household scans, device serials, SSIDs, credentials, private keys or personal screenshots. Local caches/evidence/artifacts are ignored. Never force-add them.
 - Emulator automation must reject physical devices. Physical-device checks require a specifically authorized target and must stop if the app loses the foreground. Do not operate unrelated connected devices.
 - Use the direct build and relevant checks in docs/BUILDING.md. Report exactly what passed and what remains unverified. Do not call a Partial scan complete or claim that reporting fixes resolve a discovery issue.

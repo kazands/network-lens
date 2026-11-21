@@ -1,5 +1,13 @@
 # What is new
 
+## 0.3.37 — Focused IPv4 discovery
+
+- Focus scans on responding IPv4 devices on the selected Wi-Fi.
+- Show an explicit IPv4 requirement and disable Scan on Wi-Fi without an IPv4 address.
+- Keep normal HTTPS updates and IPv6 address masking in returned text. IPv6-only devices and identity clues available only through IPv6 are outside the inventory; see [scope and validation](reference/IPV4-SCOPE.md).
+- Allow a later IPv4 address to arrive after an initial IPv6-only Android service update.
+- Avoid retrying typed connection refusals and routing failures during read-only metadata lookups; transient errors retain bounded retries.
+
 ## 0.3.36 — Calmer scanning and clearer device categories
 
 - Use consistent light/dark surface colours for cards, fields, menus and dialogs.
@@ -113,6 +121,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.36).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.37).
 
-[Verification for this release](VERIFICATION-0.3.36.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.37.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

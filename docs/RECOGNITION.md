@@ -1,5 +1,7 @@
 # Understanding device recognition
 
+Current scans discover IPv4 devices on the selected Wi-Fi. IPv6-only devices and routed Thread endpoints are outside scope. See [IPv4 scope and limitations](reference/IPV4-SCOPE.md).
+
 Network Lens separates four questions: did a device respond, what information did it share, what product does that information identify, and what services does it offer?
 
 ## Names and models

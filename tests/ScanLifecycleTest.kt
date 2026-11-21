@@ -13,14 +13,14 @@ object ScanLifecycleTest {
         check(normal.hosts.size==254 && !normal.sweepOmitted,"Normal address sweep retained")
         val large = ScanPlan.create("198.18.0.40",21,null)
         check(large.hosts.isEmpty() && large.sweepOmitted && large.range!!.prefix==21,"Large scope retained without allocating a sweep")
-        check(large.scope.contains("Service discovery only") && large.scope.contains("/21"),"Omitted sweep is explicit, not a hidden /24")
+        check(large.scope.contains("IPv4 service discovery only") && large.scope.contains("/21"),"Omitted sweep is explicit, not a hidden /24")
         check(ScanPlan.create("198.18.0.40",22,null).hosts.size==1022,"Largest supported attached sweep")
         check(ScanPlan.create("198.18.0.40",0,null).sweepOmitted,"A /0 cannot allocate billions of addresses")
         check(ScanPlan.create("198.18.0.40",21,"198.18.0.0/24").hosts.size==254,"Explicit smaller range remains available")
         reject { ScanPlan.create("198.18.0.40",21,"198.18.0.0/21") }
         reject { ScanPlan.create("198.18.0.40",24,"198.19.0.0/24") }
         reject { ScanPlan.create("",0,"198.18.0.0/24") }
-        check(ScanPlan.create("",0,null).range==null,"IPv6-only plan needs no IPv4 sweep")
+        reject { ScanPlan.create("",0,null) }
         check(ScanPlan.create("198.18.0.41",31,null).hosts.size==2,"Point-to-point range retained")
 
         repeat(30) {

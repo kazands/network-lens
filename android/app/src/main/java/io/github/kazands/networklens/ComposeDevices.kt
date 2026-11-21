@@ -127,7 +127,7 @@ internal object UiDevicePolicy {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) { NetworkLabel();Text(title,style=MaterialTheme.typography.headlineMedium) }
                 Radar()
             }
-            Button(onClick={action(UiAction.Scan)},enabled=state.scanning || state.demo || state.network!=null,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("scan")) { Text(if(state.scanning) "Stop scan" else "Scan Wi-Fi") }
+            Button(onClick={action(UiAction.Scan)},enabled=state.scanning || state.demo || state.network?.ip?.isNotEmpty()==true,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("scan")) { Text(if(state.scanning) "Stop scan" else "Scan Wi-Fi") }
             val detailsAction=Modifier.fillMaxWidth().clickable(role=Role.Button) {action(UiAction.ScanDetails)}.heightIn(min=48.dp).testTag("scan-details-action")
             @Composable fun Status(modifier: Modifier=Modifier) {
                 Text(state.status,style=MaterialTheme.typography.bodySmall,modifier=modifier.testTag("scan-status").semantics { liveRegion=LiveRegionMode.Polite })
@@ -186,9 +186,9 @@ internal object UiDevicePolicy {
     val filtered=state.query.isNotEmpty() || filter!=DeviceFilter.ALL
     Column(Modifier.fillMaxWidth().padding(vertical=24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
         LensIcon(if(filtered) R.drawable.ic_ui_search else if(state.network==null && !state.demo) R.drawable.ic_ui_wifi_off else R.drawable.ic_ui_wifi,null,Modifier.size(40.dp),MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(if(filtered) "No matching devices" else if(state.scanning) "Looking for devices…" else if(state.network==null && !state.demo) "Connect to Wi-Fi" else "Your devices will appear here",style=MaterialTheme.typography.titleLarge)
-        Text(if(filtered) "Try another name, address or service, or clear the filters." else if(state.scanning) "Names and details appear as devices respond." else if(state.network==null && !state.demo) "Join your Wi-Fi network, then return and tap Scan Wi-Fi." else "Start a fresh scan to find responding devices. Results stay in memory for this app session.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if(filtered) "No matching devices" else if(state.scanning) "Looking for devices…" else if(state.network==null && !state.demo) "Connect to Wi-Fi" else if(state.network?.ip?.isEmpty()==true) "IPv4 address required" else "Your devices will appear here",style=MaterialTheme.typography.titleLarge)
+        Text(if(filtered) "Try another name, address or service, or clear the filters." else if(state.scanning) "Names and details appear as devices respond." else if(state.network==null && !state.demo) "Join your Wi-Fi network, then return and tap Scan Wi-Fi." else if(state.network?.ip?.isEmpty()==true) ScanPlan.IPV4_REQUIRED else "Start a fresh scan to find responding IPv4 devices. Results stay in memory for this app session.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(filtered) OutlinedButton(onClick={action(UiAction.Search(""));action(UiAction.Filter(DeviceFilter.ALL))}) { Text("Clear filters") }
-        else if(state.network==null && !state.demo) OutlinedButton(onClick={action(UiAction.WifiSettings)}) { Text("Open Wi-Fi settings") }
+        else if((state.network==null || state.network.ip.isEmpty()) && !state.demo) OutlinedButton(onClick={action(UiAction.WifiSettings)}) { Text("Open Wi-Fi settings") }
     }
 }

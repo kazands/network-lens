@@ -20,7 +20,9 @@ internal object EnvisalinkChecks {
         check(Discovery::class.java.declaredMethods.none { it.name.contains("envisalink", true) }, "Discovery has no dedicated TPI scheduler or reader")
         check(Discovery::class.java.declaredConstructors.none { it.parameterTypes.contains(String::class.java) }, "No per-address alarm-check entry point remains")
         check(EnvisalinkInfo::class.java.declaredMethods.none { it.parameterTypes.any { type -> java.net.Socket::class.java.isAssignableFrom(type) } }, "Legacy evidence vocabulary exposes no socket reader")
-        val op = Discovery(test.targetContext, NetworkState().apply { ip = "198.18.0.1"; prefix = 24; key = "synthetic-alarm-retirement" })
+        val op = Discovery(test.targetContext, NetworkState().apply {
+            ip = "198.18.0.1"; prefix = 24; key = "synthetic-alarm-retirement"; addresses.add(ip); prefixes[ip] = prefix
+        })
         try {
             field(op, "accepting").set(op, true)
             val observe = Discovery::class.java.getDeclaredMethod("observe", String::class.java, String::class.java, Boolean::class.javaPrimitiveType).apply { isAccessible = true }

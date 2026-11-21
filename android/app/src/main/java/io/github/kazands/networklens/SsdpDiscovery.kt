@@ -23,10 +23,10 @@ internal object SsdpDiscovery {
     // A target is a discovery query only; no application launch or control request.
     internal val targets = listOf("ssdp:all", "upnp:rootdevice", "urn:dial-multiscreen-org:service:dial:1",
         "urn:schemas-upnp-org:device:ZonePlayer:1", "urn:Belkin:device:controllee:1")
-    internal fun query(target: String, ipv6: Boolean): ByteArray =
-        "M-SEARCH * HTTP/1.1\r\nHOST: ${if (ipv6) "[FF02::C]" else "239.255.255.250"}:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: $target\r\n\r\n".toByteArray(Charsets.US_ASCII)
+    internal fun query(target: String): ByteArray =
+        "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: $target\r\n\r\n".toByteArray(Charsets.US_ASCII)
     fun discover(channel: Channel, deadline: Long, active: () -> Boolean, allowed: (InetAddress) -> Boolean,
-                 now: () -> Long = System::nanoTime, ipv6: Boolean = false, resolved: (InetAddress, Map<String,String>) -> Unit): Result {
+                 now: () -> Long = System::nanoTime, resolved: (InetAddress, Map<String,String>) -> Unit): Result {
         val start=now();val window=start+TimeUnit.SECONDS.toNanos(12);val end=minOf(window,deadline)
         var sent=0;var packets=0;var duplicates=0;var limited=false
         val seen=HashSet<String>();val peers=HashMap<InetAddress,Peer>()
@@ -34,13 +34,13 @@ internal object SsdpDiscovery {
             val wave = sent / targets.size
             val offset = wave * 7000L + (sent % targets.size) * 250L
             if(sent < targets.size * 2 && now()-start >= TimeUnit.MILLISECONDS.toNanos(offset)) {
-                channel.send(query(targets[sent % targets.size], ipv6)); sent++
+                channel.send(query(targets[sent % targets.size])); sent++
             }
             val left=end-now()
             if(left<=0)break
             val packet=channel.receive(maxOf(1,minOf(300,TimeUnit.NANOSECONDS.toMillis(left))).toInt()) ?: continue
             packets++
-            if(!active() || now()>=end || !allowed(packet.peer) || packet.length !in 1..4096 || packet.length>packet.bytes.size)continue
+            if(!active() || now()>=end || packet.peer !is java.net.Inet4Address || !allowed(packet.peer) || packet.length !in 1..4096 || packet.length>packet.bytes.size)continue
             val peer=peers[packet.peer] ?: if(peers.size<MAX_PEERS) Peer().also {peers[packet.peer]=it}
                 else {limited=true;continue}
             // Excess traffic from one sender must not spend other senders' parse/record budget.

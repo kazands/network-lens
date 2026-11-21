@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.*
 import android.os.Handler
 import android.os.Looper
-import android.os.Build
 import java.net.*
 import java.util.TreeSet
 import java.util.UUID
@@ -20,7 +19,7 @@ class NetworkState {
     @JvmField var prefix = 0
     @JvmField val addresses: MutableList<String> = ArrayList()
     @JvmField val prefixes: MutableMap<String, Int> = LinkedHashMap()
-    private data class Scope(val prefixes: Map<String, Int>, val networks: Set<String>, val own: Set<String>, val routes: Ipv6Routes)
+    private data class Scope(val prefixes: Map<String, Int>, val networks: Set<String>, val own: Set<String>)
     @Volatile private var liveScope: Scope? = null
 
     private fun snapshot(): Scope = liveScope ?: snapshot(prefixes, addresses)
@@ -29,17 +28,18 @@ class NetworkState {
         other != null && network == other.network && key == other.key
 
     fun sameScope(other: NetworkState?): Boolean =
-        sameConnection(other) && snapshot().networks == other!!.snapshot().networks && snapshot().routes.same(other.snapshot().routes)
+        sameConnection(other) && snapshot().networks == other!!.snapshot().networks
 
     /** Ignore capability-only notifications (for example signal strength), not address or route changes. */
     fun sameConfiguration(other: NetworkState?): Boolean =
         sameScope(other) && other != null && ip == other.ip && prefix == other.prefix &&
             gateway == other.gateway && iface == other.iface && dns == other.dns &&
-            addresses.toSet() == other.addresses.toSet() && prefixes == other.prefixes
+            addresses.filter { Address.bytes(it)?.size == 4 }.toSet() == other.addresses.filter { Address.bytes(it)?.size == 4 }.toSet() &&
+            prefixes.filterKeys { Address.bytes(it)?.size == 4 } == other.prefixes.filterKeys { Address.bytes(it)?.size == 4 }
 
     /** Additions and privacy-address rotation preserve existing work; withdrawal does not. */
     fun retainsScope(other: NetworkState?): Boolean =
-        sameConnection(other) && other!!.snapshot().networks.containsAll(snapshot().networks) && snapshot().routes.retains(other.snapshot().routes)
+        sameConnection(other) && other!!.snapshot().networks.containsAll(snapshot().networks)
 
     @Synchronized fun refresh(other: NetworkState): Boolean {
         if (!retainsScope(other)) return false
@@ -49,27 +49,17 @@ class NetworkState {
 
     fun contains(device: Device): Boolean {
         val address = Address.bytes(device.ip)?.let { InetAddress.getByAddress(it) } ?: return false
-        return admitted(address) && (!device.self || owns(device.ip))
+        return local(address) && (!device.self || owns(device.ip))
     }
     fun owns(ip: String): Boolean = snapshot().own.contains(numeric(ip))
-    fun routed(address: InetAddress): Boolean = !local(address) && snapshot().routes.gateway(address) != null
-    fun admitted(address: InetAddress): Boolean = local(address) || routed(address)
-
     fun local(address: InetAddress?): Boolean {
-        if (address == null || address.isAnyLocalAddress || address.isLoopbackAddress || address.isMulticastAddress) return false
+        if (address !is Inet4Address || address.isAnyLocalAddress || address.isLoopbackAddress || address.isMulticastAddress) return false
         val value = address.hostAddress!!
         for ((local, prefix) in snapshot().prefixes) if (Address.inPrefix(value, local, prefix)) return true
         return false
     }
 
-    fun scoped(address: InetAddress): String {
-        var value = address.hostAddress!!
-        if (address is Inet6Address) {
-            value = value.javaSplit("%", 2)[0]
-            if (address.isLinkLocalAddress) value += "%" + iface
-        }
-        return value
-    }
+    fun scoped(address: InetAddress): String = address.hostAddress!!
 
     fun check(context: Context) {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -105,15 +95,15 @@ class NetworkState {
 
         private fun numeric(value: String): String = Address.bytes(value)?.joinToString("") { "%02x".format(it.toInt() and 255) } ?: value
 
-        private fun snapshot(prefixes: Map<String, Int>, own: List<String>, routes: Ipv6Routes = Ipv6Routes(emptyList(), "")): Scope {
-            val copy = LinkedHashMap(prefixes)
+        private fun snapshot(prefixes: Map<String, Int>, own: List<String>): Scope {
+            val copy = LinkedHashMap(prefixes.filterKeys { Address.bytes(it)?.size == 4 })
             val networks = copy.mapNotNull { (address, prefix) ->
                 val bytes = Address.bytes(address) ?: return@mapNotNull null
                 if (prefix !in 0..bytes.size * 8) return@mapNotNull null
                 for (bit in prefix until bytes.size * 8) bytes[bit / 8] = (bytes[bit / 8].toInt() and (0x80 ushr (bit % 8)).inv()).toByte()
                 bytes.joinToString("") { "%02x".format(it.toInt() and 255) } + "/" + prefix
             }.toSet()
-            return Scope(copy, networks, own.map(::numeric).toSet(), routes)
+            return Scope(copy, networks, own.filter { Address.bytes(it)?.size == 4 }.map(::numeric).toSet())
         }
 
         /** Only changes that replace the IPv4 attachment replace the connection key. */
@@ -135,6 +125,7 @@ class NetworkState {
             state.network = network
             state.iface = properties.interfaceName ?: ""
             for (address in properties.linkAddresses.sortedBy { it.address.hostAddress }) {
+                if (address.address !is Inet4Address) continue
                 val value = address.address.hostAddress!!
                 state.addresses.add(value)
                 state.prefixes[value] = address.prefixLength
@@ -144,20 +135,13 @@ class NetworkState {
             }
             for (route in properties.routes.sortedBy { it.toString() }) {
                 val gateway = route.gateway
-                if (route.isDefaultRoute && gateway != null && !gateway.isAnyLocalAddress) {
+                if (route.isDefaultRoute && gateway is Inet4Address && !gateway.isAnyLocalAddress) {
                     if (state.gateway.isEmpty() || gateway is Inet4Address) state.gateway = gateway.hostAddress!!
                 }
             }
             for (address in properties.dnsServers) state.dns += (if (state.dns.isEmpty()) "" else ", ") + address.hostAddress
-            if (state.addresses.isEmpty()) throw IllegalStateException("Wi-Fi has no usable IP address yet. Try again shortly.")
-            val routes = properties.routes.mapNotNull { route ->
-                val destination = route.destination
-                if (destination.address !is Inet6Address || destination.prefixLength == 0) null
-                else Ipv6Routes.Rule(destination.address.hostAddress!!, destination.prefixLength,
-                    route.gateway?.hostAddress ?: "", route.getInterface() ?: "",
-                    Build.VERSION.SDK_INT < 33 || route.type == RouteInfo.RTN_UNICAST)
-            }
-            state.liveScope = snapshot(state.prefixes, state.addresses, Ipv6Routes(routes, state.iface))
+            if (properties.linkAddresses.isEmpty()) throw IllegalStateException("Wi-Fi has no usable IP address yet. Try again shortly.")
+            state.liveScope = snapshot(state.prefixes, state.addresses)
             state.key = connectionKey(context, network, properties)
             return state
         }

@@ -60,6 +60,8 @@ Group counts describe displayed address groups, not a verified number of physica
 boxes. Separate audio zones can refer to one amplifier. A journal overflow is a
 count of recording events, not necessarily unique missing response fields.
 
+Discovery now admits IPv4 endpoints only; see [IPv4 scope](IPV4-SCOPE.md). IPv6 literals in returned text are still parsed and masked. The Android metadata retry boundary refines typed connection refusals and routing errors before applying the retry policy; neither is retried. Unclassified connection errors and transient read/write failures can still receive one fresh-connection retry within the original lookup deadline. This avoids unnecessary requests and improves failure detail; it does not recover a missing model or make an unavailable service respond.
+
 
 ### Identifier and capacity corrections (0.3.29)
 

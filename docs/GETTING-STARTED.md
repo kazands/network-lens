@@ -1,14 +1,16 @@
 # Get started
 
+Current scans discover IPv4 devices on the selected Wi-Fi. IPv6-only devices and routed Thread endpoints are outside scope. See [IPv4 scope and limitations](reference/IPV4-SCOPE.md).
+
 Network Lens runs on Android 8.0 or newer. It is currently distributed as a development-preview APK on GitHub.
 
 ## Install
 
-1. [Download Network Lens 0.3.36](https://github.com/kazands/network-lens/releases/download/v0.3.36/Network-Lens-0.3.36.apk).
+1. [Download Network Lens 0.3.37](https://github.com/kazands/network-lens/releases/download/v0.3.37/Network-Lens-0.3.37.apk).
 2. Open the downloaded APK. If Android asks, allow your browser or file manager to install it.
 3. Follow Android's installation prompt, then open Network Lens.
 
-No GitHub account is needed. Use the APK from the project release page. Source files, checksums and verification notes are available on [the same release](https://github.com/kazands/network-lens/releases/tag/v0.3.36).
+No GitHub account is needed. Use the APK from the project release page. Source files, checksums and verification notes are available on [the same release](https://github.com/kazands/network-lens/releases/tag/v0.3.37).
 
 If you already use a public Network Lens APK, install the update over it. Do not uninstall first. A locally built development APK may use a different signing key; see [installation troubleshooting](TROUBLESHOOTING.md#android-will-not-install-the-update).
 
@@ -24,11 +26,11 @@ Each scan starts fresh. Wake a missing device and run another scan to give it an
 
 Search for a device by the information it reported. Recognised products show a product name and device icon, with a useful room name underneath. An **Unnamed device** responded but did not supply enough information for a useful name.
 
-Tap a row for more information. Compact rows show IPv4 when available, or the full IPv6 address for an IPv6-only device. Device details show every grouped address, with IPv6 below IPv4. **Services available** describes capabilities such as casting or file sharing. Open **Show technical details** for reported fields, their sources and lookup outcomes.
+Tap a row for more information. Compact rows show the preferred IPv4 address. Device details show every grouped IPv4 address. **Services available** describes capabilities such as casting or file sharing. Open **Show technical details** for reported fields, their sources and lookup outcomes.
 
 Use **Scan details** to investigate discovery methods that could not finish or did not receive usable responses. The scan's finished/stopped status and individual method outcomes describe different things.
 
-Use the category filters to narrow the list to unnamed devices, network equipment, smart-home devices, computers or media. Device details combine grouped IPv4 and IPv6 addresses and keep all endpoint observations under **Show technical details**. **How this was identified** explains a product match. Search still includes MAC addresses; **Clear search** removes the search term; **All** removes the category filter. An IPv6-only device remains visible in the list.
+Use the category filters to narrow the list to unnamed devices, network equipment, smart-home devices, computers or media. Device details combine grouped IPv4 addresses and keep all endpoint observations under **Show technical details**. **How this was identified** explains a product match. Search still includes MAC addresses; **Clear search** removes the search term; **All** removes the category filter. IPv6-only devices are outside discovery scope.
 
 The manual Envisalink check has been removed. It could temporarily occupy the alarm interface’s single integration connection. Network Lens no longer offers a dedicated TPI identity check; an address without other identifying reports can remain unnamed.
 

@@ -56,8 +56,8 @@ internal class LanProtocolRunners(private val context: Context, private val net:
             } finally {socket?.let {datagrams.remove(it);it.close()}}
         },method.source).also {resources.start(it)}
     }
-    fun ssdp(ipv6: Boolean = false, resolved: (InetAddress, Map<String,String>) -> Unit): Thread = Thread({
-        val source=SsdpDiscovery.SOURCE + if (ipv6) " · IPv6" else ""
+    fun ssdp(resolved: (InetAddress, Map<String,String>) -> Unit): Thread = Thread({
+        val source=SsdpDiscovery.SOURCE
         health.begin(source)
         var socket:DatagramSocket?=null
         try {
@@ -67,7 +67,7 @@ internal class LanProtocolRunners(private val context: Context, private val net:
             network().bindSocket(selected)
             selected.networkInterface = NetworkInterface.getByName(net.iface) ?: throw IOException("Wi-Fi interface unavailable")
             selected.timeToLive = 1
-            val group=InetAddress.getByName(if (ipv6) "ff02::c%" + net.iface else "239.255.255.250")
+            val group=InetAddress.getByName("239.255.255.250")
             val result=SsdpDiscovery.discover(object:SsdpDiscovery.Channel {
                 override fun send(bytes:ByteArray) {
                     if(!accepting() || cancelled())return
@@ -79,7 +79,7 @@ internal class LanProtocolRunners(private val context: Context, private val net:
                     try {selected.receive(packet)}catch(_:SocketTimeoutException){return null}
                     return SsdpDiscovery.Packet(packet.address,bytes,packet.length)
                 }
-            },deadline(),{accepting() && !cancelled()},inScope, ipv6 = ipv6) {peer,headers->
+            },deadline(),{accepting() && !cancelled()},inScope) {peer,headers->
                 net.check(context)
                 if(accepting() && !cancelled() && inScope(peer)) resolved(peer,headers)
             }
@@ -96,7 +96,7 @@ internal class LanProtocolRunners(private val context: Context, private val net:
             }
         }catch(e:Exception){if(accepting() && !cancelled()){blocked(e);health.fail(source,"Discovery request failed")}}
         finally {socket?.let {datagrams.remove(it);it.close()}}
-    },if (ipv6) "SSDP / UPnP · IPv6" else "service-discovery").also {resources.start(it)}
+    },"service-discovery").also {resources.start(it)}
     fun omada(range: IpRange?, resolved: (InetAddress, OmadaDiscovery.Response) -> Unit): Thread? {
         val source = OmadaDiscovery.SOURCE
         val selectedRange = range

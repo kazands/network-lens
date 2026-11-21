@@ -6,18 +6,18 @@ import java.util.concurrent.TimeUnit
 internal class MdnsQuestionSuppression {
     private val observed = HashMap<String, Long>()
     private var closed = false
-    private fun key(ipv6: Boolean, q: MdnsPacket.Question) = "$ipv6|${q.kind}|${MdnsPacket.key(q.labels)}"
+    private fun key(q: MdnsPacket.Question) = "${q.kind}|${MdnsPacket.key(q.labels)}"
 
-    @Synchronized fun observe(ipv6: Boolean, questions: List<MdnsPacket.Question>, now: Long) {
+    @Synchronized fun observe(questions: List<MdnsPacket.Question>, now: Long) {
         if (closed) return
         for (q in questions.take(8)) {
-            val key = key(ipv6, q)
+            val key = key(q)
             if (key in observed || observed.size < 256) observed[key] = now
         }
     }
-    @Synchronized fun suppress(ipv6: Boolean, q: MdnsPacket.Question, now: Long): Boolean {
+    @Synchronized fun suppress(q: MdnsPacket.Question, now: Long): Boolean {
         if (closed) return false
-        val received = observed[key(ipv6, q)] ?: return false
+        val received = observed[key(q)] ?: return false
         return now >= received && now - received < TimeUnit.SECONDS.toNanos(1)
     }
     @Synchronized fun close() { closed = true; observed.clear() }

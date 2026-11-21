@@ -13,7 +13,7 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.36.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
+The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.37.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
 
 A fresh checkout creates a local development signing key. That key cannot update an installation signed by another key. Existing keys must not be replaced to work around an installation error. Public release credentials are never required for ordinary builds or tests.
 
@@ -31,7 +31,7 @@ The unshrunk Compose candidate is about 15 MB, compared with about 4 MB before m
 
 `bash scripts/test.sh` checks generated catalogues and coverage policy, compiles the shared Kotlin code, and runs 55 host suites and Python diagnostic tests. Some fixtures open bounded loopback sockets; the runner needs permission to use local sockets. It does not require a phone or scan a household network.
 
-Coverage includes protocol parsing, current-response rules, identity conflicts, grouping, retries, scanner/host separation, IPv6 admission, updates and resource ownership. Test counts measure assertions, not supported products or real-world accuracy.
+Coverage includes protocol parsing, current-response rules, identity conflicts, grouping, retries, scanner/host separation, IPv4 scope and IPv6 exclusion, updates and resource ownership. Test counts measure assertions, not supported products or real-world accuracy.
 
 ## Android tests
 
@@ -48,7 +48,7 @@ Replace the serial with the exact emulator you started. Instrumentation changes 
 
 | Area | Useful modes |
 | --- | --- |
-| Recognition and protocols | `device-identities`, `recog`, `local-metadata`, `public-identity`, `homekit`, `routed-ipv6` |
+| Recognition and protocols | `device-identities`, `recog`, `local-metadata`, `public-identity`, `homekit`, `ipv4-scope` |
 | Focused products | `google-cast`, `fire-tv`, `smartthings`, `envisalink`, `kidde`, `fibe-tv` |
 | Indirect local-name evidence | `network-names` |
 | Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `session-only`, `session-cold` |
@@ -72,7 +72,7 @@ request structures if capture were enabled. It uses the pinned runtime's interna
 test boundary; it does not install or exercise an OEM content-capture service.
 
 `compose-update-network` drives the real network-reconciliation path with
-synthetic Wi-Fi loss, replacement and IPv6 withdrawal. It checks that updater
+synthetic Wi-Fi loss, replacement and IPv4 scope withdrawal. It checks that updater
 progress, Cancel and the verified-update action stay visible, while obsolete
 scan dialogs and reports retire. Its update state and cache bytes are synthetic;
 it does not contact GitHub, change the emulator's network or install an update.
@@ -94,7 +94,7 @@ of every older scenario. Prefer the explicit `compose-*` modes above. The
 dialog on API 37; the optional Wi-Fi-name permission journey still needs manual
 verification for this migration.
 
-The `public-identity` mode uses synthetic ownership transitions and loopback HTTP/SSH/TLS fixtures. It checks that certificate observation cannot weaken normal HTTPS verification, and that public clues cannot become hardware fields or grouping links. `ipv6-public-trial` is an emulator-only, one-packet selected-Wi-Fi multicast experiment with a one-second receive window, 64-packet and 32-peer caps; its output is aggregate feasibility evidence, not physical-network recall. Neither mode contacts household devices.
+The `public-identity` mode uses synthetic ownership transitions and loopback HTTP/SSH/TLS fixtures. It checks that certificate observation cannot weaken normal HTTPS verification, and that public clues cannot become hardware fields or grouping links. It does not contact household devices. `ipv4-scope` verifies mixed A/AAAA replies, AAAA-first/A-later native updates, clean IPv6-only window expiry, current-response rules, cancellation, and the unsupported-network interface in both themes at 200% text. Its native callback fixtures drive the production expiry boundary directly without sleeps or live NSD registration. The former `routed-ipv6`, `ipv6-feasibility`, and `ipv6-public-trial` modes were removed with LAN IPv6 discovery.
 
 The `envisalink` mode now verifies removal of the dedicated TPI transport and manual action; it does not exercise an active alarm-service check.
 

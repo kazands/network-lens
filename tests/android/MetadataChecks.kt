@@ -115,7 +115,73 @@ internal object MetadataChecks {
         } finally { next.cancel() }
         RecognitionPlanningChecks.run(test, check)
         endpointOutcomes(check)
+        retryFailures(check)
         limits(test, check)
+    }
+
+    private fun retryFailures(check: (Boolean, String) -> Unit) {
+        val timer = java.util.concurrent.ScheduledThreadPoolExecutor(1)
+        fun fault(errno: Int?) = java.net.ConnectException("fixture-secret ECONNREFUSED").apply {
+            if (errno != null) initCause(ErrnoException("fixture-secret", errno))
+        }
+        try {
+            // Exercise both real transports through the same Android retry boundary used by Discovery.
+            // The socket fails before connecting, so these fixtures cannot contact any network peer.
+            for (audio in listOf(false, true)) for (errno in listOf(null, OsConstants.ECONNREFUSED, OsConstants.ENETUNREACH, OsConstants.EHOSTUNREACH, OsConstants.EACCES)) {
+                var attempts = 0
+                var failure: MetadataHttp.Failure? = null
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+                try {
+                    AndroidMetadataFailure.retryReadOnly(deadline, { true }) {
+                        attempts++
+                        object : java.net.Socket() {
+                            override fun connect(endpoint: java.net.SocketAddress, timeout: Int) { throw fault(errno) }
+                        }.use { socket ->
+                            if (audio) AudioZoneInfo.exchange(socket, InetAddress.getLoopbackAddress(), AudioZones.Kind.VSSL, "", deadline, timer) { true }
+                            else MetadataHttp.exchange(socket, InetAddress.getLoopbackAddress(), LocalMetadata.Request(LocalMetadata.Kind.SPOTIFY, 8080, "/fixture"), deadline, timer) { true }
+                        }
+                    }
+                } catch (error: MetadataHttp.Failure) { failure = error }
+                val expected = when (errno) {
+                    OsConstants.ECONNREFUSED -> MetadataHttp.Reason.CONNECTION_REFUSED
+                    OsConstants.ENETUNREACH, OsConstants.EHOSTUNREACH -> MetadataHttp.Reason.ROUTING_FAILED
+                    else -> MetadataHttp.Reason.CONNECTION_FAILED
+                }
+                check(failure?.reason == expected && attempts == if (expected == MetadataHttp.Reason.CONNECTION_FAILED) 2 else 1,
+                    "${if (audio) "Audio" else "HTTP"} retry boundary uses typed errno before retrying; untyped connection failures remain bounded")
+                check(!failure?.message.orEmpty().contains("fixture-secret"), "Retry failures retain only fixed diagnostic text")
+                check(generateSequence(failure?.cause) { it.cause }.take(16).any { it is ErrnoException && it.errno == errno } || errno == null,
+                    "Original typed connection evidence survives retry classification")
+            }
+            var attempts = 0
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            val recovered = AndroidMetadataFailure.retryReadOnly(deadline, { true }) {
+                if (++attempts == 1) throw MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED)
+                "recovered"
+            }
+            check(recovered == "recovered" && attempts == 2, "A transient read failure still gets one fresh attempt")
+            for (active in listOf(false, true)) {
+                attempts = 0
+                var failure: MetadataHttp.Failure? = null
+                try {
+                    AndroidMetadataFailure.retryReadOnly(if (active) System.nanoTime() - 1 else deadline, { active }) {
+                        attempts++; throw MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED)
+                    }
+                } catch (error: MetadataHttp.Failure) { failure = error }
+                check(attempts == 1 && failure?.reason == if (active) MetadataHttp.Reason.DEADLINE else MetadataHttp.Reason.CANCELLED,
+                    "Android retry classification preserves deadline and cancellation without another attempt")
+            }
+            attempts = 0
+            var failure: MetadataHttp.Failure? = null
+            try {
+                AndroidMetadataFailure.retryReadOnly(deadline, { true }) {
+                    if (++attempts == 1) throw MetadataHttp.Failure(MetadataHttp.Reason.READ_FAILED)
+                    throw MetadataHttp.Failure(MetadataHttp.Reason.CONNECTION_FAILED, cause = fault(OsConstants.ECONNREFUSED))
+                }
+            } catch (error: MetadataHttp.Failure) { failure = error }
+            check(attempts == 2 && failure?.reason == MetadataHttp.Reason.CONNECTION_REFUSED,
+                "A refusal on the final retry is refined without a third attempt")
+        } finally { timer.shutdownNow() }
     }
 
     private fun endpointOutcomes(check: (Boolean, String) -> Unit) {

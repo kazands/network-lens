@@ -32,8 +32,6 @@ class LocalServices private constructor() {
             val canonical = canonicalType(type)
             return canonical.endsWith("._tcp.") && canonical != "_matter._tcp."
         }
-        @JvmStatic fun routedAccessory(type: String): Boolean = canonicalType(type) in
-            setOf("_hap._tcp.", "_hap._udp.", "_matter._tcp.", "_matterc._udp.")
         // Matter operational discovery keeps a _tcp service name even when the
         // endpoint supports only UDP. Do not mistake its SRV port for a TCP port.
     }

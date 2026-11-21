@@ -1,12 +1,14 @@
 # Troubleshooting
 
+Current scans discover IPv4 devices on the selected Wi-Fi. IPv6-only devices and routed Thread endpoints are outside scope. See [IPv4 scope and limitations](reference/IPV4-SCOPE.md).
+
 ## A device is missing
 
 Check that it is powered on, awake and connected to the same network. Run a fresh scan while keeping Network Lens open. Guest Wi-Fi, client isolation, separate VLANs, VPN routing and device firewalls can prevent discovery. Do not disable protections blindly; first check whether they separate the phone from the device.
 
 Open **Scan details** to see which methods ran and whether they reported a permission, resolution, response or time-limit problem. A device can be connected without answering the methods available to the app.
 
-On automatic ranges larger than 1,024 addresses, Network Lens keeps service discovery but skips individual address checks. Choose a smaller range if you need those checks. IPv6 discovery follows eligible advertised addresses; it does not sweep the IPv6 address space.
+On automatic ranges larger than 1,024 addresses, Network Lens keeps service discovery but skips individual address checks. Choose a smaller range if you need those checks. IPv6-only endpoints are excluded. On Wi-Fi without an IPv4 address, the app explains that IPv4 is required and does not start a scan.
 
 ## A device is unnamed or has the wrong type
 

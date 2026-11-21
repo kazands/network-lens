@@ -5,6 +5,8 @@ observations, with source labels and per-endpoint lookup outcomes. Supported exa
 manufacturer/model reports can feed the [offline product catalogue](DEVICE-IDENTITIES.md).
 Every scan starts fresh and all metadata remains in memory.
 
+Current discovery admits IPv4 endpoints only; see [IPv4 discovery scope](IPV4-SCOPE.md).
+
 [Amazon Fire TV recognition](FIRE-TV-RECOGNITION.md) additionally reads current
 WhisperPlay friendly-name/type-code fields and permits the documented same-peer
 `/upnp/dev/<UUID>/desc` description path. A reviewed type-code interpretation is
@@ -57,7 +59,7 @@ HomeKit/HTTP Android resolution issue or measured coverage on real hardware.
 ## Local diagnostics
 
 Each endpoint's details now include its admitted Shelly, WLED, Spotify Connect
-IPP, Cast and Samsung lookup outcomes, labelled by protocol, IPv4/IPv6 and the attempted port
+IPP, Cast and Samsung lookup outcomes, labelled by protocol, address family and the attempted port
 (with TLS for IPPS). Success without an optional model/manufacturer is explicit.
 Connection refusal and routing failures require typed platform evidence; generic
 connection failures remain generic. Read timeouts, HTTP errors, invalid metadata,
@@ -95,7 +97,7 @@ The original ordinary-counter limit remains; the additional diagnostic vocabular
 is a finite enum. Event counts saturate at one million; received-byte counts
 saturate at 32 MiB.
 
-The direct mDNS receiver also counts datagrams per IPv4/IPv6 receive window,
+The direct IPv4 mDNS receiver also counts datagrams per receive window,
 ignored sources, oversized packets, non-response header packets, rejected response packets,
 responses without live details, live-record responses and receive-budget stops.
 A live-record response counter is not a count of confirmed devices. It grants no
@@ -108,7 +110,7 @@ traffic consumes the raw packet/byte limits; query headers do not consume the
 response-decoding limit. At most 256 small query packets are parsed for optional
 question suppression. Exceeding a receive/byte/response limit remains Truncated;
 skipping further query-suppression parsing does not discard response evidence.
-IPv4 and IPv6 have separate budgets with aggregate counters; packets are not
+Packets are not
 deduplicated across windows or attributed to individual senders by these counts.
 
 Current-scan traffic reduction has two bounded mechanisms:
