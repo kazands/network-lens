@@ -141,7 +141,7 @@ object MdnsAssemblyTest {
             assembly.accept(peer, if (modelFirst) model else anchor, now)
             check(assembly.associatedModels(peer, now).isEmpty(), "Neither standalone model nor model-less anchor fabricates model evidence")
             if (!modelFirst) {
-                val questions = assembly.due(false, now, 4)
+                val questions = assembly.due(now, 4)
                 check(questions.any { it.kind == 16 && it.labels == modelOwner }, "Complete Companion service requests its bounded associated TXT model")
                 check(MdnsPacket.followUp(questions).isNotEmpty(), "Associated model query uses the normal bounded wire encoder")
             }
@@ -153,7 +153,7 @@ object MdnsAssemblyTest {
             check(assembly.associatedModels(peer, now + 2).isEmpty(), "Conflicting current TXT RRset is not arbitrarily resolved")
             check(assembly.associatedModels(peer, now + 11_000_000_000L).isEmpty(), "Expired model and anchor cannot be reused")
             assembly.close()
-            check(assembly.associatedModels(peer, now).isEmpty() && assembly.modelPeers(now).isEmpty() && assembly.due(false, now, 4).isEmpty(), "Stopped scan emits no associated models or queries")
+            check(assembly.associatedModels(peer, now).isEmpty() && assembly.modelPeers(now).isEmpty() && assembly.due(now, 4).isEmpty(), "Stopped scan emits no associated models or queries")
         }
         val proxy = MdnsAssembly()
         proxy.accept(other, anchor, now); proxy.accept(other, model, now)
@@ -166,13 +166,13 @@ object MdnsAssemblyTest {
         mismatch.accept(peer, parse(rr(modelOwner, 16, txt("model=iPad14,1"), 0, true)), now + 1)
         check(mismatch.associatedModels(peer, now + 1).isEmpty(), "TXT goodbye immediately removes model evidence")
         val retry = MdnsAssembly(); retry.accept(peer, anchor, now)
-        check(retry.due(false, now, 4).size == 1 && retry.due(false, now + 100, 4).isEmpty(), "Auxiliary queries respect retry spacing")
-        check(retry.due(false, now + 2_000_000_000L, 4).size == 1 && retry.due(false, now + 4_000_000_000L, 4).isEmpty(), "Auxiliary query has at most two attempts per scan")
+        check(retry.due(now, 4).size == 1 && retry.due(now + 100, 4).isEmpty(), "Auxiliary queries respect retry spacing")
+        check(retry.due(now + 2_000_000_000L, 4).size == 1 && retry.due(now + 4_000_000_000L, 4).isEmpty(), "Auxiliary query has at most two attempts per scan")
     }
 
     private fun associatedModelWireNames() {
         val now = 1_000_000_000L
-        for (peer in listOf(ip("192.0.2.92"), ip("2001:db8::92"))) {
+        for (peer in listOf(ip("192.0.2.92"))) {
             for (service in listOf("_companion-link", "_airplay", "_smb", "_workstation")) {
                 for (rawName in listOf(" ", "  ", " Fixture", "Fixture ", " Fixture ", "Fixture", "Fixture.room", "é".repeat(31))) {
                     val type = listOf(service, "_tcp", "local")
@@ -183,8 +183,8 @@ object MdnsAssemblyTest {
                     val anchor = parse(rr(type, 12, name(instance), 120, false),
                         rr(instance, 33, srv(host), 120, true), rr(instance, 16, txt("fixture=1"), 120, true),
                         rr(host, if (peer is Inet4Address) 1 else 28, peer.address, 120, true))
-                    check(assembly.accept(peer, anchor, now).size == 1, "Valid raw instance completes on either address family")
-                    val questions = assembly.due(peer is Inet6Address, now, 4)
+                    check(assembly.accept(peer, anchor, now).size == 1, "Valid raw IPv4 instance completes")
+                    val questions = assembly.due(now, 4)
                     // Exercise the same encoder called by the production receive loop. A display
                     // name trimmed to empty must never turn a valid DNS label into a loop-ending exception.
                     val wire = MdnsPacket.followUp(questions)
@@ -197,7 +197,7 @@ object MdnsAssemblyTest {
                     assembly.accept(peer, parse(rr(owner, 16, txt("model=iPad13,18"), 120, true)), now + 2)
                     check(String(assembly.associatedModels(peer, now + 2).single().getValue("model")) == "iPad13,18",
                         "Only the exact raw instance supplies its model after another name was observed")
-                    check(assembly.due(peer is Inet6Address, now + 2_000_000_000L, 4).isEmpty(),
+                    check(assembly.due(now + 2_000_000_000L, 4).isEmpty(),
                         "The exact model response satisfies its original query")
                     assembly.close()
                 }
@@ -374,7 +374,7 @@ object MdnsAssemblyTest {
         )
         a = MdnsAssembly()
         a.accept(PEER, parse(p[0]), start)
-        var q: List<MdnsPacket.Question> = a.due(false, start, 4)
+        var q: List<MdnsPacket.Question> = a.due(start, 4)
         check(
             (((q.size == 2) && (q.stream())!!.anyMatch(callback1@{ x -> (x.kind == 33) })) &&
                 (q.stream())!!.anyMatch(callback2@{ x -> (x.kind == 16) })),
@@ -388,21 +388,20 @@ object MdnsAssemblyTest {
             "Query encodes dotted instance as one label",
         )
         check(
-            ((a.due(false, (start + 1), 4))!!.isEmpty() &&
-                (a.due(true, (start + TimeUnit.SECONDS.toNanos(2)), 4))!!.isEmpty()),
-            "Retries are spaced and do not leak across IP families",
+            (a.due((start + 1), 4))!!.isEmpty(),
+            "IPv4 retries retain their bounded spacing",
         )
         check(
-            ((a.due(false, (start + TimeUnit.MILLISECONDS.toNanos(1200)), 4))!!.size == 2),
+            ((a.due((start + TimeUnit.MILLISECONDS.toNanos(1200)), 4))!!.size == 2),
             "One timed retry is available",
         )
         check(
-            ((a.due(false, (start + TimeUnit.SECONDS.toNanos(3)), 4))!!.isEmpty() &&
+            ((a.due((start + TimeUnit.SECONDS.toNanos(3)), 4))!!.isEmpty() &&
                 !(a.pending((start + TimeUnit.SECONDS.toNanos(3))))),
             "Unanswered records cannot cause unbounded queries or wait",
         )
         a.accept(PEER, parse(p[1], p[2]), (start + TimeUnit.SECONDS.toNanos(3)))
-        q = a.due(false, (start + TimeUnit.SECONDS.toNanos(3)), 4)
+        q = a.due((start + TimeUnit.SECONDS.toNanos(3)), 4)
         check(
             (((q.size == 1) && ((q.get(0))!!.kind == 1)) && ((q.get(0))!!.labels)!!.equals(HOST)),
             "SRV yields a targeted missing A question",
@@ -448,52 +447,52 @@ object MdnsAssemblyTest {
             (timed.ready((start + TimeUnit.SECONDS.toNanos(4))))!!.isEmpty(),
             "Stop discards timer completions",
         )
-        var v6: InetAddress = ip("fd00::20")
+        var peer4: InetAddress = ip("192.0.2.20")
         a = MdnsAssembly()
-        var six: kotlin.Array<ByteArray> = parts(v6)
-        a.accept(v6, parse(six[0], six[1], six[2]), start)
-        q = a.due(true, start, 4)
-        check(((q.size == 1) && ((q.get(0))!!.kind == 28)), "IPv6 sender gets an AAAA follow-up")
+        var parts4: kotlin.Array<ByteArray> = parts(peer4)
+        a.accept(peer4, parse(parts4[0], parts4[1], parts4[2]), start)
+        q = a.due(start, 4)
+        check(((q.size == 1) && ((q.get(0))!!.kind == 1)), "IPpeer4 sender gets an AAAA follow-up")
         check(
-            ((a.accept(v6, parse(six[3]), (start + 1)))!!.size == 1),
-            "Same-sender IPv6 assembly works",
+            ((a.accept(peer4, parse(parts4[3]), (start + 1)))!!.size == 1),
+            "Same-sender IPpeer4 assembly works",
         )
         var burst: MdnsAssembly = MdnsAssembly()
-        burst.accept(v6, parse(six[0], six[1], six[3]), start)
-        var alternate: ByteArray = rr(HOST, 28, (ip("fd00::21"))!!.address, 120, true)
-        burst.accept(v6, parse(alternate), (start + TimeUnit.MILLISECONDS.toNanos(200)))
+        burst.accept(peer4, parse(parts4[0], parts4[1], parts4[3]), start)
+        var alternate: ByteArray = rr(HOST, 1, (ip("192.0.2.21"))!!.address, 120, true)
+        burst.accept(peer4, parse(alternate), (start + TimeUnit.MILLISECONDS.toNanos(200)))
         check(
-            ((burst.accept(v6, parse(six[2]), (start + TimeUnit.MILLISECONDS.toNanos(400))))!!
+            ((burst.accept(peer4, parse(parts4[2]), (start + TimeUnit.MILLISECONDS.toNanos(400))))!!
                 .size == 1),
-            "Same-burst cache flush preserves an earlier matching AAAA member",
+            "Same-burst cache flush preserves an earlier matching A member",
         )
-        burst.accept(v6, parse(alternate), (start + TimeUnit.SECONDS.toNanos(2)))
+        burst.accept(peer4, parse(alternate), (start + TimeUnit.SECONDS.toNanos(2)))
         check(
-            ((burst.accept(v6, parse(six[2]), (start + TimeUnit.MILLISECONDS.toNanos(2500))))!!
+            ((burst.accept(peer4, parse(parts4[2]), (start + TimeUnit.MILLISECONDS.toNanos(2500))))!!
                 .size == 1),
             "Old RRset member remains only during one-second grace",
         )
         check(
-            (burst.accept(v6, parse(six[2]), (start + TimeUnit.SECONDS.toNanos(3))))!!.isEmpty(),
+            (burst.accept(peer4, parse(parts4[2]), (start + TimeUnit.SECONDS.toNanos(3))))!!.isEmpty(),
             "Unrefreshed old address expires at the grace deadline",
         )
         check(
-            ((burst.due(true, (start + TimeUnit.SECONDS.toNanos(3)), 4))!!.stream())!!.anyMatch(
-                callback3@{ x -> (x.kind == 28) }
+            ((burst.due((start + TimeUnit.SECONDS.toNanos(3)), 4))!!.stream())!!.anyMatch(
+                callback3@{ x -> (x.kind == 1) }
             ),
             "An alternate address cannot suppress a missing sender-address retry",
         )
         check(
-            ((burst.accept(v6, parse(six[3]), (start + TimeUnit.MILLISECONDS.toNanos(3100))))!!
+            ((burst.accept(peer4, parse(parts4[3]), (start + TimeUnit.MILLISECONDS.toNanos(3100))))!!
                 .size == 1),
             "A refreshed matching address repairs the association",
         )
         var refreshedBurst: MdnsAssembly = MdnsAssembly()
-        all(refreshedBurst, v6, six, start)
-        refreshedBurst.accept(v6, parse(alternate), (start + TimeUnit.SECONDS.toNanos(2)))
-        refreshedBurst.accept(v6, parse(six[3]), (start + TimeUnit.MILLISECONDS.toNanos(2400)))
+        all(refreshedBurst, peer4, parts4, start)
+        refreshedBurst.accept(peer4, parse(alternate), (start + TimeUnit.SECONDS.toNanos(2)))
+        refreshedBurst.accept(peer4, parse(parts4[3]), (start + TimeUnit.MILLISECONDS.toNanos(2400)))
         check(
-            ((refreshedBurst.accept(v6, parse(six[2]), (start + TimeUnit.SECONDS.toNanos(4))))!!
+            ((refreshedBurst.accept(peer4, parse(parts4[2]), (start + TimeUnit.SECONDS.toNanos(4))))!!
                 .size == 1),
             "A matching member refreshed during the burst keeps its own TTL",
         )
@@ -519,8 +518,8 @@ object MdnsAssemblyTest {
         )
         a.close()
         check(
-            (((a.accept(v6, parse(*six), (start + 2)))!!.isEmpty() &&
-                (a.due(true, (start + 2), 4))!!.isEmpty()) && !(a.pending((start + 2)))),
+            (((a.accept(peer4, parse(*parts4), (start + 2)))!!.isEmpty() &&
+                (a.due((start + 2), 4))!!.isEmpty()) && !(a.pending((start + 2)))),
             "Closed scan discards late replies and queued work",
         )
         check(
@@ -543,7 +542,7 @@ object MdnsAssemblyTest {
         a = MdnsAssembly()
         a.accept(PEER, parse(p[0]), -(TimeUnit.SECONDS.toNanos(10)))
         check(
-            ((a.due(false, -(TimeUnit.SECONDS.toNanos(10)), 4))!!.size == 2),
+            ((a.due(-(TimeUnit.SECONDS.toNanos(10)), 4))!!.size == 2),
             "Monotonic clocks need no positive epoch",
         )
         var full: ByteArray = packet(*p)
@@ -576,7 +575,7 @@ object MdnsAssemblyTest {
                     parse(rr(Arrays.asList("_http", "_tcp", "local"), 12, name(inst), 120, false)),
                     start,
                 )
-                a.due(false, start, 4)
+                a.due(start, 4)
                 n++
             }
         }
@@ -590,7 +589,7 @@ object MdnsAssemblyTest {
                 var result: MdnsPacket.Result = MdnsPacket.parse(data, data.size)
                 var bounded: MdnsAssembly = MdnsAssembly()
                 bounded.accept(PEER, result, start)
-                for (question in bounded.due(false, start, 4)) {
+                for (question in bounded.due(start, 4)) {
                     MdnsPacket.followUp(Arrays.asList(question))
                 }
                 n++

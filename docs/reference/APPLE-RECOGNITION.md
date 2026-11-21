@@ -33,8 +33,11 @@ failures and work limits.
 ## Bounds and compatibility
 
 - At most 32 endpoint lookups per scan, using bounded metadata workers.
-- Two requests maximum, two seconds total per lookup, within the scan deadline.
-  No retry, redirect, authentication or downgrade path.
+- At most two requests per connection, two seconds total per lookup, within the
+  scan deadline. A transient transport failure before service verification can
+  receive one fresh-connection retry within that original window. Refusal and
+  routing failure outcomes are not retried.
+  No redirect, authentication or downgrade path.
 - Four-byte big-endian frames, each limited to 8 KiB before allocation. Only flat
   XML plist string dictionaries are supported. Duplicate keys, nested values,
   binary plists, unrelated requests, malformed UTF-8, unexpected DTDs and entities

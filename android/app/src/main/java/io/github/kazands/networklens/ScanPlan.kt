@@ -1,20 +1,17 @@
 package io.github.kazands.networklens
 
 /** Scope is independent of address-sweep capacity. Never silently substitute a smaller subnet. */
-internal class ScanPlan private constructor(val range: IpRange?, val hosts: List<String>, val sweepOmitted: Boolean) {
+internal class ScanPlan private constructor(val range: IpRange, val hosts: List<String>, val sweepOmitted: Boolean) {
     // Preserve the normal /24 budget; larger sweeps need more bounded time, not shorter probes.
     val budgetSeconds: Long = 55L + ((hosts.size - 254).coerceAtLeast(0) + 255) / 256 * 15L
-    val scope: String = if (range == null) "IPv6 advertised services + this phone's Wi-Fi addresses"
-        else IpRange.address(if (range.prefix >= 31) range.first else range.first - 1) + "/" + range.prefix +
-            if (sweepOmitted) " · Service discovery only (IPv4 + IPv6); IPv4 address sweep not run" else " · IPv4 + IPv6 advertised services"
+    val scope: String = IpRange.address(if (range.prefix >= 31) range.first else range.first - 1) + "/" + range.prefix +
+        if (sweepOmitted) " · IPv4 service discovery only; address sweep not run" else " · IPv4 devices only"
     companion object {
+        const val IPV4_REQUIRED = "This Wi-Fi has no IPv4 address. Network Lens scans IPv4 devices only."
         const val MAX_HOSTS = 1024
         fun create(ip: String, prefix: Int, cidr: String?): ScanPlan {
             val requested = cidr?.javaTrim().orEmpty()
-            if (ip.isEmpty()) {
-                require(requested.isEmpty()) { "This network has no IPv4 range. Use automatic discovery." }
-                return ScanPlan(null, emptyList(), false)
-            }
+            require(ip.isNotEmpty()) { IPV4_REQUIRED }
             val local = IpRange(ip, prefix)
             val selected = if (requested.isEmpty()) local else {
                 val parts = requested.javaSplit("/", -1)

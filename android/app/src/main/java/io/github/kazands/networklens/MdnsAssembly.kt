@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 
 /** Short-lived, same-sender DNS-SD assembly. One instance belongs to one scan. */
 class MdnsAssembly {
-    data class RoutedCandidate(val sender: InetAddress, val address: InetAddress, val service: MdnsPacket.Service)
     private data class Entry(val record: MdnsPacket.Record, val expires: Long, val received: Long)
     private class Peer(val address: InetAddress) {
         val sets = LinkedHashMap<String, MutableList<Entry>>()
@@ -42,7 +41,7 @@ class MdnsAssembly {
     private fun usedBytes() = peers.values.sumOf { p -> p.sets.values.sumOf { entries -> entries.sumOf { weight(it.record) } } }
 
     @Synchronized fun accept(sender: InetAddress, packet: MdnsPacket.Result, now: Long): List<MdnsPacket.Service> {
-        if (closed || sender.isAnyLocalAddress || sender.isLoopbackAddress || sender.isMulticastAddress || packet.records.isEmpty()) return emptyList()
+        if (closed || sender.address.size != 4 || sender.isAnyLocalAddress || sender.isLoopbackAddress || sender.isMulticastAddress || packet.records.isEmpty()) return emptyList()
         expire(now)
         val key = peerKey(sender)
         if (!peers.containsKey(key) && peers.size >= 128) { limited = true; return emptyList() }
@@ -115,32 +114,7 @@ class MdnsAssembly {
         return out
     }
 
-    /** Advertisements only. Callers must separately admit the route and obtain a fresh endpoint reply. */
-    @Synchronized fun routedCandidates(now: Long): List<RoutedCandidate> {
-        if (closed) return emptyList()
-        expire(now)
-        val out = ArrayList<RoutedCandidate>()
-        for (peer in peers.values) for (instance in instances(peer)) {
-            val type = MdnsPacket.instanceType(instance)
-            if (!LocalServices.routedAccessory(type)) continue
-            if (records(peer, instance.drop(1), 12).none { MdnsPacket.key(it.target) == MdnsPacket.key(instance) }) continue
-            val srv = records(peer, instance, 33).singleOrNull() ?: continue
-            val txt = records(peer, instance, 16).singleOrNull() ?: continue
-            if (srv.port !in 1..65535) continue
-            for (record in records(peer, srv.target, 28)) {
-                val bytes = Address.bytes(record.address) ?: continue
-                if (bytes.size != 16 || Arrays.equals(bytes, peer.address.address)) continue
-                val service = MdnsPacket.Service(SafeText.label(instance[0], 128), type)
-                service.host = srv.target.joinToString("."); service.port = srv.port
-                service.ptrReceived = true; service.txtReceived = true
-                service.duplicateModelKey = txt.duplicateModelKey
-                for ((key, value) in txt.attributes) service.attributes[key] = value.clone()
-                out.add(RoutedCandidate(peer.address, InetAddress.getByAddress(bytes), service))
-            }
-        }
-        return out
-    }
-
+    /** Current records from one sender and one RRset. */
     private fun records(peer: Peer, labels: List<String>, kind: Int) = peer.sets[setKey(labels, kind)]?.map { it.record } ?: emptyList()
     // Bonjour device-info can be TXT-only. Bind it to a complete current service
     // with the exact same instance name AND sender, never a proxy/cached name.
@@ -220,13 +194,13 @@ class MdnsAssembly {
 
     /** Suppress only PTRs backed by complete, current same-sender services in this scan.
      * Advertised TTL is aged from receipt; the shorter assembly retention is not the wire TTL. */
-    @Synchronized internal fun knownAnswers(v6: Boolean, names: List<String>, now: Long): List<MdnsPacket.Record> {
+    @Synchronized internal fun knownAnswers(names: List<String>, now: Long): List<MdnsPacket.Record> {
         if (closed) return emptyList()
         expire(now)
         val owners = names.map { MdnsPacket.key(it.split('.')) }.toSet()
         val out = LinkedHashMap<String, MdnsPacket.Record>()
         for (peer in peers.values) {
-            if ((peer.address.address.size == 16) != v6) continue
+            if (peer.address.address.size != 4) continue
             val complete = complete(peer).map { MdnsPacket.key(listOf(it.name) + it.type.removeSuffix(".").split('.') + "local") }.toSet()
             for (entries in peer.sets.values) for (entry in entries) {
                 val r = entry.record
@@ -273,22 +247,20 @@ class MdnsAssembly {
             // A bounded retry may recover the missing member, but never trusts the proxy.
             if (records(peer, srv.target, kind).none { Arrays.equals(Address.bytes(it.address), peer.address.address) })
                 out.add(MdnsPacket.Question(srv.target, kind))
-            if (LocalServices.routedAccessory(MdnsPacket.instanceType(instance)) && records(peer, srv.target, 28).isEmpty())
-                out.add(MdnsPacket.Question(srv.target, 28))
         }
         for (owner in modelOwners(peer)) if (records(peer, owner, 16).isEmpty()) out.add(MdnsPacket.Question(owner, 16))
         return out
     }
-    private fun queryKey(v6: Boolean, q: MdnsPacket.Question) = "$v6|" + setKey(q.labels, q.kind)
-    @Synchronized fun due(v6: Boolean, now: Long, limit: Int): List<MdnsPacket.Question> {
+    private fun queryKey(q: MdnsPacket.Question) = setKey(q.labels, q.kind)
+    @Synchronized fun due(now: Long, limit: Int): List<MdnsPacket.Question> {
         require(limit in 0..4)
         if (closed || limit == 0) return emptyList()
         expire(now)
         val out = LinkedHashMap<String, MdnsPacket.Question>()
         for (peer in peers.values) {
-            if ((peer.address.address.size == 16) != v6) continue
+            if (peer.address.address.size != 4) continue
             for (q in missing(peer)) {
-                val key = queryKey(v6, q)
+                val key = queryKey(q)
                 if (!attempts.containsKey(key) && attempts.size >= 256) { limited = true; continue }
                 val attempt = attempts.getOrPut(key) { Attempt() }
                 if (attempt.sent >= 2 || attempt.sent > 0 && now - attempt.next < 0 || out.containsKey(key)) continue
@@ -306,7 +278,7 @@ class MdnsAssembly {
             entries.size > 1 && entries.first().record.kind in listOf(16, 33) &&
                 entries.any { it.expires - now in 1..TimeUnit.SECONDS.toNanos(1) }
         } || missing(p).any { q ->
-            val attempt = attempts[queryKey(p.address.address.size == 16, q)]
+            val attempt = attempts[queryKey(q)]
             if (attempt == null) attempts.size < 256 else attempt.sent < 2
         } }
     }

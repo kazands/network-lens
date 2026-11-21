@@ -4,7 +4,9 @@ The list uses a recognized product as its primary title, followed by its categor
 and a useful custom network name. Raw network names, reported models,
 manufacturer, interface vendor and recognition sources remain in Details and
 copied details. Missing MAC messages appear in Details rather than every list
-row. Known MACs remain visible. IPv4 still appears above IPv6.
+row. Known MACs remain visible. Current discovery admits IPv4 endpoints only;
+see [IPv4 discovery scope](IPV4-SCOPE.md). The general formatter still handles
+IPv6 safely, below IPv4, for synthetic inputs and diagnostic text.
 
 A product-like hostname or service name alone never establishes hardware.
 Unidentified endpoints use “Unnamed device”; useful reported names remain

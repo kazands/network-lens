@@ -5,6 +5,14 @@ import android.system.OsConstants
 
 /** Refine connection failures only from typed errno evidence, never exception message text. */
 internal object AndroidMetadataFailure {
+    /** Refine typed connection errors before the shared retry policy sees them. */
+    fun <T> retryReadOnly(deadline: Long, active: () -> Boolean, exchange: () -> T): T =
+        MetadataHttp.retryReadOnly(deadline, active) {
+            try { exchange() } catch (error: MetadataHttp.Failure) {
+                throw classify(error, System.nanoTime() >= deadline)
+            }
+        }
+
     fun classify(error: Exception, expired: Boolean): MetadataHttp.Failure {
         val failure = error as? MetadataHttp.Failure
         if (expired) return MetadataHttp.Failure(MetadataHttp.Reason.DEADLINE, cause = error)

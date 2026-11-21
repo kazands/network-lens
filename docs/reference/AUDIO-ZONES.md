@@ -50,8 +50,11 @@ report. Group identifiers never merge Sonos devices, VSSL zones or Cast receiver
 - Selected Wi-Fi, eligible scope, current presence and endpoint-object checks apply
   at admission and result application. Cached/native advertisements cannot trigger
   VSSL status queries. Only current description responses trigger Sonos queries.
-- At most 32 audio endpoints per scan, one attempt each, shared bounded metadata
-  workers, two-second exchange deadline, tracked sockets and explicit lookup status.
+- At most 32 audio endpoints per scan, one lookup each, shared bounded metadata
+  workers, two-second lookup deadline, tracked sockets and explicit lookup status.
+  Transient transport failures can receive one fresh-connection retry within the
+  original window. Typed Android refusal/routing errors are classified before
+  retry and are not retried.
   Normal scan draining lets admitted descriptions finish their dependent metadata
   queries; Stop/deadline cancellation still closes every lane and socket.
 - VSSL reads one bounded frame. Sonos HTTP/XML bodies are capped at 64 KiB with

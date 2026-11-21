@@ -53,19 +53,11 @@ class IcmpEcho private constructor() {
 
         @JvmStatic fun probe(factory: Factory, cancelled: BooleanSupplier, timeoutMillis: Int,
             attempts: Int, retryDelayMillis: Int, clock: Clock): Result =
-            exchange(factory, cancelled, timeoutMillis, attempts, retryDelayMillis, clock, false)
-
-        @JvmStatic fun probeV6(factory: Factory, cancelled: BooleanSupplier, timeoutMillis: Int,
-            attempts: Int, retryDelayMillis: Int): Result =
-            probeV6(factory, cancelled, timeoutMillis, attempts, retryDelayMillis, CLOCK)
-
-        @JvmStatic fun probeV6(factory: Factory, cancelled: BooleanSupplier, timeoutMillis: Int,
-            attempts: Int, retryDelayMillis: Int, clock: Clock): Result =
-            exchange(factory, cancelled, timeoutMillis, attempts, retryDelayMillis, clock, true)
+            exchange(factory, cancelled, timeoutMillis, attempts, retryDelayMillis, clock)
 
         private fun exchange(factory: Factory, cancelled: BooleanSupplier, timeoutMillis: Int,
-            attempts: Int, retryDelayMillis: Int, clock: Clock, ipv6: Boolean): Result {
-            require(timeoutMillis in 1..(if (ipv6) 2500 else 1000) && attempts in 1..2 && retryDelayMillis in 0..500) { "Invalid echo budget" }
+            attempts: Int, retryDelayMillis: Int, clock: Clock): Result {
+            require(timeoutMillis in 1..1000 && attempts in 1..2 && retryDelayMillis in 0..500) { "Invalid echo budget" }
             var sent = 0
             var channel: Channel? = null
             var result: Result? = null
@@ -88,7 +80,7 @@ class IcmpEcho private constructor() {
                     }
                     if (cancelled.asBoolean) { result = Result(Status.CANCELLED, null, sent, -1); break }
                     starts[attempt - 1] = clock.nanos()
-                    channel.send(if (ipv6) requestV6(channel.identifier(), attempt, nonce) else request(channel.identifier(), attempt, nonce))
+                    channel.send(request(channel.identifier(), attempt, nonce))
                     sent++
                     val deadline = starts[attempt - 1] + timeoutMillis * 1_000_000L
                     var packets = 0
@@ -98,8 +90,7 @@ class IcmpEcho private constructor() {
                         val reply = channel.receive(wait)
                         if (cancelled.asBoolean) { result = Result(Status.CANCELLED, null, sent, -1); break@exchange }
                         if (reply == null) continue
-                        val sequence = if (ipv6) replySequenceV6(reply, channel.identifier(), attempt, nonce)
-                            else replySequence(reply, channel.identifier(), attempt, nonce)
+                        val sequence = replySequence(reply, channel.identifier(), attempt, nonce)
                         if (sequence > 0) {
                             result = Result(Status.REPLIED, null, sent, maxOf(0L, (clock.nanos() - starts[sequence - 1]) / 1_000_000))
                             break@exchange
@@ -144,16 +135,6 @@ class IcmpEcho private constructor() {
             packet[2] = (checksum ushr 8).toByte()
             packet[3] = checksum.toByte()
             return packet
-        }
-
-        /** Linux ping sockets supply and validate the IPv6 pseudo-header checksum. */
-        @JvmStatic fun requestV6(identifier: Int, sequence: Int, nonce: ByteArray?): ByteArray =
-            request(identifier, sequence, nonce).also { it[0] = 128.toByte(); it[2] = 0; it[3] = 0 }
-
-        /** Only for checksum-validated, connected-peer ICMPv6 datagrams, never raw packets. */
-        @JvmStatic fun replySequenceV6(packet: ByteArray?, identifier: Int, sentSequence: Int, nonce: ByteArray?): Int {
-            if (packet == null || packet.size != 24 || packet[0].toInt() and 255 != 129 || packet[1].toInt() != 0) return 0
-            return matchingSequence(packet, identifier, sentSequence, nonce)
         }
 
         @JvmStatic fun replySequence(packet: ByteArray?, identifier: Int, sentSequence: Int, nonce: ByteArray?): Int {

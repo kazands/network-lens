@@ -19,11 +19,11 @@ internal object UpdateNetworkChecks {
             val before=network("synthetic-update-network-a",true)
             val transitions=listOf("Wi-Fi disconnect" to null,
                 "Wi-Fi replacement" to network("synthetic-update-network-b",true),
-                "IPv6 scope withdrawal" to network(before.key,false))
+                "IPv4 scope withdrawal" to network(before.key,false))
             val artifact=File.createTempFile("synthetic-update-network-",".bin",test.targetContext.cacheDir)
             fun seedNetwork() {
                 store.clear();store.observeConnection(before)
-                val peers=listOf(Device().apply {ip="192.0.2.8";seen=true},Device().apply {ip="2001:db8:1::8";seen=true})
+                val peers=listOf(Device().apply {ip="192.0.2.8";seen=true},Device().apply {ip="198.18.0.8";seen=true})
                 store.retainIfCurrent(store.token(),before.key,peers,true)
                 d.set("network",before);d.set("devices",peers);d.set("groupedSource",null)
             }
@@ -86,6 +86,6 @@ internal object UpdateNetworkChecks {
     private fun network(key: String,ipv6: Boolean)=NetworkState().apply {
         this.key=key;ip="192.0.2.1";prefix=24;iface="fixture0"
         addresses.add(ip);prefixes[ip]=prefix
-        if(ipv6) {addresses.add("2001:db8:1::1");prefixes["2001:db8:1::1"]=64}
+        if(ipv6) {addresses.add("198.18.0.1");prefixes["198.18.0.1"]=24}
     }
 }

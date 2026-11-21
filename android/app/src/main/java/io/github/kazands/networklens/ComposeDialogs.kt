@@ -171,7 +171,7 @@ import java.util.Locale
         Text("Automatic checks your current Wi-Fi's IPv4 address range, up to 1,024 addresses. Leave the field empty to use it.")
         OutlinedTextField(value=value,onValueChange={value=it;memory.rangeError=""},label={Text("Custom IPv4 range (optional)")},placeholder={Text("192.168.1.0/24")},modifier=Modifier.fillMaxWidth().testTag("range-input"),singleLine=true,isError=memory.rangeError.isNotEmpty(),keyboardOptions=KeyboardOptions(autoCorrectEnabled=false,keyboardType=KeyboardType.Uri))
         if(memory.rangeError.isNotEmpty()) Text(memory.rangeError,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
-        Text("A custom range must stay inside the Wi-Fi network you are connected to. IPv6 devices are found through service advertisements, rather than an address sweep.",style=MaterialTheme.typography.bodySmall)
+        Text("A custom range must stay inside the Wi-Fi network you are connected to. Network Lens scans IPv4 devices only.",style=MaterialTheme.typography.bodySmall)
     }
 }
 @Composable private fun UpdateModal(state: UiState,action: (UiAction)->Unit) {

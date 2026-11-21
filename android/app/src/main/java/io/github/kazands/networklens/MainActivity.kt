@@ -174,11 +174,11 @@ class MainActivity : ComponentActivity() {
             if (!retained) {
                 val report = store.report(prior.key)
                 val replacement = ScanReport(operation?.scope() ?: report?.scope ?: "", false,
-                    "Wi-Fi IPv6 routes or addresses changed. Unaffected responses remain; scan again to refresh.",
+                    "Wi-Fi IPv4 scope changed. Unaffected responses remain; scan again to refresh.",
                     if (operation == null) report?.checked ?: 0 else done,
                     if (operation == null) report?.total ?: 0 else total,
                     System.currentTimeMillis(), (operation?.sources() ?: report?.sources ?: emptyMap()).mapValues {
-                        if (it.value.startsWith("Running")) "Truncated · Wi-Fi IPv6 routes or addresses changed" else it.value
+                        if (it.value.startsWith("Running")) "Truncated · Wi-Fi IPv4 scope changed" else it.value
                     }, if (operation == null) report?.omittedSources ?: 0 else 0)
                 operation?.cancel(); discovery = null; scanning = false; selected = null
                 store.replaceScope(current!!.key, kept, replacement)
@@ -235,6 +235,7 @@ class MainActivity : ComponentActivity() {
             "Checking addresses · " + (done.coerceAtLeast(0).toLong() * 100 / total) + "%\n" + done.coerceAtLeast(0) + " of " + total + " addresses checked"
         } else "Identifying devices…\nReading names and device details")
         if (demo) return "Sample results · not your network"
+        if (network?.ip?.isEmpty() == true) return ScanPlan.IPV4_REQUIRED
         val report = network?.let { store.report(it.key) }
         if (message.isNotEmpty() && (report == null || message != report.reason)) return message
         if (report == null) return if (network == null) "Not connected to Wi-Fi" else "Ready to scan"
@@ -255,7 +256,7 @@ class MainActivity : ComponentActivity() {
         val report = current?.let { store.report(it.key) }
         val scope = if (range.isNotEmpty()) range else current?.takeIf { it.ip.isNotEmpty() }?.let {
             try { val r = IpRange(it.ip,it.prefix); IpRange.address(if (it.prefix < 31) r.first-1 else r.first)+"/"+it.prefix } catch (_: IllegalArgumentException) { "" }
-        }.orEmpty()
+        }.orEmpty().ifEmpty { if (current != null) "IPv4 Wi-Fi required" else "" }
         return UiState(store.dark(),store.ready(),demo,scanning,showingSettings,selected,groupsForDisplay(),query,range,
             current,wifiName?.let { if (current == null) "" else it.get(current.network) }.orEmpty(),scope,statusText(),done,total,report,
             if (modal == UiModal.SCAN) discovery?.sources() ?: report?.sources ?: emptyMap() else emptyMap(),
@@ -464,6 +465,7 @@ class MainActivity : ComponentActivity() {
         if (scanning) return
         if (Build.VERSION.SDK_INT >= 37 && checkSelfPermission(LAN_PERMISSION) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(LAN_PERMISSION), LOCAL_NETWORK); return }
         try { network = NetworkState.current(this) } catch (e: Exception) { message = e.message ?: ""; render(); return }
+        if (network?.ip?.isEmpty() == true) { message = ScanPlan.IPV4_REQUIRED; render(); return }
         startDiscovery()
     }
     private fun startDiscovery() {

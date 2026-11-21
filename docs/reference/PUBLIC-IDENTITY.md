@@ -103,9 +103,9 @@ Host regression tests use synthetic parsing and loopback HTTP/SSH/TLS fixtures.
 The emulator-only `public-identity` mode checks ownership, cancellation, admission,
 privacy, late model arrival, and separate TLS observation/HTTPS trust behaviour.
 The optional host [public-page trial](PUBLIC-WEB-TRIAL.md) reports aggregate clue
-availability. A bounded `ipv6-public-trial` emulator experiment evaluates one
-selected-Wi-Fi `ff02::1` echo; it is not enabled in production discovery and does
-not infer MACs from IPv6 interface identifiers.
+availability. The former bounded `ipv6-public-trial` emulator experiment was
+retired with [IPv4-only discovery](IPV4-SCOPE.md). It was never enabled in
+production discovery and did not infer MACs from IPv6 interface identifiers.
 
 Physical firmware compatibility, low-end performance and recall improvements
 remain unverified. Credential-based SNMP remains a follow-up after these public

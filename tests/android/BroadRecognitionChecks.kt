@@ -112,7 +112,7 @@ internal object BroadRecognitionChecks {
                 check(pending.invoke(op)==false,"Ordinary discovery is settled before late recovery is admitted")
                 retries.recover(listOf("_http._tcp."))
                 check(pending.invoke(op)==true,"Late recovery keeps the actual Discovery completion predicate pending")
-                check(retries.due(false,now,2)==listOf("_http._tcp."),"Queued late recovery gets a send opportunity")
+                check(retries.due(now,2)==listOf("_http._tcp."),"Queued late recovery gets a send opportunity")
                 check(retryPending.invoke(op,now + 1_199_999_999L)==true,"Discovery retains the final response window")
                 check(retryPending.invoke(op,now + 1_200_000_000L)==false,"Inactive IPv6 does not extend completed IPv4 recovery")
             } finally {release.countDown();receiver.join(1000);threadField.set(op,null)}

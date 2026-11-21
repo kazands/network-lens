@@ -111,5 +111,5 @@ per-file hashes, required public regeneration inputs and original notices.
 Private signing material, caches and household evidence are excluded. Assets
 are published with `SHA256SUMS`.
 
-See the [design system](reference/DESIGN-SYSTEM.md), [build instructions](BUILDING.md)
-and [previous release verification](archive/VERIFICATION-0.3.35.md).
+See the [design system](../reference/DESIGN-SYSTEM.md), [build instructions](../BUILDING.md)
+and [previous release verification](VERIFICATION-0.3.35.md).

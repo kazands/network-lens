@@ -25,6 +25,8 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import org.json.*
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 
 /** Runs only against isolated emulators. Fixture metadata is never called live discovery. */
 /** Keep Java platform nulls observable by the original null-guard assertions. */
@@ -71,6 +73,7 @@ class SmokeInstrumentation : Instrumentation() {
             },{Store(targetContext).dark(false)})
             compose=ComposeDriver(this,::check)
             when(mode) {
+                "ipv4-scope" -> Ipv4ScopeChecks.run(this,::check)
                 "compose-privacy" -> ComposePrivacyChecks.run(this,::check)
                 "compose-update-network" -> UpdateNetworkChecks.run(this,::check)
                 "compose-list-anchor" -> ListAnchorChecks.run(this,::check)
@@ -78,9 +81,7 @@ class SmokeInstrumentation : Instrumentation() {
                 "compose-design" -> ComposeDesignChecks.run(this,::check)
                 "compose-ui","compose-typography","compose-updates","compose-reports","compose-rtl","navigation","options","scan-details","settings-scroll","lifecycle","full","branding","wifi-name","grouping","ui-refinement","home-user","detail-stability","typography","recognition-report" -> ComposeUiChecks.run(this,::check,mode)
                 "failure-reporting" -> failureReporting()
-                "routed-ipv6" -> routedIpv6()
                 "freshness-fixes" -> freshnessFixes()
-                "ipv6-feasibility" -> ipv6Feasibility()
                 "split-mdns" -> splitMdns()
                 "homekit" -> homeKit()
                 "legacy-seed" -> legacySeed()
@@ -103,7 +104,6 @@ class SmokeInstrumentation : Instrumentation() {
                 "performance" -> PerformanceChecks.run(this,::check)
                 "local-metadata" -> MetadataChecks.run(this,::check)
                 "public-identity" -> PublicIdentityChecks.run(this,::check)
-                "ipv6-public-trial" -> Ipv6PublicTrialChecks.run(this,::check)
                 "recog" -> RecogChecks.run(this,::check)
                 "fibe-tv" -> FibeTvChecks.run(this,::check)
                 "network-names" -> NetworkNameChecks.run(this,::check)
@@ -226,7 +226,12 @@ class SmokeInstrumentation : Instrumentation() {
 
     private fun recoveryReachable(label: String) {
         compose!!.reveal(label,"cleanup")
-        onMain {val node=compose!!.text(label)!!;check(node.touchBoundsInRoot.height>=48*compose!!.root().density.density,"Recovery action retains an accessible touch target: $label")}
+        onMain {
+            var node = compose!!.text(label)!!
+            while (node.config.getOrNull(SemanticsActions.OnClick)?.action == null && node.parent != null) node = node.parent!!
+            check(node.config.getOrNull(SemanticsActions.OnClick)?.action != null && node.touchBoundsInRoot.height >= 48 * compose!!.root().density.density,
+                "Recovery action retains an accessible clickable touch target: $label")
+        }
     }
 
     class CleanupContext : ContextWrapper {
@@ -272,329 +277,7 @@ class SmokeInstrumentation : Instrumentation() {
         store.clear()
         var live: NetworkState = NetworkState.current(target)
         live.check(target)
-        var manager: android.net.ConnectivityManager? =
-            (target.getSystemService(Context.CONNECTIVITY_SERVICE)
-                as android.net.ConnectivityManager?)
-        var original: android.net.LinkProperties? = (manager)!!.getLinkProperties(live.network)
-        var base: android.net.LinkProperties = copyProperties((original)!!)
-        var links: MutableList<android.net.LinkAddress> = ArrayList((original)!!.getLinkAddresses())
-        links.removeIf(callback4@{ a -> (a.address is Inet6Address) })
-        links.add(fixtureAddress((original)!!, "fd55:1234::10", 64))
-        base.setLinkAddresses(links)
-        var before: NetworkState = networkFixture(target, (live.network)!!, base)
-        var rotated: android.net.LinkProperties = copyProperties(base)
-        var changed: MutableList<android.net.LinkAddress> = ArrayList(links)
-        changed.removeIf(callback5@{ a -> (a.address is Inet6Address) })
-        changed.add(fixtureAddress((original)!!, "fd55:1234::99", 64))
-        rotated.setLinkAddresses(changed)
-        rotated.setDnsServers(Collections.singletonList(InetAddress.getByName("192.0.2.53")))
-        var after: NetworkState = networkFixture(target, (live.network)!!, rotated)
-        check(
-            ((before)!!.sameConnection(after) && (before)!!.sameScope(after)),
-            "DNS updates and privacy-address rotation retain connection and normalized prefixes",
-        )
-        var route: android.net.LinkProperties = copyProperties(rotated, false)
-        var routed: NetworkState = networkFixture(target, (live.network)!!, route)
-        check(
-            ((after)!!.sameConnection(routed) && (after)!!.sameScope(routed)),
-            "IPv6 route metadata alone does not erase direct-link results",
-        )
-        check(
-            !((routed)!!.local(InetAddress.getByName("fd77::20"))),
-            "Ignoring route churn does not expand scan scope",
-        )
-        var added: android.net.LinkProperties = copyProperties(rotated)
-        var extra: MutableList<android.net.LinkAddress> = ArrayList(changed)
-        extra.add(fixtureAddress((original)!!, "fd66::10", 64))
-        added.setLinkAddresses(extra)
-        var expanded: NetworkState = networkFixture(target, (live.network)!!, added)
-        check(
-            (((after)!!.retainsScope(expanded) && (after)!!.refresh((expanded)!!)) &&
-                (after)!!.local(InetAddress.getByName("fd66::20"))),
-            "A new IPv6 prefix updates the atomic admission snapshot",
-        )
-        var withdrawn: NetworkState = networkFixture(target, (live.network)!!, rotated)
-        check(
-            (((after)!!.sameConnection(withdrawn) && !((after)!!.retainsScope(withdrawn))) &&
-                !((after)!!.refresh((withdrawn)!!))),
-            "Prefix withdrawal cannot silently continue obsolete work",
-        )
-        var v4: Device = Device()
-        v4.ip = live.gateway
-        v4.name = "Unchanged IPv4 fixture"
-        var v6: Device = Device()
-        v6.ip = "fd66::20"
-        v6.name = "Withdrawn IPv6 fixture"
-        var oldSelf: Device = Device()
-        oldSelf.ip = "fd55:1234::10"
-        oldSelf.self = true
-        check(
-            !((withdrawn)!!.contains(oldSelf)),
-            "Retired phone privacy address is excluded despite a matching subnet",
-        )
-        store.retainIfCurrent(store.token(), (before)!!.key, Arrays.asList(v4, v6), true)
-        activity = launch(false)
-        settle()
-        onMain(callback6@{ invoke("stopWatchingConnection") })
-        onMain(
-            callback7@{
-                setField("network", before)
-                setField("devices", Collections.singletonList(v4))
-                setField("range", (live.ip + "/32"))
-                setField("query", "")
-            }
-        )
-        var running: Discovery = Discovery(target, (before)!!)
-        onMain(
-            callback8@{
-                setField("discovery", running)
-                setField("scanning", true)
-            }
-        )
-        reconcileFixture(networkFixture(target, (live.network)!!, rotated))
-        check(
-            (((field("scanning") as Boolean) && (field("discovery") === running)) &&
-                ((((field("devices") as List<Device>?)))!!.size == 1)),
-            "Harmless address changes preserve the active operation and device list",
-        )
-        check(
-            (field("range"))!!.equals((live.ip + "/32")),
-            "Harmless changes preserve the session scan range",
-        )
-        running.cancel()
-        onMain(
-            callback9@{
-                setField("discovery", null)
-                setField("scanning", false)
-                setField("network", expanded)
-                setField("devices", Arrays.asList(v4, v6))
-            }
-        )
-        store.retainIfCurrent(store.token(), (expanded)!!.key, Arrays.asList(v4, v6), true)
-        var oldToken: Long = store.token()
-        var obsolete: Discovery = Discovery(target, (expanded)!!)
-        onMain(
-            callback10@{
-                setField("discovery", obsolete)
-                setField("scanning", true)
-            }
-        )
-        reconcileFixture(withdrawn)
-        check(
-            (!((field("scanning") as Boolean)) && (field("discovery") === null)),
-            "Withdrawal cancels the affected scan",
-        )
-        check(
-            (((((field("devices") as List<Device>?)))!!.size == 1) &&
-                ((((field("devices") as List<Device>?)))!!.get(0))!!.name.equals(v4.name)),
-            "Withdrawal removes affected IPv6 results while preserving IPv4 responses",
-        )
-        check(
-            (!(store.isCurrent(oldToken)) &&
-                !(store.retainIfCurrent(
-                    oldToken,
-                    (expanded)!!.key,
-                    Collections.singletonList(v6),
-                    true,
-                ))),
-            "Obsolete callbacks cannot restore removed addresses",
-        )
-        check(
-            (!((store.report((withdrawn)!!.key))!!.complete) &&
-                (store.report((withdrawn)!!.key))!!.reason.contains("IPv6")),
-            "Withdrawal leaves an honest Partial report",
-        )
-        store.retainIfCurrent(store.token(), expanded.key, listOf(v4, v6),
-            ScanReport("Fixture coverage", false, "Fixture report", 1, 2, System.currentTimeMillis(),
-                mapOf("Fixture method" to "Failed · Fixture failure"), 10))
-        onMain { setField("network", expanded) }
-        reconcileFixture(withdrawn)
-        check(store.report(withdrawn.key)?.omittedSources == 10,
-            "Scope replacement preserves omitted-method disclosure from a finished report")
-        var replaced: android.net.LinkProperties = copyProperties(rotated)
-        replaced.setInterfaceName((live.iface + "-fixture"))
-        var other: NetworkState = networkFixture(target, (live.network)!!, replaced)
-        onMain(
-            callback11@{
-                setField("query", "Old filter")
-                setField("range", (live.ip + "/32"))
-                setField("message", "Previous scan fixture")
-            }
-        )
-        reconcileFixture(other)
-        check(
-            ((((((field("devices") as List<Device>?)))!!.isEmpty() &&
-                (field("range"))!!.equals("")) && (field("query"))!!.equals("")) &&
-                (field("message"))!!.equals("")),
-            "A genuine attachment replacement clears results, range, filter and status",
-        )
-        onMain(
-            callback12@{
-                setField("range", "192.0.2.0/24")
-                setField("message", "Old background summary")
-                invoke("loadNetwork")
-                invoke("render")
-            }
-        )
-        check(
-            (((field("range"))!!.equals("") && (field("message"))!!.equals("")) &&
-                (((field("network") as NetworkState?)))!!.sameConnection(
-                    NetworkState.current(target)
-                )),
-            "Resume-time reconciliation resets old-network controls before callbacks",
-        )
-        reconcileFixture(null)
-        onMain(callback13@{ setField("message", "Connect to Wi-Fi to scan for devices.") })
-        reconcileFixture(live)
-        check(
-            ((field("message"))!!.equals("") &&
-                (((field("devices") as List<Device>?)))!!.isEmpty()),
-            "Reconnect clears the no-Wi-Fi error without restoring results",
-        )
-        check(
-            (!((field("scanning") as Boolean)) && (field("discovery") === null)),
-            "Reconnect after a failed scan attempt never starts discovery automatically",
-        )
-        // Copied selections and queued publications must obey the latest ownership snapshot.
-        var selectedBefore: NetworkState = networkFixture(target, (live.network)!!, base)
-        var selectedAfter: NetworkState = networkFixture(target, (live.network)!!, rotated)
-        var phone4: Device = Device()
-        phone4.ip = live.ip
-        phone4.self = true
-        phone4.name = "Grouped phone fixture"
-        var phone6: Device = Device()
-        phone6.ip = "fd55:1234::10"
-        phone6.self = true
-        phone6.name = phone4.name
-        var oldPhone: List<Device> = Arrays.asList(phone4, phone6)
-        store.retainIfCurrent(store.token(), (selectedBefore)!!.key, oldPhone, true)
-        onMain(
-            callback14@{
-                setField("network", selectedBefore)
-                setField("devices", oldPhone)
-                setField("selected", (Device.grouped(oldPhone))!!.get(0))
-            }
-        )
-        reconcileFixture(selectedAfter)
-        var keptSelection: Device? = (field("selected") as Device?)
-        check(
-            (((keptSelection !== null) && ((keptSelection.endpoints())!!.size == 1)) &&
-                keptSelection.ip.equals(live.ip)),
-            "Grouped detail selection drops the retired IPv6 member",
-        )
-        onMain(
-            callback15@{
-                try {
-                    var copy: Method =
-                        (activity!!.javaClass)!!.getDeclaredMethod("deviceText", Device::class.java)
-                    copy.setAccessible(true)
-                    check(
-                        !((((copy.invoke(activity, field("selected")) as String?)))!!.contains(
-                            phone6.ip
-                        )),
-                        "Copied grouped details exclude the retired member",
-                    )
-                } catch (e: Exception) {
-                    throw AssertionError(e)
-                }
-            }
-        )
-        check(
-            !((texts())!!.contains(phone6.ip)),
-            "Rendered grouped details exclude the retired member",
-        )
-        var updateType: Class<*> = Class.forName("io.github.kazands.networklens.MainActivity\$ScanUpdate")
-        var update: Constructor<*> =
-            updateType.getDeclaredConstructor(
-                Discovery::class.java,
-                Long::class.javaPrimitiveType!!,
-                Long::class.javaPrimitiveType!!,
-                Int::class.javaPrimitiveType!!,
-                Int::class.javaPrimitiveType!!,
-                List::class.java,
-                Boolean::class.javaPrimitiveType!!,
-                String::class.java,
-            )
-        update.setAccessible(true)
-        for (terminal in booleanArrayOf(false, true)) {
-            var pendingBefore: NetworkState = networkFixture(target, (live.network)!!, base)
-            var pendingAfter: NetworkState = networkFixture(target, (live.network)!!, rotated)
-            var pending: Discovery = Discovery(target, (pendingBefore)!!)
-            var generation: Long = store.token()
-            store.retainIfCurrent(generation, (pendingBefore)!!.key, oldPhone, true)
-            var publication: Any =
-                update.newInstance(
-                    pending,
-                    generation,
-                    (((field("displaySequence") as Long)) + 1),
-                    1,
-                    1,
-                    oldPhone,
-                    terminal,
-                    "",
-                )
-            onMain(
-                callback16@{
-                    setField("selected", null)
-                    setField("network", pendingBefore)
-                    setField("discovery", pending)
-                    setField("scanning", true)
-                    setField("devices", oldPhone)
-                }
-            )
-            reconcileFixture(pendingAfter)
-            // Model a worker's final write occurring after reconciliation but before its terminal
-            // callback.
-            if (terminal) {
-                store.retainIfCurrent(generation, (pendingBefore)!!.key, oldPhone, true)
-            }
-            onMain(
-                callback17@{
-                    setField("pendingDisplay", publication)
-                    invoke("displayScan")
-                }
-            )
-            settle()
-            var published: List<Device>? = (field("devices") as List<Device>?)
-            check(
-                (((published)!!.size == 1) && ((published)!!.get(0))!!.ip.equals(live.ip)),
-                ("Queued publication cannot restore a retired phone address: terminal=" + terminal),
-            )
-            check(
-                ((store.devices((pendingAfter)!!.key))!!.size == 1),
-                ("Retained final inventory also excludes the retired address: terminal=" +
-                    terminal),
-            )
-            pending.cancel()
-        }
-        store.retainIfCurrent(store.token(), (expanded)!!.key, Arrays.asList(v4, v6), true)
-        store.observeConnection(expanded)
-        onMain(
-            callback18@{
-                setField("discovery", null)
-                setField("scanning", false)
-                setField("network", expanded)
-                setField("devices", Arrays.asList(v4, v6))
-                setField("selected", v6)
-                setField("showingSettings", true)
-                invoke("render")
-            }
-        )
-        var restoredMonitor: ActivityMonitor = addMonitor("io.github.kazands.networklens.MainActivity", null, false)
-        onMain(callback19@{ activity!!.recreate() })
-        var restored: Activity? =
-            nullablePlatformResult(waitForMonitorWithTimeout(restoredMonitor, 8000))
-        removeMonitor(restoredMonitor)
-        check((restored !== null), "Android recreates Settings with a selected withdrawn endpoint")
-        activity = restored
-        settle()
-        check(
-            (field("selected") === null),
-            "Retained Settings selection cannot restore a withdrawn endpoint",
-        )
-        description("Back to devices")
-        check(!((texts())!!.contains(v6.ip)), "Back after recreation excludes the withdrawn device")
-        onMain(callback20@{ activity!!.finish() })
+        Ipv4ScopeChecks.run(this, ::check)
         store.clear()
         var receive: Method =
             Discovery::class
@@ -819,809 +502,6 @@ class SmokeInstrumentation : Instrumentation() {
         store.clear()
     }
 
-    class ServiceCacheContext : ContextWrapper {
-        var cache: Any = Any()
-
-        var entered: CountDownLatch? = CountDownLatch(1)
-        var release: CountDownLatch? = CountDownLatch(1)
-
-        var rootNsd: AtomicInteger = AtomicInteger()
-        var isolatedNsd: AtomicInteger = AtomicInteger()
-        var contexts: AtomicInteger = AtomicInteger()
-
-        constructor(base: Context) : super(base) {}
-
-        override fun getApplicationContext(): Context {
-            return this
-        }
-
-        private fun waitForNsd(): Any? {
-            entered!!.countDown()
-            try {
-                release!!.await()
-            } catch (e: InterruptedException) {
-                (Thread.currentThread())!!.interrupt()
-            }
-            return null
-        }
-
-        override fun getSystemService(name: String): Any? {
-            synchronized((cache)) {
-                if (Context.NSD_SERVICE.equals(name)) {
-                    rootNsd.incrementAndGet()
-                    return waitForNsd()
-                }
-                return super.getSystemService(name)
-            }
-        }
-
-        override fun createConfigurationContext(configuration: Configuration): Context {
-            contexts.incrementAndGet()
-            var isolated: Context = super.createConfigurationContext(configuration)
-            return object : ContextWrapper(isolated) {
-                var ownCache: Any = Any()
-
-                override fun getSystemService(name: String): Any? {
-                    synchronized((ownCache)) {
-                        if (Context.NSD_SERVICE.equals(name)) {
-                            isolatedNsd.incrementAndGet()
-                            return waitForNsd()
-                        }
-                        return super.getSystemService(name)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun isolatedServiceCache(target: Context, live: NetworkState): Unit {
-        var context: ServiceCacheContext = ServiceCacheContext(target)
-        var scan: Discovery = Discovery(context, live)
-        var accepting: Field = Discovery::class.java.getDeclaredField("accepting")
-        accepting.setAccessible(true)
-        accepting.set(scan, true)
-        var start: Method = Discovery::class.java.getDeclaredMethod("startNsd")
-        start.setAccessible(true)
-        var lookups: ExecutorService = Executors.newSingleThreadExecutor()
-        try {
-            var began: Long = SystemClock.uptimeMillis()
-            start.invoke(scan)
-            check(
-                ((((SystemClock.uptimeMillis() - began)).toLong() < (2500).toLong()) &&
-                    context.entered!!.await(100, TimeUnit.MILLISECONDS)),
-                "Stalled OS discovery constructor retains its bounded caller wait",
-            )
-            check(
-                (((context.contexts.get() == 1) && (context.isolatedNsd.get() == 1)) &&
-                    (context.rootNsd.get() == 0)),
-                "NSD construction uses its own configuration Context cache",
-            )
-            var lookup: Future<Any?> =
-                lookups.submit(
-                    Callable<Any?>(
-                        callback27@{ context.getSystemService(Context.CONNECTIVITY_SERVICE) }
-                    )
-                )
-            check(
-                (lookup.get(500, TimeUnit.MILLISECONDS) !== null),
-                "Other application service lookups remain usable while NSD construction is stalled",
-            )
-            var types: Field = Discovery::class.java.getDeclaredField("nsdTypes")
-            types.setAccessible(true)
-            check(
-                (((types.get(scan) as Set<*>?)))!!.contains("_hap._udp."),
-                "The native-service failure leaves raw accessory queries admitted",
-            )
-        } finally {
-            context.release!!.countDown()
-            scan.cancel()
-            lookups.shutdownNow()
-        }
-    }
-
-    private fun icmpPeerReceivePath(live: NetworkState, own: InetAddress): Unit {
-        var channelType: Class<*> = Class.forName("io.github.kazands.networklens.AndroidIcmp\$SocketChannel")
-        var constructor: Constructor<*> =
-            channelType.getDeclaredConstructor(
-                java.io.FileDescriptor::class.java,
-                Int::class.javaPrimitiveType!!,
-                InetAddress::class.java,
-            )
-        constructor.setAccessible(true)
-        for (matches in booleanArrayOf(false, true)) {
-            var fd: java.io.FileDescriptor? =
-                android.system.Os.socket(
-                    android.system.OsConstants.AF_INET6,
-                    android.system.OsConstants.SOCK_DGRAM,
-                    android.system.OsConstants.IPPROTO_UDP,
-                )
-            var channel: IcmpEcho.Channel? = null
-            try {
-                (live.network)!!.bindSocket(fd)
-                android.system.Os.bind(fd, own, 0)
-                android.system.Os.fcntlInt(
-                    (fd)!!,
-                    android.system.OsConstants.F_SETFL,
-                    ((android.system.Os.fcntlInt((fd)!!, android.system.OsConstants.F_GETFL, 0))
-                        .toInt() or (android.system.OsConstants.O_NONBLOCK).toInt()),
-                )
-                var receiver: InetSocketAddress? =
-                    (android.system.Os.getsockname(fd) as InetSocketAddress?)
-                channel =
-                    (constructor.newInstance(
-                        fd,
-                        123,
-                        (if (matches) own else InetAddress.getByName("fd70::dead")),
-                    ) as IcmpEcho.Channel?)
-                DatagramSocket(null).use { sender ->
-                    sender.bind(InetSocketAddress(own, 0))
-                    (live.network)!!.bindSocket(sender)
-                    var marker: ByteArray = byteArrayOf(11, 22, 33, 44)
-                    sender.send(DatagramPacket(marker, marker.size, receiver))
-                    var received: ByteArray? = channel!!.receive(1000)
-                    check(
-                        ((received !== null) &&
-                            ((if (matches) Arrays.equals(received, marker)
-                            else (received.size == 0)))),
-                        (if (matches) "Actual recvfrom source extraction accepts the expected peer"
-                        else
-                            "Actual recvfrom path discards a different source before echo parsing"),
-                    )
-                }
-            } finally {
-                if ((channel !== null)) {
-                    channel!!.close()
-                } else {
-                    android.system.Os.close(fd)
-                }
-            }
-        }
-    }
-
-    private fun ipv6LateTcpFallback(
-        target: Context,
-        live: NetworkState,
-        own: InetAddress,
-        afterEcho: Boolean,
-    ): Unit {
-        var accepting: Field = Discovery::class.java.getDeclaredField("accepting")
-        var enriching: Field = Discovery::class.java.getDeclaredField("enriching")
-        accepting.setAccessible(true)
-        enriching.setAccessible(true)
-        var resolve: Method =
-            Discovery::class.java.getDeclaredMethod("resolved", NsdServiceInfo::class.java)
-        resolve.setAccessible(true)
-        var echoes: AtomicInteger = AtomicInteger()
-        var connections: AtomicInteger = AtomicInteger()
-        var read: CountDownLatch = CountDownLatch(1)
-        var echo: V6FixtureChannel = V6FixtureChannel(false, read, null, echoes)
-        var scan: Discovery = Discovery(target, live, callback28@{ n, a -> echo })
-        var serverWork: ExecutorService = Executors.newSingleThreadExecutor()
-        try {
-            ServerSocket(0, 4, own).use { server ->
-                server.setSoTimeout(7000)
-                var accepted: Future<*> =
-                    serverWork.submit(
-                        callback29@{
-                            try {
-                                run {
-                                    var n: Int = 0
-                                    while ((n < 2)) {
-                                        server.accept().use { client ->
-                                            connections.incrementAndGet()
-                                        }
-                                        n++
-                                    }
-                                }
-                            } catch (error: IOException) {
-                                throw RuntimeException(error)
-                            }
-                        }
-                    )
-                accepting.set(scan, true)
-                enriching.set(scan, true)
-                var udp: NsdServiceInfo = NsdServiceInfo()
-                udp.setServiceName("Late TCP fixture")
-                udp.setServiceType("_hap._udp.")
-                udp.setHost(own)
-                udp.setPort(server.getLocalPort())
-                if ((Build.VERSION.SDK_INT >= 34)) {
-                    udp.setHostAddresses(Collections.singletonList(own))
-                }
-                resolve.invoke(scan, udp)
-                check(
-                    read.await(2, TimeUnit.SECONDS),
-                    "UDP advertisement starts the IPv6 echo before a TCP port is known",
-                )
-                if (afterEcho) {
-                    var end: Long = (SystemClock.uptimeMillis() + 5500)
-                    while (((SystemClock.uptimeMillis() < end) && !(echo.closed))) {
-                        SystemClock.sleep(20)
-                    }
-                    check(echo.closed, "Echo completed before the later TCP advertisement")
-                }
-                var tcp: NsdServiceInfo = NsdServiceInfo()
-                tcp.setServiceName("Late TCP fixture")
-                tcp.setServiceType("_http._tcp.")
-                tcp.setHost(own)
-                tcp.setPort(server.getLocalPort())
-                if ((Build.VERSION.SDK_INT >= 34)) {
-                    tcp.setHostAddresses(Collections.singletonList(own))
-                }
-                resolve.invoke(scan, tcp)
-                accepted.get(8, TimeUnit.SECONDS)
-                var until: Long = (SystemClock.uptimeMillis() + 2000)
-                while (
-                    ((SystemClock.uptimeMillis() < until) &&
-                        ((scan.snapshot())!!.stream())!!.noneMatch(
-                            callback30@{ d -> d.ip.equals(own.getHostAddress()) }
-                        ))
-                ) {
-                    SystemClock.sleep(20)
-                }
-                check(
-                    ((echoes.get() == 2) && (connections.get() == 2)),
-                    "UDP-first discovery retains a later TCP port through echo timeout",
-                )
-                check(
-                    ((scan.snapshot())!!.stream())!!.anyMatch(
-                        callback31@{ d -> d.ip.equals(own.getHostAddress()) }
-                    ),
-                    "The twice-confirmed direct IPv6 TCP endpoint remains discoverable",
-                )
-            }
-        } finally {
-            scan.cancel()
-            serverWork.shutdownNow()
-        }
-    }
-
-    private fun routedFixture(
-        prefix: String,
-        length: Int,
-        gateway: String,
-        iface: String,
-        type: Int,
-    ): android.net.RouteInfo {
-        var parcel: Parcel = Parcel.obtain()
-        try {
-            parcel.writeParcelable(android.net.IpPrefix(InetAddress.getByName(prefix), length), 0)
-            parcel.writeByteArray((InetAddress.getByName(gateway))!!.address)
-            parcel.writeString(iface)
-            parcel.writeInt(type)
-            parcel.writeInt(0)
-            parcel.setDataPosition(0)
-            var route: android.net.RouteInfo =
-                android.net.RouteInfo.CREATOR.createFromParcel(parcel)
-            check(
-                (((route.destination)!!.getPrefixLength() == length) &&
-                    (route.getInterface())!!.equals(iface)),
-                "Route fixture decoded by this Android version",
-            )
-            return route
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    class V6FixtureChannel : IcmpEcho.Channel {
-        var sent: ByteArray? = null
-
-        var reply: Boolean = false
-
-        var entered: CountDownLatch? = null
-        var release: CountDownLatch? = null
-
-        var closed: Boolean = false
-
-        var requests: AtomicInteger? = null
-
-        constructor(
-            answer: Boolean,
-            entered: CountDownLatch?,
-            release: CountDownLatch?,
-            requests: AtomicInteger?,
-        ) {
-            reply = answer
-            this.entered = entered
-            this.release = release
-            this.requests = requests
-        }
-
-        override fun identifier(): Int {
-            return 23123
-        }
-
-        override fun send(packet: ByteArray): Unit {
-            sent = packet.clone()
-            requests!!.incrementAndGet()
-        }
-
-        override fun receive(wait: Int): ByteArray? {
-            try {
-                if ((entered !== null)) {
-                    entered!!.countDown()
-                }
-                if (
-                    ((release !== null) &&
-                        !(release!!.await((wait).toLong(), TimeUnit.MILLISECONDS)))
-                ) {
-                    return null
-                }
-                if (!(reply)) {
-                    Thread.sleep(wait.toLong())
-                    return null
-                }
-                var packet: ByteArray = sent!!.clone()
-                packet[0] = (129).toByte()
-                return packet
-            } catch (e: InterruptedException) {
-                (Thread.currentThread())!!.interrupt()
-                throw IOException(e)
-            }
-        }
-
-        override fun close(): Unit {
-            closed = true
-        }
-    }
-
-    private fun routedIpv6(): Unit {
-        var target: Context = getTargetContext()
-        var store: Store = Store(target)
-        store.clear()
-        var live: NetworkState = NetworkState.current(target)
-        live.check(target)
-        isolatedServiceCache(target, live)
-        var manager: android.net.ConnectivityManager? =
-            (target.getSystemService(Context.CONNECTIVITY_SERVICE)
-                as android.net.ConnectivityManager?)
-        var original: android.net.LinkProperties? = (manager)!!.getLinkProperties(live.network)
-        var properties: android.net.LinkProperties = copyProperties((original)!!)
-        properties.addRoute(routedFixture("fd70::", 64, "fe80::1", live.iface, 1))
-        var routed: NetworkState = networkFixture(target, (live.network)!!, properties)
-        var endpoint: InetAddress? = InetAddress.getByName("fd70::20")
-        var proxy: InetAddress = InetAddress.getByName(live.gateway)
-        check(
-            (live.sameConnection(routed) && live.retainsScope(routed)),
-            "Adding an OMR route preserves this attachment and existing work",
-        )
-        check(
-            ((!((routed)!!.local(endpoint)) && (routed)!!.routed((endpoint)!!)) &&
-                (routed)!!.admitted((endpoint)!!)),
-            "Explicit routed prefix is admitted separately from direct Wi-Fi prefixes",
-        )
-        check(!((routed)!!.retainsScope(live)), "Route withdrawal fences existing routed work")
-        check(
-            !(live.admitted((endpoint)!!)),
-            "The default IPv6 route never supplies discovery scope",
-        )
-        var self6: InetAddress? = null
-        for (value in live.addresses) {
-            if ((InetAddress.getByName(value) is Inet6Address)) {
-                self6 = InetAddress.getByName(live.scoped(InetAddress.getByName(value)))
-                break
-            }
-        }
-        check((self6 !== null), "The native fixture has an assigned Wi-Fi IPv6 address")
-        var own: InetAddress? = self6
-        icmpPeerReceivePath(live, (own)!!)
-        ipv6LateTcpFallback(target, live, (own)!!, false)
-        ipv6LateTcpFallback(target, live, (own)!!, true)
-        var real: IcmpEcho.Result =
-            IcmpEcho.probeV6(
-                callback32@{ AndroidIcmp.open(live, own) },
-                callback33@{ false },
-                500,
-                2,
-                100,
-            )
-        check(
-            (((real.status === IcmpEcho.Status.REPLIED) && (real.requests >= 1)) ||
-                ((real.status === IcmpEcho.Status.ERROR) &&
-                    (((real.problem === IcmpEcho.Problem.PERMISSION) ||
-                        (real.problem === IcmpEcho.Problem.UNSUPPORTED))))),
-            "Native IPv6 echo replies or exposes a specific platform restriction",
-        )
-        var capability: Bundle = Bundle()
-        capability.putString(
-            "stream",
-            (((((("NATIVE_ICMPV6: " + real.status) + " / ") + real.problem) + " / API ") +
-                Build.VERSION.SDK_INT) + "\n"),
-        )
-        sendStatus(0, capability)
-        var receive: Method =
-            Discovery::class
-                .java
-                .getDeclaredMethod(
-                    "mdnsResolved",
-                    InetAddress::class.java,
-                    MdnsPacket.Result::class.java,
-                )
-        receive.setAccessible(true)
-        var accepting: Field = Discovery::class.java.getDeclaredField("accepting")
-        var enriching: Field = Discovery::class.java.getDeclaredField("enriching")
-        var types: Field = Discovery::class.java.getDeclaredField("nsdTypes")
-        for (field in arrayOf(accepting, enriching, types)) {
-            field.setAccessible(true)
-        }
-        if ((real.status === IcmpEcho.Status.ERROR)) {
-            var limited: Discovery = Discovery(target, live)
-            try {
-                accepting.set(limited, true)
-                enriching.set(limited, true)
-                var service: NsdServiceInfo = NsdServiceInfo()
-                service.setServiceName("Restricted native IPv6 fixture")
-                service.setServiceType("_hap._udp.")
-                service.setHost(own)
-                service.setPort(51827)
-                if ((Build.VERSION.SDK_INT >= 34)) {
-                    service.setHostAddresses(Collections.singletonList(own))
-                }
-                var resolve: Method =
-                    Discovery::class.java.getDeclaredMethod("resolved", NsdServiceInfo::class.java)
-                resolve.setAccessible(true)
-                resolve.invoke(limited, service)
-                var end: Long = (SystemClock.uptimeMillis() + 2500)
-                while (
-                    ((SystemClock.uptimeMillis() < end) &&
-                        !(((limited.sources())!!.getOrDefault("IPv6 service checks", ""))!!
-                            .startsWith("Failed")))
-                ) {
-                    SystemClock.sleep(20)
-                }
-                check(
-                    ((limited.sources())!!.getOrDefault("IPv6 service checks", ""))!!.startsWith(
-                        "Failed"
-                    ),
-                    "Platform restriction produces a failed discovery source",
-                )
-                check(
-                    (limited.snapshot())!!.isEmpty(),
-                    "A restricted native echo never promotes an advertisement",
-                )
-            } finally {
-                limited.cancel()
-            }
-        }
-        var packet: ByteArray = hkPacket(endpoint!!.getHostAddress(), "_hap._udp.", true)
-        var graph: MdnsPacket.Result = MdnsPacket.parse(packet, packet.size)
-        var requests: AtomicInteger? = AtomicInteger()
-        var guards: AtomicInteger = AtomicInteger()
-        var channels: MutableList<V6FixtureChannel> = Collections.synchronizedList(ArrayList())
-        var positive: Discovery =
-            Discovery(
-                target,
-                (routed)!!,
-                callback34@{ n, a ->
-                    check(
-                        (a.equals(endpoint) && n.routed(a)),
-                        "Fixture transport receives only the selected routed endpoint",
-                    )
-                    var c: V6FixtureChannel = V6FixtureChannel(true, null, null, requests)
-                    channels.add(c)
-                    return@callback34 c
-                },
-                callback35@{ c, n ->
-                    check(
-                        ((n === routed) && n.routed(endpoint)),
-                        "Route guard receives the selected immutable snapshot",
-                    )
-                    guards.incrementAndGet()
-                },
-            )
-        try {
-            accepting.set(positive, true)
-            enriching.set(positive, true)
-            (((types.get(positive) as MutableSet<String>?)))!!.add("_hap._udp.")
-            receive.invoke(positive, proxy, graph)
-            var until: Long = (SystemClock.uptimeMillis() + 2500)
-            while (
-                ((SystemClock.uptimeMillis() < until) &&
-                    ((positive.snapshot())!!.stream())!!.noneMatch(
-                        callback36@{ d -> d.ip.equals(endpoint!!.getHostAddress()) }
-                    ))
-            ) {
-                SystemClock.sleep(20)
-            }
-            var accessory: Device? =
-                nullablePlatformResult(
-                    ((((positive.snapshot())!!.stream())!!.filter(
-                                callback37@{ d -> d.ip.equals(endpoint!!.getHostAddress()) }
-                            ))!!
-                            .findFirst())!!
-                        .orElse(null)
-                )
-            check((accessory !== null), "Routed accessory is listed after a fresh endpoint echo")
-            until = (SystemClock.uptimeMillis() + 1500)
-            while (
-                ((SystemClock.uptimeMillis() < until) &&
-                    !((accessory)!!.model.equals("Current HomeKit model")))
-            ) {
-                SystemClock.sleep(20)
-                accessory =
-                    ((((positive.snapshot())!!.stream())!!.filter(
-                                callback38@{ d -> d.ip.equals(endpoint!!.getHostAddress()) }
-                            ))!!
-                            .findFirst())!!
-                        .orElseThrow(::AssertionError)
-            }
-            check(
-                ((accessory)!!.model.equals("Current HomeKit model") &&
-                    (accessory)!!.kind!!.equals("HomeKit light")),
-                "Current proxy graph adds advertised model and category only after confirmation",
-            )
-            check((accessory)!!.mac.isEmpty(), "HomeKit pairing ID never becomes a MAC or vendor")
-            check(
-                ((accessory)!!.details.containsKey("ICMPv6 response time") &&
-                    ((accessory)!!.details.get("Network path"))!!.contains("Routed IPv6")),
-                "Response protocol and routed path keep distinct provenance",
-            )
-            check(
-                (((requests!!.get() == 1) && (guards.get() >= 3)) && (channels.get(0))!!.closed),
-                "One correlated reply closes the channel; route is checked before opening, sending and publishing",
-            )
-            var shown: Device = accessory!!
-            activity = launch(false)
-            settle()
-            onMain(
-                callback39@{
-                    invoke("stopWatchingConnection")
-                    setField("network", routed)
-                    setField("devices", Collections.singletonList(shown))
-                    setField("selected", shown)
-                    invoke("render")
-                }
-            )
-            assertText("Response time (ICMPv6)")
-            capture("routed-accessory-light")
-            description("Switch to dark mode")
-            assertText("Response time (ICMPv6)")
-            click("Show technical details")
-            assertText("Network path")
-            assertText("Routed IPv6 through Wi-Fi")
-            capture("routed-accessory-dark")
-        } finally {
-            positive.cancel()
-        }
-        run {
-            var scenario: Int = 0
-            while ((scenario < 4)) {
-                var which: Int = scenario
-                var sent: AtomicInteger? = AtomicInteger()
-                var entered: CountDownLatch? = CountDownLatch(1)
-                var release: CountDownLatch? = CountDownLatch(1)
-                var routeGone: AtomicBoolean = AtomicBoolean()
-                var channel: V6FixtureChannel? =
-                    V6FixtureChannel(
-                        (scenario != 0),
-                        entered,
-                        (if ((scenario == 0)) null else release),
-                        sent,
-                    )
-                var scan: Discovery =
-                    Discovery(
-                        target,
-                        (routed)!!,
-                        callback40@{ n, a -> channel!! },
-                        callback41@{ c, n ->
-                            if (routeGone.get()) {
-                                throw IllegalStateException("Controlled route withdrawal")
-                            }
-                        },
-                    )
-                try {
-                    accepting.set(scan, true)
-                    enriching.set(scan, true)
-                    (((types.get(scan) as MutableSet<String>?)))!!.add("_hap._udp.")
-                    receive.invoke(scan, proxy, graph)
-                    check(
-                        entered!!.await(2, TimeUnit.SECONDS),
-                        "Confirmation reached its bounded receive loop",
-                    )
-                    var pending: Field = Discovery::class.java.getDeclaredField("ipv6Pending")
-                    pending.setAccessible(true)
-                    check(
-                        ((((pending.get(scan) as AtomicInteger?)))!!.get() > 0),
-                        "A running IPv6 confirmation keeps the scan settlement window open",
-                    )
-                    if ((scenario == 1)) {
-                        var goodbye: ByteArray =
-                            txtWire(
-                                "HomeKit fixture",
-                                "_hap._udp.",
-                                0,
-                                "md=Current HomeKit model",
-                                "ci=5",
-                                "sf=5",
-                                "id=AA:BB:CC:DD:EE:FF",
-                            )
-                        receive.invoke(scan, proxy, MdnsPacket.parse(goodbye, goodbye.size))
-                    }
-                    if ((scenario == 2)) {
-                        scan.cancel()
-                    }
-                    if ((scenario == 3)) {
-                        routeGone.set(true)
-                    }
-                    release!!.countDown()
-                    var end: Long = (SystemClock.uptimeMillis() + 5500)
-                    while (((SystemClock.uptimeMillis() < end) && !(channel!!.closed))) {
-                        SystemClock.sleep(20)
-                    }
-                    check(
-                        channel!!.closed,
-                        "IPv6 confirmation closes after reply, silence, Stop or route change",
-                    )
-                    var drained: Long = (SystemClock.uptimeMillis() + 1500)
-                    while (
-                        ((SystemClock.uptimeMillis() < drained) &&
-                            ((((pending.get(scan) as AtomicInteger?)))!!.get() != 0))
-                    ) {
-                        SystemClock.sleep(10)
-                    }
-                    check(
-                        ((((pending.get(scan) as AtomicInteger?)))!!.get() == 0),
-                        "The settlement counter drains after every terminal path",
-                    )
-                    var found: Device? =
-                        ((((scan.snapshot())!!.stream())!!.filter(
-                                    callback42@{ d -> d.ip.equals(endpoint!!.getHostAddress()) }
-                                ))!!
-                                .findFirst())!!
-                            .orElse(null)
-                    if ((scenario == 1)) {
-                        check(
-                            (((found !== null) && found!!.model.isEmpty()) &&
-                                found!!.services.isEmpty()),
-                            "Goodbye before echo prevents withdrawn metadata returning; live IP remains independently confirmed",
-                        )
-                    } else {
-                        check(
-                            (found === null),
-                            "Silent, cancelled and withdrawn-route endpoints stay out of results",
-                        )
-                    }
-                    if ((scenario == 0)) {
-                        check(
-                            ((sent!!.get() == 2) &&
-                                ((scan.sources())!!.get("IPv6 service checks"))!!.contains(
-                                    "unconfirmed 1"
-                                )),
-                            "Two bounded sleepy-device attempts and honest unconfirmed count",
-                        )
-                    }
-                    if ((scenario == 3)) {
-                        check(
-                            ((scan.sources())!!.get("IPv6 service checks"))!!.startsWith("Failed"),
-                            "Route failure is distinct from a silent accessory",
-                        )
-                    }
-                } finally {
-                    release!!.countDown()
-                    scan.cancel()
-                }
-                scenario++
-            }
-        }
-        var excludedCalls: AtomicInteger = AtomicInteger()
-        var excluded: Discovery =
-            Discovery(
-                target,
-                live,
-                callback43@{ n, a ->
-                    excludedCalls.incrementAndGet()
-                    throw IOException("Must not open")
-                },
-            )
-        try {
-            accepting.set(excluded, true)
-            enriching.set(excluded, true)
-            (((types.get(excluded) as MutableSet<String>?)))!!.add("_hap._udp.")
-            receive.invoke(excluded, proxy, graph)
-            check(
-                ((excludedCalls.get() == 0) &&
-                    ((excluded.snapshot())!!.stream())!!.noneMatch(
-                        callback44@{ d -> d.ip.equals(endpoint!!.getHostAddress()) }
-                    )),
-                "Missing OMR route causes no probe and no listed accessory",
-            )
-            check(
-                ((excluded.sources())!!.get("IPv6 service checks"))!!.contains("excluded 1"),
-                "Out-of-scope accessory address is counted",
-            )
-        } finally {
-            excluded.cancel()
-            store.clear()
-        }
-    }
-
-    private fun ipv6Feasibility(): Unit {
-        var net: NetworkState = NetworkState.current(getTargetContext())
-        check((net.network !== null), "IPv6 feasibility uses the selected Wi-Fi network")
-        var fd: java.io.FileDescriptor? = null
-        var stage: String = "socket"
-        var socketOpened: Boolean = false
-        var bound: Boolean = false
-        var replied: Boolean = false
-        try {
-            fd =
-                android.system.Os.socket(
-                    android.system.OsConstants.AF_INET6,
-                    android.system.OsConstants.SOCK_DGRAM,
-                    android.system.OsConstants.IPPROTO_ICMPV6,
-                )
-            socketOpened = true
-            stage = "network binding"
-            (net.network)!!.bindSocket(fd)
-            bound = true
-            var local: InetAddress? = null
-            for (ip in net.addresses) {
-                if (ip.contains(":")) {
-                    var candidate: InetAddress = InetAddress.getByName(ip)
-                    if ((candidate is Inet6Address)) {
-                        local = candidate
-                        break
-                    }
-                }
-            }
-            if ((local === null)) {
-                System.out.println(
-                    "FEASIBILITY: IPv6 datagram socket opened and Wi-Fi bound; no IPv6 interface address to test"
-                )
-            } else {
-                if (local!!.isLinkLocalAddress()) {
-                    local =
-                        Inet6Address.getByAddress(
-                            null,
-                            local!!.address,
-                            NetworkInterface.getByName(net.iface),
-                        )
-                }
-                stage = "local echo"
-                android.system.Os.bind(fd, local, 0)
-                android.system.Os.connect(fd, local, 0)
-                var packet: ByteArray = ByteArray(24)
-                packet[0] = (128).toByte()
-                packet[7] = 1
-                var nonce: ByteArray = ByteArray(16)
-                java.security.SecureRandom().nextBytes(nonce)
-                System.arraycopy(nonce, 0, packet, 8, 16)
-                android.system.Os.write(fd, packet, 0, packet.size)
-                var poll: android.system.StructPollfd = android.system.StructPollfd()
-                poll.fd = fd
-                poll.events = (android.system.OsConstants.POLLIN).toShort()
-                if ((android.system.Os.poll(arrayOf(poll), 800) > 0)) {
-                    var reply: ByteArray? = ByteArray(256)
-                    var count: Int = android.system.Os.read(fd, reply, 0, reply!!.size)
-                    replied =
-                        (((count == 24) && ((((reply!![0]).toInt() and (255).toInt())) == 129)) &&
-                            Arrays.equals(Arrays.copyOfRange(reply, 8, 24), nonce))
-                }
-                System.out.println(
-                    (("FEASIBILITY: IPv6 datagram socket opened, Wi-Fi bound, own-address correlated echo=" +
-                        replied) + "; multicast and other-device discovery NOT established")
-                )
-            }
-        } catch (e: Exception) {
-            if (e !is android.system.ErrnoException && e !is SecurityException && e !is IOException)
-                throw e
-            System.out.println(
-                ((((((((("FEASIBILITY: IPv6 probe stopped at " + stage) + "; type=") +
-                    (e.javaClass)!!.getSimpleName()) + "; errno=") +
-                    ((if ((e is android.system.ErrnoException))
-                        (((e as android.system.ErrnoException?)))!!.errno
-                    else "n/a"))) + "; opened=") + socketOpened) + "; bound=") + bound)
-            )
-        } finally {
-            if ((fd !== null)) {
-                android.system.Os.close(fd)
-            }
-        }
-        check(((fd === null) || !(fd!!.valid())), "IPv6 experiment closes its socket")
-        check(true, "Diagnostic records capability without claiming discovery support")
-    }
-
     private fun splitMdns(): Unit {
         var target: Context = getTargetContext()
         var live: NetworkState = NetworkState.current(target)
@@ -1640,7 +520,7 @@ class SmokeInstrumentation : Instrumentation() {
         var raw: Method =
             Discovery::class
                 .java
-                .getDeclaredMethod("startMdnsFamily", Boolean::class.javaPrimitiveType!!)
+                .getDeclaredMethod("startMdnsReceiver")
         receive.setAccessible(true)
         raw.setAccessible(true)
         var accepting: Field = Discovery::class.java.getDeclaredField("accepting")
@@ -1720,31 +600,31 @@ class SmokeInstrumentation : Instrumentation() {
             proxy.cancel()
         }
         var burst: MdnsAssembly = MdnsAssembly()
-        var sixPeer: InetAddress = InetAddress.getByName("fd00::20")
+        var ipv4Peer: InetAddress = InetAddress.getByName("192.0.2.20")
         var now: Long = System.nanoTime()
         for (part in intArrayOf(0, 1, 3)) {
-            var p: ByteArray = splitPacket("fd00::20", part)
-            burst.accept(sixPeer, MdnsPacket.parse(p, p.size), now)
+            var p: ByteArray = splitPacket("192.0.2.20", part)
+            burst.accept(ipv4Peer, MdnsPacket.parse(p, p.size), now)
         }
-        var alternate: ByteArray = splitPacket("fd00::21", 3)
-        var txt: ByteArray = splitPacket("fd00::20", 2)
-        burst.accept(sixPeer, MdnsPacket.parse(alternate, alternate.size), (now + 200000000L))
+        var alternate: ByteArray = splitPacket("192.0.2.21", 3)
+        var txt: ByteArray = splitPacket("192.0.2.20", 2)
+        burst.accept(ipv4Peer, MdnsPacket.parse(alternate, alternate.size), (now + 200000000L))
         check(
-            ((burst.accept(sixPeer, MdnsPacket.parse(txt, txt.size), (now + 400000000L)))!!.size ==
+            ((burst.accept(ipv4Peer, MdnsPacket.parse(txt, txt.size), (now + 400000000L)))!!.size ==
                 1),
-            "Split AAAA cache-flush burst retains its recent matching address",
+            "Split A cache-flush burst retains its recent matching address",
         )
-        burst.accept(sixPeer, MdnsPacket.parse(alternate, alternate.size), (now + 2000000000L))
+        burst.accept(ipv4Peer, MdnsPacket.parse(alternate, alternate.size), (now + 2000000000L))
         check(
-            (burst.accept(sixPeer, MdnsPacket.parse(txt, txt.size), (now + 3000000000L)))!!
+            (burst.accept(ipv4Peer, MdnsPacket.parse(txt, txt.size), (now + 3000000000L)))!!
                 .isEmpty(),
             "Older unrefreshed address expires after cache-flush grace",
         )
         check(
-            ((burst.due(true, (now + 3000000000L), 4))!!.stream())!!.anyMatch(
-                callback45@{ q -> (q.kind == 28) }
+            ((burst.due((now + 3000000000L), 4))!!.stream())!!.anyMatch(
+                callback45@{ q -> (q.kind == 1) }
             ),
-            "Missing matching AAAA triggers repair even when an alternate exists",
+            "Missing matching A triggers repair even when an alternate exists",
         )
         burst.close()
         var timed: MdnsAssembly = MdnsAssembly()
@@ -1856,7 +736,7 @@ class SmokeInstrumentation : Instrumentation() {
             }
             check(wired.snapshot().single { it.ip == live.ip }.model.isEmpty(),
                 "Whitespace anchor has no model before the later ordinary multicast reply")
-            worker = (raw.invoke(wired, false) as Thread?)
+            worker = (raw.invoke(wired) as Thread?)
             var sawSrv: Boolean = false
             var sawTxt: Boolean = false
             var sawRawModelName = false
@@ -2376,7 +1256,6 @@ class SmokeInstrumentation : Instrumentation() {
                 .java
                 .getDeclaredMethod(
                     "mdnsBatch",
-                    Boolean::class.javaPrimitiveType!!,
                     Long::class.javaPrimitiveType!!,
                     Map::class.java,
                     Map::class.java,
@@ -2386,7 +1265,7 @@ class SmokeInstrumentation : Instrumentation() {
         var normalNext: Map<String, Long> = HashMap()
         try {
             var now: Long = System.nanoTime()
-            var packet: Any = batch.invoke(batching, false, now, normalAttempts, normalNext)
+            var packet: Any = batch.invoke(batching, now, normalAttempts, normalNext)
             var questions: Field = (packet.javaClass)!!.getDeclaredField("questions")
             var isRetry: Field = (packet.javaClass)!!.getDeclaredField("retry")
             questions.setAccessible(true)
@@ -2400,7 +1279,6 @@ class SmokeInstrumentation : Instrumentation() {
             var normal: Any =
                 batch.invoke(
                     batching,
-                    false,
                     (now + TimeUnit.MILLISECONDS.toNanos(100)),
                     normalAttempts,
                     normalNext,
@@ -2412,7 +1290,7 @@ class SmokeInstrumentation : Instrumentation() {
             val expanded = (0 until 100).map { "_coverage$it._tcp." }.toSet()
             (types.get(batching) as MutableSet<String>).addAll(expanded)
             repeat(200) { n ->
-                val scheduled = batch.invoke(batching, false, now + TimeUnit.MILLISECONDS.toNanos((n+1)*250L), normalAttempts, normalNext)
+                val scheduled = batch.invoke(batching, now + TimeUnit.MILLISECONDS.toNanos((n+1)*250L), normalAttempts, normalNext)
                 check((questions.get(scheduled) as List<String>).size <= 8, "Expanded catalogue keeps the Android query batch bounded")
             }
             check(expanded.all { normalAttempts[it] == 2 }, "Android scheduler reaches observed types beyond the old 48-type ceiling")
@@ -2428,11 +1306,11 @@ class SmokeInstrumentation : Instrumentation() {
         var start: Method =
             Discovery::class
                 .java
-                .getDeclaredMethod("startMdnsFamily", Boolean::class.javaPrimitiveType!!)
+                .getDeclaredMethod("startMdnsReceiver")
         start.setAccessible(true)
         var thread: Thread? = null
         try {
-            thread = (start.invoke(scan, false) as Thread?)
+            thread = (start.invoke(scan) as Thread?)
             var end: Long = (SystemClock.uptimeMillis() + 5000)
             var status: String = ""
             while ((SystemClock.uptimeMillis() < end)) {
@@ -2502,7 +1380,7 @@ class SmokeInstrumentation : Instrumentation() {
                     }
                 )
                 check(
-                    ((gatePlan)!!.due(false, System.nanoTime(), 8))!!.isEmpty(),
+                    ((gatePlan)!!.due(System.nanoTime(), 8))!!.isEmpty(),
                     "A registration failure does not trigger multicast follow-ups",
                 )
                 var registeredRequest: Any = ctor.newInstance(info, 0)
@@ -2522,7 +1400,7 @@ class SmokeInstrumentation : Instrumentation() {
                     }
                 )
                 check(
-                    ((gatePlan)!!.due(false, System.nanoTime(), 8))!!.equals(
+                    ((gatePlan)!!.due(System.nanoTime(), 8))!!.equals(
                         Collections.singletonList("_devicelens-fixture._tcp.")
                     ),
                     "An admitted registered request schedules the local type after missing data",
@@ -2538,7 +1416,7 @@ class SmokeInstrumentation : Instrumentation() {
             cancelled.cancel()
             finish.invoke(cancelled, afterStop, false, "Late timeout")
             check(
-                ((((plan.get(cancelled) as MdnsRetries?)))!!.due(false, System.nanoTime(), 8))!!
+                ((((plan.get(cancelled) as MdnsRetries?)))!!.due(System.nanoTime(), 8))!!
                     .isEmpty(),
                 "A timeout after Stop cannot schedule discovery traffic",
             )
@@ -3674,130 +2552,6 @@ class SmokeInstrumentation : Instrumentation() {
             serverWorker.shutdownNow()
         }
 
-        var ipv6: String? = null
-        for (address in live.addresses) {
-            if (((Address.bytes(address) !== null) && ((Address.bytes(address))!!.size == 16))) {
-                ipv6 = live.scoped(InetAddress.getByName(address))
-                if ((InetAddress.getByName(address))!!.isLinkLocalAddress()) {
-                    break
-                }
-            }
-        }
-        if ((ipv6 !== null)) {
-            var v6bytes: ByteArray? = Address.bytes(ipv6)
-            var selected: NetworkInterface = NetworkInterface.getByName(live.iface)
-            check(
-                (live.scoped(Inet6Address.getByAddress(null, v6bytes, selected.index)))!!.equals(
-                    live.scoped(Inet6Address.getByAddress(null, v6bytes, selected))
-                ),
-                "Numeric and named IPv6 zones use one device-address key",
-            )
-            var multicast: Discovery = Discovery(target, live)
-            accepting.set(multicast, true)
-            try {
-                MulticastSocket(null).use { sender ->
-                    var wireTarget: Device? =
-                        (observe.invoke(multicast, ipv6, "Explicit IPv6 fixture target") as Device?)
-                    var queueName: Method =
-                        Discovery::class.java.getDeclaredMethod("queueMdnsName", Device::class.java)
-                    queueName.setAccessible(true)
-                    queueName.invoke(multicast, wireTarget)
-                    var questions: Field = Discovery::class.java.getDeclaredField("mdnsQuestions")
-                    questions.setAccessible(true)
-                    var question: Any? =
-                        (((questions.get(multicast) as MutableMap<*, *>?)))!!.get(ipv6)
-                    var attempts: Field = ((question)!!.javaClass)!!.getDeclaredField("attempts")
-                    attempts.setAccessible(true)
-                    attempts.setInt(question, 2)
-                    var startV6: Method =
-                        Discovery::class
-                            .java
-                            .getDeclaredMethod(
-                                "startMdnsFamily",
-                                Boolean::class.javaPrimitiveType!!,
-                            )
-                    startV6.setAccessible(true)
-                    var receiving: Thread? = (startV6.invoke(multicast, true) as Thread?)
-                    SystemClock.sleep(200)
-                    sender.setReuseAddress(true)
-                    sender.bind(InetSocketAddress(InetAddress.getByName("::"), 5353))
-                    (live.network)!!.bindSocket(sender)
-                    sender.setNetworkInterface(NetworkInterface.getByName(live.iface))
-                    sender.setTimeToLive(255)
-                    sender.setLoopbackMode(false)
-                    var targetBytes: ByteArrayOutputStream = ByteArrayOutputStream()
-                    var targetName: DataOutputStream = DataOutputStream(targetBytes)
-                    for (label in arrayOf("engine-fixture", "local")) {
-                        var part: ByteArray =
-                            label.toByteArray(java.nio.charset.StandardCharsets.US_ASCII)
-                        targetName.writeByte(part.size)
-                        targetName.write(part)
-                    }
-                    targetName.writeByte(0)
-                    var bytes: ByteArrayOutputStream = ByteArrayOutputStream()
-                    var packet: DataOutputStream = DataOutputStream(bytes)
-                    packet.writeShort(0)
-                    packet.writeShort(33792)
-                    packet.writeShort(0)
-                    packet.writeShort(1)
-                    packet.writeInt(0)
-                    for (label in
-                        java.util.regex.Pattern.compile("\\.")
-                            .split(ReverseDns.question(ipv6), 0)) {
-                        var part: ByteArray =
-                            label.toByteArray(java.nio.charset.StandardCharsets.US_ASCII)
-                        packet.writeByte(part.size)
-                        packet.write(part)
-                    }
-                    packet.writeByte(0)
-                    packet.writeShort(12)
-                    packet.writeShort(32769)
-                    packet.writeInt(120)
-                    packet.writeShort(targetBytes.size())
-                    packet.write(targetBytes.toByteArray())
-                    var response: ByteArray = bytes.toByteArray()
-                    var group: InetAddress = InetAddress.getByName(("ff02::fb%" + live.iface))
-                    run {
-                        var attempt: Int = 0
-                        while ((attempt < 6)) {
-                            // The emulator's own advertiser can answer this address too. Re-arm
-                            // the bounded fixture exchange and assert admission, not which of
-                            // multiple valid hostnames wins presentation priority.
-                            synchronized(multicast) {
-                                @Suppress("UNCHECKED_CAST")
-                                val pending = questions.get(multicast) as MutableMap<String, Any>
-                                pending[ipv6!!] = question!!
-                            }
-                            sender.send(DatagramPacket(response, response.size, group, 5353))
-                            SystemClock.sleep(250)
-                            if ((wireTarget)!!.observations().any { it.field == "Hostname" && it.value == "engine-fixture.local" }) {
-                                break
-                            }
-                            attempt++
-                        }
-                    }
-                    check(
-                        ((wireTarget)!!.observations().any { it.field == "Hostname" && it.value == "engine-fixture.local" && it.source == "mDNS reverse hostname" } &&
-                            (wireTarget)!!.evidence.contains("Matching mDNS reverse-PTR reply")),
-                        ("Actual IPv6 multicast PTR fixture supplies the unique expected hostname; sources=" +
-                            multicast.sources()),
-                    )
-                    multicast.cancel()
-                    (receiving)!!.join(1500)
-                    check(
-                        !((receiving)!!.isAlive()),
-                        "IPv6 multicast listener closes promptly on Stop",
-                    )
-                }
-            } finally {
-                multicast.cancel()
-            }
-        } else {
-            var skipped: Bundle = Bundle()
-            skipped.putString("stream", "PLATFORM: no IPv6 Wi-Fi address for multicast fixture\n")
-            sendStatus(0, skipped)
-        }
-        store.clear()
     }
 
     private fun icmpDeniedFlow(): Unit {
@@ -3861,12 +2615,12 @@ class SmokeInstrumentation : Instrumentation() {
         changed.setLinkAddresses(ipv4Only)
         var withdrawn: NetworkState = networkFixture(target, (live.network)!!, changed)
         check(
-            (live.sameConnection(withdrawn) && !(live.retainsScope(withdrawn))),
-            "IPv6 withdrawal preserves connection identity but invalidates affected scope",
+            (live.sameConnection(withdrawn) && live.retainsScope(withdrawn)),
+            "IPv6 withdrawal leaves IPv4 connection and discovery scope unchanged",
         )
         check(
-            !(live.refresh((withdrawn)!!)),
-            "Active work refuses a withdrawn prefix without replacing its snapshot",
+            live.refresh(withdrawn),
+            "IPv4 work survives unrelated IPv6 prefix withdrawal",
         )
         live.check(target)
         var old: Device = Device()
