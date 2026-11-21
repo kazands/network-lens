@@ -1,20 +1,22 @@
 # Current status
 
-**Network Lens 0.3.35 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.36 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
 ## This release
 
-Unresolved devices that responded during the current scan can now receive bounded public HTTP, certificate-observation, SSH and direct LLMNR hostname checks. Selected clues appear in technical details and troubleshooting reports; public software-service evidence stays separate from hardware identity. Queue wait and request timing help explain why a lookup did or did not return information. See [public identity readers](reference/PUBLIC-IDENTITY.md).
+The scan card separates the network name and range, adapts to narrow screens and enlarged text, and uses one radar indicator. Address-check percentages describe only the first pass; identification continues afterwards. Animation responds to Android's setting while open and stops when the card is off-screen or the app is paused. A closing ring is reserved for a newly completed successful scan with results.
 
-Troubleshooting reports mask public labels by default. The explicit names, local-addresses and public-labels option can include them for investigation. Cookies, authentication nonces, raw certificates, keys and unreviewed response bodies are not retained.
+Muted category colours make device icons easier to scan. Menus, dialogs and scan details have clearer surfaces in both themes. The list uses plain device counts, with separate group and address counts retained in Scan details. See the [design system](reference/DESIGN-SYSTEM.md). Discovery and recognition rules are unchanged.
 
 ## App behavior
 
 The Compose interface keeps one searchable device list, adaptive details, category filters and source-labelled observations. Results, appearance and navigation stay in RAM. Scans start only when requested; current responses are required for presence. Router DNS names cannot determine a product, manufacturer, primary type or grouping.
 
+Bounded public identity readers retain selected local clues separately from hardware identity. Troubleshooting reports mask public labels by default; their explicit names-and-labels option can include them for investigation. Credentials, cookies, raw certificates and unreviewed bodies are excluded.
+
 No dedicated Envisalink TPI probe is used, because even a short connection could compete with an alarm integration. Devices without supported identifying reports can remain unnamed.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.35.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md) · [Implementation verification history](PUBLIC-IDENTITY-VERIFICATION.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.36.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md) · [Implementation verification history](PUBLIC-IDENTITY-VERIFICATION.md)
 
 ## What remains unverified
 

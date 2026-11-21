@@ -53,4 +53,4 @@ Physical recognition gains, firmware compatibility, ARM64/low-memory performance
 
 Live GitHub download/user-approved in-app installation and the Gradle IDE build remain outside these checks. The prior Play Protect classification remains unresolved; signing and emulator installation do not establish Google clearance. Keep Play Protect enabled. No CI, saved inventory, background scan, cloud recognition or device-control commands were added. Credential-based SNMP and production IPv6 multicast probing remain follow-up work.
 
-Earlier candidate results are in [implementation verification](PUBLIC-IDENTITY-VERIFICATION.md). The previous release's exact checks remain in [the 0.3.34 archive](archive/VERIFICATION-0.3.34.md).
+Earlier candidate results are in [implementation verification](../PUBLIC-IDENTITY-VERIFICATION.md). The previous release's exact checks remain in [the 0.3.34 archive](../archive/VERIFICATION-0.3.34.md).

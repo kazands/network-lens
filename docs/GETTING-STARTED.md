@@ -4,11 +4,11 @@ Network Lens runs on Android 8.0 or newer. It is currently distributed as a deve
 
 ## Install
 
-1. [Download Network Lens 0.3.35](https://github.com/kazands/network-lens/releases/download/v0.3.35/Network-Lens-0.3.35.apk).
+1. [Download Network Lens 0.3.36](https://github.com/kazands/network-lens/releases/download/v0.3.36/Network-Lens-0.3.36.apk).
 2. Open the downloaded APK. If Android asks, allow your browser or file manager to install it.
 3. Follow Android's installation prompt, then open Network Lens.
 
-No GitHub account is needed. Use the APK from the project release page. Source files, checksums and verification notes are available on [the same release](https://github.com/kazands/network-lens/releases/tag/v0.3.35).
+No GitHub account is needed. Use the APK from the project release page. Source files, checksums and verification notes are available on [the same release](https://github.com/kazands/network-lens/releases/tag/v0.3.36).
 
 If you already use a public Network Lens APK, install the update over it. Do not uninstall first. A locally built development APK may use a different signing key; see [installation troubleshooting](TROUBLESHOOTING.md#android-will-not-install-the-update).
 

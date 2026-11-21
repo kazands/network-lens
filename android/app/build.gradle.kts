@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.kazands.networklens"
         minSdk = 26
         targetSdk = 37
-        versionCode = 63
-        versionName = "0.3.35"
+        versionCode = 64
+        versionName = "0.3.36"
     }
     buildFeatures { compose = true }
     // Match the direct build: optional library startup/profile components are unused.

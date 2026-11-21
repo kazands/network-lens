@@ -75,6 +75,7 @@ class SmokeInstrumentation : Instrumentation() {
                 "compose-update-network" -> UpdateNetworkChecks.run(this,::check)
                 "compose-list-anchor" -> ListAnchorChecks.run(this,::check)
                 "compose-icmp-errors" -> IcmpUiChecks.fixture(this,::check)
+                "compose-design" -> ComposeDesignChecks.run(this,::check)
                 "compose-ui","compose-typography","compose-updates","compose-reports","compose-rtl","navigation","options","scan-details","settings-scroll","lifecycle","full","branding","wifi-name","grouping","ui-refinement","home-user","detail-stability","typography","recognition-report" -> ComposeUiChecks.run(this,::check,mode)
                 "failure-reporting" -> failureReporting()
                 "routed-ipv6" -> routedIpv6()

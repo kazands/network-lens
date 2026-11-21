@@ -13,7 +13,7 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.35.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
+The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.36.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
 
 A fresh checkout creates a local development signing key. That key cannot update an installation signed by another key. Existing keys must not be replaced to work around an installation error. Public release credentials are never required for ordinary builds or tests.
 
@@ -52,11 +52,17 @@ Replace the serial with the exact emulator you started. Instrumentation changes 
 | Focused products | `google-cast`, `fire-tv`, `smartthings`, `envisalink`, `kidde`, `fibe-tv` |
 | Indirect local-name evidence | `network-names` |
 | Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `session-only`, `session-cold` |
-| Compose migration | `compose-ui`, `compose-typography`, `compose-updates`, `compose-update-network`, `compose-reports`, `compose-rtl`, `compose-privacy`, `compose-list-anchor`, `compose-icmp-errors` |
+| Compose interface | `compose-design`, `compose-ui`, `compose-typography`, `compose-updates`, `compose-update-network`, `compose-reports`, `compose-rtl`, `compose-privacy`, `compose-list-anchor`, `compose-icmp-errors` |
 | Interface | `ui-refinement`, `home-user`, `detail-stability`, `recognition-report`, `scan-details`, `typography`, `navigation`, `options` |
 | Updates and performance | `app-updates`, `performance` |
 
 Compose UI checks drive the actual semantics tree, actions and measured text layouts. They use synthetic observations, test both themes, 200% text, narrow and wide viewports, and preserve private-keyboard and sensitive-clipboard protections. They do not substitute fake View widgets.
+
+`compose-design` verifies light/dark colour contrast and category semantics,
+radar success/Stop/failure outcomes, live animation-scale changes without Activity
+recreation, and idle/off-screen animation shutdown. It restores the emulator's
+animation setting afterwards. Its captures are synthetic interface evidence,
+not phone performance or household recognition measurements.
 
 `compose-privacy` checks every Compose window's capture/autofill exclusions,
 Activity recreation and screenshot availability. On API 29+, it supplies an

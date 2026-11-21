@@ -3,7 +3,6 @@ package io.github.kazands.networklens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +33,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
     }
 }
 @Composable internal fun DeviceScreen(device: Device,state: UiState,memory: UiMemory,action: (UiAction)->Unit) {
+    val tone=lensTone(device)
     val generation=memory.detailVersion
     val scroll=remember(device.ip,generation) { ScrollState(memory.detailOffset) }
     LaunchedEffect(scroll,generation) { snapshotFlow { scroll.value }.distinctUntilChanged().collect { if(memory.detailVersion==generation) memory.detailOffset=it } }
@@ -45,10 +45,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
     val name=device.presentation().title
     val room=device.name.takeIf { IdentityHints.specificName(it) && it!=name && product?.redundantName(it)!=true }.orEmpty()
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp).testTag("device-details"),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) {
+        Surface(shape=LensShape.hero,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.secondaryContainer,modifier=Modifier.size(64.dp)) {
-                    Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(40.dp)) }
+                Surface(shape=LensShape.tile,color=tone.container,modifier=Modifier.size(64.dp)) {
+                    Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(40.dp),tone.icon) }
                 }
                 Text(name,style=MaterialTheme.typography.headlineMedium,textAlign=TextAlign.Center,modifier=Modifier.semantics { heading() })
                 Text(category,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.primary,modifier=Modifier.semantics { contentDescription="Primary device type: $category" })
@@ -70,7 +70,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
             "Addresses" to "${endpoints.size} IP address"+(if(endpoints.size==1) "" else "es"))
         val columns=if(LocalDensity.current.fontScale>=1.4f || LocalConfiguration.current.screenWidthDp<360) 1 else 2
         for(chunk in facts.chunked(columns)) Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            for((label,value) in chunk) Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surface,modifier=Modifier.weight(1f).fillMaxHeight()) {
+            for((label,value) in chunk) Surface(shape=LensShape.tile,color=MaterialTheme.colorScheme.surface,modifier=Modifier.weight(1f).fillMaxHeight()) {
                 Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(value,style=MaterialTheme.typography.bodyMedium) }
             }
         }
@@ -124,7 +124,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
     }
 }
 @Composable internal fun DetailSurface(content: @Composable ColumnScope.()->Unit) {
-    Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface) { Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content) }
+    Surface(shape=LensShape.card,color=MaterialTheme.colorScheme.surface) { Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content) }
 }
 @Composable internal fun SectionTitle(title: String) { Text(title,style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics { heading() }) }
 @Composable internal fun InfoField(label: String,value: String,identifier: Boolean=false) {

@@ -1,5 +1,24 @@
 # Home-user interface wording
 
+## Design refinement — 0.3.36
+
+The [design system](DESIGN-SYSTEM.md) centralises complete light/dark Material
+schemes, typography and shape tokens. Device icon tiles use muted colours from
+the existing category filters. Menus, dialogs and the scan sheet use the elevated
+surface role; the dimmed backdrop and privacy boundaries remain.
+
+The scan card separates the network name from its scope, adapts at narrow widths
+and enlarged text, and uses one decorative radar instead of a spinner plus bar.
+Its determinate rim describes only the address pass. The live textual status
+continues to describe identification and actual method outcomes. Animation
+settings are observed while open. Idle, paused, off-screen and reduced-motion
+states do not keep an infinite animation. Only a newly observed successful scan
+with results receives a closing ring.
+
+List counts use "devices" for grouped results; Scan details retains separate
+device-group and address-endpoint counts. Counts update immediately. Technical
+disclosures, theme changes and navigation retain their existing instant behaviour.
+
 ## Compose interface — 0.3.34
 
 Version 0.3.34 uses Jetpack Compose throughout: screens, menus, dialogs,
