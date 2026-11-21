@@ -35,7 +35,7 @@ internal object ComposeUiChecks {
         val unknown=Device().apply {ip="192.0.2.42";seen=true;evidence("Synthetic current unnamed response")}
         return listOf(router,thermostat,v6,unknown,laptop,plug,onlyV6)
     }
-    private fun capture(d: ComposeDriver,name: String) {
+    internal fun capture(d: ComposeDriver,name: String) {
         // Test artifacts show the app rather than the transient system clipboard overlay.
         d.main {
             d.activity.uiMemory.notice=null
@@ -91,7 +91,7 @@ internal object ComposeUiChecks {
         val fixtures=fixtures();d.fixture(fixtures)
         d.revealTag("result-count")
         d.main {
-            check(d.words().contains("6 device groups · 7 IPs"),"Compose list counts groups separately from addresses")
+            check(d.words().contains("6 devices"),"Compose list uses plain device wording for grouped results")
             check(d.words().none {it.contains("02:11:22:33:44:55")},"MAC lines stay out of the list")
             val options=d.tagged("options")!!
             check(options.config.getOrNull(SemanticsActions.OnClick)?.action!=null && options.touchBoundsInRoot.height>=48*d.root().density.density,"Toolbar has a real accessible action and 48dp target")
@@ -99,10 +99,10 @@ internal object ComposeUiChecks {
         capture(d,"list-light");d.assertTextLayouts("Default list")
         d.search("02:11:22:33:44:55")
         d.privateKeyboard()
-        d.main {check(d.words().contains("1 matching device group · 1 IP"),"Hidden MAC remains searchable")}
+        d.main {check(d.words().contains("1 matching device"),"Hidden MAC remains searchable")}
         d.search("no-fixture-match");d.main {check(d.words().contains("No matching devices"),"No-match state is neutral and recoverable")};capture(d,"search-no-match")
         d.click("Clear filters");d.clickTag("filter-UNNAMED")
-        d.main {check(d.words().contains("1 matching device group · 1 IP") && d.words().contains("Unnamed device"),"Unnamed filter keeps the useful unresolved endpoint")}
+        d.main {check(d.words().contains("1 matching device") && d.words().contains("Unnamed device"),"Unnamed filter keeps the useful unresolved endpoint")}
         d.clickTag("device:192.0.2.42")
         d.main {check(d.words().contains(RecognitionCopy.UNNAMED),"Unknown details explain available evidence without inventing identity");check(d.words().count {it=="Not available"}==1,"Unknown MAC is summarised once before disclosure")}
         d.reveal("Show technical details");d.click("Show technical details")

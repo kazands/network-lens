@@ -4,7 +4,6 @@ package io.github.kazands.networklens
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
@@ -127,7 +126,7 @@ import java.util.Locale
     }
 }
 @Composable private fun ScanSheet(state: UiState,memory: UiMemory,action: (UiAction)->Unit) {
-    ModalBottomSheet(onDismissRequest={action(UiAction.CloseModal)},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),scrimColor=Color.Black.copy(alpha=.65f),containerColor=MaterialTheme.colorScheme.surface) {
+    ModalBottomSheet(onDismissRequest={action(UiAction.CloseModal)},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),scrimColor=MaterialTheme.colorScheme.scrim.copy(alpha=.65f),containerColor=MaterialTheme.colorScheme.surfaceContainerHigh) {
         PrivateUiRoot()
         val scroll=rememberScrollState()
         Column(Modifier.fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp*.85f).dp).navigationBarsPadding().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -137,6 +136,8 @@ import java.util.Locale
                 Text(if(state.demo) "Sample devices show how Network Lens looks. They do not describe your Wi-Fi." else if(state.scanning) "Network Lens is checking addresses and listening for device details." else "Results reflect responses during this scan. Scan again to refresh them.")
                 if(!state.demo) {
                     Text(state.status)
+                    InfoField("Device groups",state.groups.size.toString())
+                    InfoField("Address endpoints",state.groups.sumOf {it.endpoints().size}.toString())
                     val total=if(state.scanning) state.total else state.report?.total ?: 0
                     val checked=if(state.scanning) state.done else state.report?.checked ?: 0
                     if(total>0) InfoField("Network coverage","$checked / $total addresses checked")
@@ -214,7 +215,7 @@ import java.util.Locale
         PrivateUiRoot()
         val view=LocalView.current
         SideEffect {(view.parent as? DialogWindowProvider)?.window?.setDimAmount(.65f)}
-        Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface,modifier=Modifier.padding(16.dp).widthIn(max=560.dp).fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp-48).coerceAtLeast(200).dp).imePadding().testTag("modal")) {
+        Surface(shape=LensShape.hero,color=MaterialTheme.colorScheme.surfaceContainerHigh,modifier=Modifier.padding(16.dp).widthIn(max=560.dp).fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp-48).coerceAtLeast(200).dp).imePadding().testTag("modal")) {
             Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(title,style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics {heading()})
                 controls()

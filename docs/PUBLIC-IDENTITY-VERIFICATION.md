@@ -2,7 +2,7 @@
 
 Implementation candidates checked on 20 November 2026, against the working branch `codex/public-identity-readers`, based on main commit `7a3fcc84ec58a6c3aa8262e41cb68ef629133d43`.
 
-The development candidates below were labelled **0.3.34**, distinct from the published 0.3.34 APK. Their hashes and checks are historical implementation evidence. See [0.3.35 release verification](VERIFICATION-0.3.35.md) for the versioned release artifacts.
+The development candidates below were labelled **0.3.34**, distinct from the published 0.3.34 APK. Their hashes and checks are historical implementation evidence. See [0.3.35 release verification](archive/VERIFICATION-0.3.35.md) for the versioned release artifacts.
 
 ## Final implementation review
 

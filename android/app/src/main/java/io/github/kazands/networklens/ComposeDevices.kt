@@ -5,7 +5,6 @@ import androidx.compose.foundation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,7 +79,7 @@ internal object UiDevicePolicy {
             item(key="search") {
                 OutlinedTextField(value=state.query,onValueChange={action(UiAction.Search(it))},label={Text("Search devices")},
                     leadingIcon={LensIcon(R.drawable.ic_ui_search,null)},trailingIcon={if(state.query.isNotEmpty()) IconButton(onClick={action(UiAction.Search(""))}) { LensIcon(R.drawable.ic_ui_clear,"Clear search") }},
-                    modifier=Modifier.fillMaxWidth().padding(top=8.dp).testTag("search"),singleLine=true,shape=RoundedCornerShape(14.dp),
+                    modifier=Modifier.fillMaxWidth().padding(top=8.dp).testTag("search"),singleLine=true,shape=LensShape.tile,
                     keyboardOptions=KeyboardOptions(autoCorrectEnabled=false,imeAction=ImeAction.Search))
             }
             item(key="filters") {
@@ -93,8 +92,7 @@ internal object UiDevicePolicy {
             Column(Modifier.padding(top=8.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 Text("Your devices",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() })
                 if(state.groups.isNotEmpty() || state.query.isNotEmpty() || filter!=DeviceFilter.ALL) {
-                    val addresses=shown.sumOf { it.endpoints().size }
-                    Text("${shown.size}"+(if(state.query.isNotEmpty() || filter!=DeviceFilter.ALL) " matching" else "")+" device group"+(if(shown.size==1) "" else "s")+" · $addresses IP"+(if(addresses==1) "" else "s"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.testTag("result-count"))
+                    Text("${shown.size}"+(if(state.query.isNotEmpty() || filter!=DeviceFilter.ALL) " matching" else "")+" device"+(if(shown.size==1) "" else "s"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.testTag("result-count"))
                 }
             }
         }
@@ -105,39 +103,62 @@ internal object UiDevicePolicy {
     }
 }
 @Composable private fun ScanHero(state: UiState,action: (UiAction)->Unit) {
-    Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.secondaryContainer) {
-        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Text(listOf(state.ssid.ifEmpty { if(state.network==null && !state.demo) "Wi-Fi not connected" else if(state.demo) "Example network" else "Current Wi-Fi" },state.scope).filter { it.isNotEmpty() }.joinToString(" · "),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer,modifier=Modifier.weight(1f))
-                if(state.scanning) CircularProgressIndicator(Modifier.padding(start=12.dp).size(24.dp).clearAndSetSemantics {},strokeWidth=2.dp)
-                else LensIcon(R.drawable.ic_ui_wifi,null,modifier=Modifier.padding(start=12.dp),tint=MaterialTheme.colorScheme.primary)
+    Surface(shape=LensShape.hero,color=MaterialTheme.colorScheme.secondaryContainer) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(16.dp)) {
+        val stacked=maxWidth<320.dp || LocalDensity.current.fontScale>=1.4f
+        val network=state.ssid.ifEmpty { if(state.network==null && !state.demo) "Wi-Fi not connected" else if(state.demo) "Example network" else "Current Wi-Fi" }
+        val title=if(state.groups.isEmpty()) if(state.scanning) "Looking for devices…" else "Discover your network"
+            else "${state.groups.size} device"+(if(state.groups.size==1) "" else "s")+" found"
+        @Composable fun NetworkLabel(modifier: Modifier=Modifier) {
+            Column(modifier,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Text(network,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
+                if(state.scope.isNotEmpty()) Text(state.scope,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
             }
-            Text(if(state.groups.isEmpty()) if(state.scanning) "Looking for devices…" else "Discover your network" else "${state.groups.size} device group"+(if(state.groups.size==1) "" else "s")+" found",style=MaterialTheme.typography.headlineMedium)
+        }
+        @Composable fun Radar() {
+            ScanRadar(state.scanning,if(state.total>0 && state.done<state.total) state.done.coerceAtLeast(0).toFloat()/state.total else null,
+                state.report,state.groups.size,Pair(state.network?.key,state.demo),diameter=if(stacked) 48.dp else 64.dp)
+        }
+        Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            if(stacked) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) { NetworkLabel(Modifier.weight(1f));Radar() }
+                Text(title,style=MaterialTheme.typography.titleLarge)
+            } else Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) { NetworkLabel();Text(title,style=MaterialTheme.typography.headlineMedium) }
+                Radar()
+            }
             Button(onClick={action(UiAction.Scan)},enabled=state.scanning || state.demo || state.network!=null,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("scan")) { Text(if(state.scanning) "Stop scan" else "Scan Wi-Fi") }
-            if(state.scanning) {
-                if(state.total>0 && state.done<state.total) LinearProgressIndicator(progress={state.done.toFloat().coerceAtLeast(0f)/state.total},modifier=Modifier.fillMaxWidth().clearAndSetSemantics {})
-                else LinearProgressIndicator(modifier=Modifier.fillMaxWidth().clearAndSetSemantics {})
+            val detailsAction=Modifier.fillMaxWidth().clickable(role=Role.Button) {action(UiAction.ScanDetails)}.heightIn(min=48.dp).testTag("scan-details-action")
+            @Composable fun Status(modifier: Modifier=Modifier) {
+                Text(state.status,style=MaterialTheme.typography.bodySmall,modifier=modifier.testTag("scan-status").semantics { liveRegion=LiveRegionMode.Polite })
             }
-            Row(Modifier.fillMaxWidth().clickable(role=Role.Button) {action(UiAction.ScanDetails)}.heightIn(min=48.dp).testTag("scan-details-action"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(state.status,style=MaterialTheme.typography.bodySmall,modifier=Modifier.weight(1f).semantics { liveRegion=LiveRegionMode.Polite })
+            @Composable fun DetailsLabel() {
                 Text("Details",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
                 LensIcon(R.drawable.ic_ui_chevron_right,null,tint=MaterialTheme.colorScheme.primary)
             }
+            if(stacked) Column(detailsAction,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Status(Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth().heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.End)) { DetailsLabel() }
+            } else Row(detailsAction,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Status(Modifier.weight(1f));DetailsLabel()
+            }
+        }
         }
     }
 }
 @Composable private fun DeviceCard(device: Device,selected: Boolean,action: (UiAction)->Unit) {
+    val tone=lensTone(device)
     val label=device.presentation();val endpoints=device.endpoints().sortedWith {a,b->Address.compare(a.ip,b.ip)}
     val primary=endpoints.firstOrNull { !it.ip.contains(':') } ?: endpoints.first()
     val product=device.groupProduct()?.product
     val room=device.name.takeIf { IdentityHints.specificName(it) && it!=label.title && product?.redundantName(it)!=true && !device.self && !device.gateway }.orEmpty()
     val role=when {device.self->"This phone";device.gateway->"Wi-Fi gateway";device.classification().conflicted->"";else->product?.displayType?.takeIf {it.isNotEmpty()} ?: device.classification().category?.label.orEmpty()}
     val compact=LocalDensity.current.fontScale<1.4f && LocalConfiguration.current.screenWidthDp>=360
-    Surface(onClick={action(UiAction.Select(device))},shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface,
+    Surface(onClick={action(UiAction.Select(device))},shape=LensShape.card,color=MaterialTheme.colorScheme.surface,
         border=if(selected) BorderStroke(1.dp,MaterialTheme.colorScheme.primary) else null,modifier=Modifier.fillMaxWidth().testTag("device:${device.ip}")) {
         Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.secondaryContainer,modifier=Modifier.size(48.dp)) {
-                Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(32.dp),if(device.self || device.gateway) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
+            Surface(shape=LensShape.tile,color=tone.container,modifier=Modifier.size(48.dp)) {
+                Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(32.dp),tone.icon) }
             }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -157,7 +178,7 @@ internal object UiDevicePolicy {
     }
 }
 @Composable internal fun BadgeText(label: String) {
-    Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(50)) {
+    Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=LensShape.chip) {
         Text(label,style=MaterialTheme.typography.labelMedium,modifier=Modifier.padding(horizontal=8.dp,vertical=3.dp),color=MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }

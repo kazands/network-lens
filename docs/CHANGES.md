@@ -1,5 +1,15 @@
 # What is new
 
+## 0.3.36 — Calmer scanning and clearer device categories
+
+- Use consistent light/dark surface colours for cards, fields, menus and dialogs.
+- Add muted category colours to device icons while keeping the existing physical-device classification.
+- Replace the scan spinner and progress bar with one radar indicator. Address-check percentages and the identification phase remain explicitly labelled.
+- Adapt the scan card for narrow screens and enlarged text. Counts update immediately; device grouping and address counts remain available in Scan details.
+- Keep the radar static with Android animations disabled, stop it off-screen, and reserve the closing ring for a newly completed successful scan.
+
+These are interface changes. Discovery and recognition behaviour are unchanged.
+
 ## 0.3.35 — More clues for unnamed devices
 
 - Check public web information, presented certificate names and SSH greetings when a responding device has no supported product or specific model. Selected clues appear under **Show technical details**.
@@ -103,6 +113,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.35).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.36).
 
-[Verification for this release](VERIFICATION-0.3.35.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.36.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
