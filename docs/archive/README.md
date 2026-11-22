@@ -1,6 +1,6 @@
 # Historical records
 
-These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.37.md) for today’s behavior and checks.
+These are dated verification reports and investigations, retained for traceability. They describe the candidates or releases named in each file, not the current APK. Use [current documentation](../README.md) and [current verification](../VERIFICATION-0.3.38.md) for today’s behavior and checks.
 
 - [IMPLEMENTATION VERIFICATION](IMPLEMENTATION-VERIFICATION.md)
 - [METADATA FOLLOWUP](METADATA-FOLLOWUP.md)
@@ -48,3 +48,5 @@ These are dated verification reports and investigations, retained for traceabili
 - [0.3.35 verification](VERIFICATION-0.3.35.md) — public identity clues and lookup timing.
 
 - [0.3.36 verification](VERIFICATION-0.3.36.md) — calmer scanning and device category colours.
+
+- [0.3.37 verification](VERIFICATION-0.3.37.md) — focused IPv4 discovery.

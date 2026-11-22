@@ -269,7 +269,7 @@ class MainActivity : ComponentActivity() {
             UiAction.Scan -> { val op = discovery; if (scanning && op != null) op.cancel() else beginScan() }
             UiAction.ExitSample -> resetSessionData()
             is UiAction.Select -> { selected = action.device.copy(); uiMemory.resetDetails() }
-            is UiAction.Search -> { query = action.value; uiMemory.resetList() }
+            is UiAction.Search -> { query = action.value }
             is UiAction.Filter -> { uiMemory.filter = action.value; uiMemory.resetList() }
             UiAction.Back -> { if (modal != null) closeModal() else if (showingSettings || selected != null) backToPreviousPage() else finish() }
             UiAction.Theme -> store.dark(!store.dark())

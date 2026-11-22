@@ -159,10 +159,15 @@ internal class ComposeDriver(val test: Instrumentation,private val check: (Boole
     }
     fun reveal(label: String,scrollTag: String="device-details") {
         repeat(30) {
-            var visible=false
-            main {visible=text(label)?.boundsInRoot?.let {it.width>0 && it.height>0}==true}
+            var visible=false;var step=400f
+            main {
+                visible=text(label)?.boundsInRoot?.let {it.width>0 && it.height>0}==true
+                // Follow the actual viewport: a fixed pixel step needs too many
+                // swipes for source-labelled evidence at enlarged text sizes.
+                step=maxOf(step,(tagged(scrollTag)?.boundsInRoot?.height ?: 0f)*.75f)
+            }
             if(visible) return
-            scroll(scrollTag,400f)
+            scroll(scrollTag,step)
         }
         throw AssertionError("Compose action could not be brought into view: $label")
     }
@@ -198,10 +203,10 @@ internal class ComposeDriver(val test: Instrumentation,private val check: (Boole
             oldDensity=Regex("Override density: ([0-9]+)").find(shell("wm density"))?.groupValues?.get(1)
             configured=true
         }
-        shell("wm size "+if(width>=840) "1800x2560" else if(width<=320) "840x1920" else "1080x2400")
+        shell("wm size "+if(width>=840) "1800x2560" else if(width<=320) "840x1920" else if(width<=360) "945x2100" else "1080x2400")
         // Android 8's legacy display scaling caps this image's effective width;
         // a lower density is needed to exercise the same wide layout class.
-        shell("wm density "+if(width>=840) if(android.os.Build.VERSION.SDK_INT<=26) "240" else "320" else "420")
+        shell("wm density "+if(width>=840) if(android.os.Build.VERSION.SDK_INT<=26) "240" else "320" else if(width==375) "460" else "420")
         shell("settings put system font_scale $scale")
         SystemClock.sleep(1200)
         for(attempt in 0 until 20) {

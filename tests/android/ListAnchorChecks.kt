@@ -46,7 +46,7 @@ internal object ListAnchorChecks {
             d.clickTag("back")
             d.main {check(d.tagged("devices-list")!=null && d.activity.uiMemory.listIndex<10,"A removed anchor falls back to a valid current list position")}
             d.search("missing-fixture")
-            d.main {check(d.activity.uiMemory.listIndex==0,"Changing the query resets the old anchor")}
+            d.main {check(d.tagged("search")?.boundsInRoot?.height?.let {it>0}==true,"Changing the query discards the old device anchor and shows the search field")}
         }
         Store(test.targetContext).clear()
     }

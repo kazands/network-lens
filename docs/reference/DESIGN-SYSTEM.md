@@ -45,9 +45,58 @@ count updates directly, without rolling digits or debounce. Use 26sp count/title
 text normally and a stacked 20sp layout at enlarged text or narrow available
 width; the count must not dominate the device list.
 
+Keep the scan card compact with 16dp horizontal padding, 12dp vertical padding
+and 8dp between its main groups. Status and Details share a row when the
+available text width permits. At enlarged text or narrow widths, give the
+status the full width and put Details below it. Preserve the 48dp scan and
+Details action targets and the complete status message.
+
+Search filters as the user types. Keep the search area in view when the query
+changes; do not jump back to the scan card. The keyboard's Search action hides
+the keyboard and releases input focus so the results can be read. Preserve the
+query when opening a result and returning, and keep Clear search ready for new
+input.
+
 The list says "devices" for the app's grouped results. Scan details retain
 separate device-group and address-endpoint counts. Every grouped address remains
 available in device details. Neither wording nor colour changes grouping rules.
+
+Device rows put the product or reported name first, an optional custom/room name
+below it, then the primary address. Keep the title's trailing space free:
+category badges must not compete with a name. The chevron sits beside the address
+instead. Services and full classification belong in details and remain
+searchable. This phone, the gateway and named/model-only devices without a
+catalogue match may retain a useful plain-text role when there is no custom name.
+Additional addresses use a quiet text count instead of another chip.
+
+Use balanced heading line breaks for longer titles, with no shrinking, line cap
+or ellipsis. When the text area beside a 48dp icon would be narrower than 200dp
+at the current text scale, move the icon and chevron to a separate 40dp header
+and give the identity the full card width. Base this on the card's constraints,
+including a split pane, rather than the screen width or character count.
+
+## Device details
+
+Keep the centred icon, product/name, category, room and meaningful uncertainty
+labels in the identity card. Below them, use left-aligned labelled IPv4 and MAC
+rows with monospace values and separate 48dp copy actions. Show the MAC row only
+when the endpoint supplying the displayed IP reports a MAC; never borrow another
+grouped endpoint's interface address. Advertised hardware IDs explicitly marked
+as possibly naming another interface stay in technical details. At enlarged text
+or narrow card widths,
+stack the label/copy action above the value and preserve exact identifier copy.
+
+Services & ports follows the identity card with its existing contents and
+appearance. Keep unknown/conflicting identity guidance when applicable.
+Technical details starts collapsed and contains identification explanations,
+response/timing observations, every grouped address and its individual copy
+action, endpoint MACs and their sources, and other protocol evidence. Keep
+interface vendor and reported manufacturer separate. No standalone Addresses,
+identification-explanation or scan-summary card appears on the main page.
+
+Full-width disclosure buttons use a rectangular clip so wrapped labels remain
+visible at enlarged text. Preserve instant expansion, current scroll position
+and RAM-only disclosure state.
 
 ## Motion
 
