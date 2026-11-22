@@ -13,7 +13,8 @@ class ScanReport @JvmOverloads constructor(
     total: Int,
     @JvmField val finished: Long,
     sources: Map<String, String> = emptyMap(),
-    previouslyOmittedSources: Int = 0
+    previouslyOmittedSources: Int = 0,
+    val tcpProbes: TcpProbeJournal.Snapshot = TcpProbeJournal.Snapshot.EMPTY
 ) {
     @JvmField val scope = SafeText.label(scope, 200)
     @JvmField val reason = SafeText.label(reason, 300)

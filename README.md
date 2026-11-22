@@ -8,11 +8,11 @@ See what is on your Wi-Fi. Find responding devices, understand what they are, an
 
 Network Lens is a free, open-source Android IPv4 Wi-Fi device finder for home users and smart-home enthusiasts. It keeps everyday scanning simple while making addresses, services and discovery evidence available when you need them. IPv6-only devices and routed Thread endpoints are outside its discovery scope.
 
-[![Download Network Lens 0.3.39 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.39/Network-Lens-0.3.39.apk)
+[![Download Network Lens 0.3.40 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.40/Network-Lens-0.3.40.apk)
 
 **Android 8.0 or newer · Development preview · No account required**
 
-Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.39)
+Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.40)
 
 ## Find your devices
 

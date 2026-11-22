@@ -8,9 +8,10 @@ internal object TroubleshootingReport {
     data class Group(val summary: String, val endpoints: List<Endpoint>, val summaryFacts: List<Fact> = emptyList())
     data class Document(val pages: List<String>) { fun text() = pages.joinToString("\n\n") }
 
-    fun create(summary: String, groups: List<Group>, context: List<Fact>, includeNames: Boolean = false): Document {
+    fun create(summary: String, groups: List<Group>, context: List<Fact>, includeNames: Boolean = false,
+               tcpProbes: TcpProbeJournal.Snapshot = TcpProbeJournal.Snapshot.EMPTY): Document {
         val endpoints = groups.flatMap { it.endpoints }
-        val redaction = Redaction(endpoints.flatMap { it.privateValues + it.address }, endpoints.flatMap { it.names }, includeNames)
+        val redaction = Redaction(endpoints.flatMap { it.privateValues + it.address } + tcpProbes.entries.map { it.address }, endpoints.flatMap { it.names }, includeNames)
         fun fact(f: Fact): String {
             val value = if (f.publicValue || includeNames && (f.field in setOf("IP address", "Network name", "Hostname", "MAC address", "Router-reported name") || selectedPublicLabel(f.field)))
                 redaction.text(f.value, f.kind) else if (f.value.isEmpty()) "No retained value" else redaction.label(f.value)
@@ -32,6 +33,23 @@ internal object TroubleshootingReport {
             append("HTTP metadata history lists each candidate attempt and available queue wait, start budget and request timing. Public readers have a separate bounded journal; a reused equipment root request is identified. Legacy and audio readers list recorded state transitions. Retries internal to a transport and discarded packets may have only scan-level counters. No record means not recorded, not necessarily not attempted.\n")
             append("Each endpoint has a bounded diagnostic journal; exact duplicates are coalesced. Overflow counts are rejected record events, not unique fields. Existing UI/catalogue/parser caps remain in effect. Ports are observed/checked ports, not an exhaustive port scan.\n")
             append("Identity observations list selected versus alternate values. Returned payload fields are listed separately; they are not proof that recognition used them. Child/scanner/playback-group identity is not physical host identity.\n")
+        })
+        if (tcpProbes.entries.isNotEmpty() || tcpProbes.omitted > 0) sections.add(buildString {
+            append("TCP presence checks with at least one successful connection\n")
+            append("Diagnostic targets, not additional discovered devices. A failed reconfirmation does not establish absence; another method may have confirmed the address. Checks with no successful connection are not listed here. No exception messages or packet payloads are retained.\n")
+            append("Retained checks: ${tcpProbes.entries.size}; check records omitted by capacity limit: ${tcpProbes.omitted}\n")
+            val admitted = endpoints.mapTo(hashSetOf()) { it.address }
+            tcpProbes.entries.forEachIndexed { index, entry ->
+                append("\nTCP check ${index + 1}\n")
+                append(fact(Fact("IP address", entry.address))).append('\n')
+                append(fact(Fact("TCP port", entry.port.toString(), entry.source, publicValue = true))).append('\n')
+                append("Reconfirmation: ${if (entry.confirmed) "Two connections succeeded" else "First connection was not reconfirmed"}\n")
+                append("Included in device list: ${if (entry.address in admitted) "Yes" else "No"}\n")
+                entry.attempts.forEachIndexed { i, attempt ->
+                    append("Connection ${i + 1}: ${if (attempt.connected) "Connected" else attempt.failure.text}; elapsed ${attempt.elapsedMillis} ms; connect timeout ${attempt.timeoutMillis} ms\n")
+                }
+                append("Total check elapsed: ${entry.elapsedMillis} ms (includes the reconfirmation gap)\n")
+            }
         })
         groups.forEachIndexed { index, group ->
             sections.add(buildString {

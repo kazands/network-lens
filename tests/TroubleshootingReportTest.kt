@@ -4,6 +4,7 @@ object TroubleshootingReportTest {
     private var checks = 0
     private fun verify(ok: Boolean, message: String) { checks++; if (!ok) error(message) }
     @JvmStatic fun main(args: Array<String>) {
+        tcpProbeReport()
         val journal = DiagnosticEvidence()
         journal.txt("mDNS _fixture._tcp.", mapOf("model" to "Fixture lamp".toByteArray(), "features" to "123".toByteArray(), "token" to "TOKEN_SECRET".toByteArray(), "unknown" to "UNKNOWN_SECRET".toByteArray()))
         journal.json("Samsung TV device information", """{"device":{"type":"Samsung SmartTV","firmwareVersion":"fixture-1","name":"PRIVATE_ROOM","TokenAuthSupport":true},"unexpected":"SECRET","token":"TOKEN_SECRET"}""".toByteArray(), DiagnosticEvidence.paths(LocalMetadata.Kind.SAMSUNG))
@@ -141,5 +142,48 @@ object TroubleshootingReportTest {
         verify(compact.contains("Device 1000 / Address 1") && !compact.contains("Synthetic-") && compact.contains("Reported [private value"),
             "A large dictionary of long private names remains complete and masked")
         println("PASS · TroubleshootingReportTest · $checks assertions")
+    }
+
+    private fun tcpProbeReport() {
+        val partial = TcpCheck.Result(TcpCheck.Status.UNCONFIRMED, 1, -1, java.net.SocketTimeoutException("PRIVATE_TOKEN"))
+        val confirmed = TcpCheck.Result(TcpCheck.Status.CONFIRMED, 2, 7, null)
+        val attempts = listOf(TcpProbeJournal.Attempt(true, 7, 160),
+            TcpProbeJournal.Attempt(false, 160, 160, TransportDiagnostic.Failure.TIMEOUT))
+        val journal = TcpProbeJournal()
+        journal.record("192.0.2.44", 62078, "IPv4 checks", partial, attempts, 367)
+        val snapshot = journal.snapshot()
+        journal.record("192.0.2.45", 443, "IPv4 checks", confirmed, attempts.map { it.copy(connected = true) }, 214)
+        verify(snapshot.entries.size == 1 && journal.snapshot().entries.size == 2, "TCP trace snapshots are detached")
+        val included = TroubleshootingReport.Group("Synthetic responding peer", listOf(
+            TroubleshootingReport.Endpoint("192.0.2.45", emptyList(), emptyList(), 0)))
+        val redacted = TroubleshootingReport.create("Synthetic aggregate", listOf(included),
+            listOf(TroubleshootingReport.Fact("Note", "192.0.2.44", publicValue = true)), tcpProbes = journal.snapshot()).text()
+        verify(redacted.contains("all 1 device groups / 1 address endpoints") && redacted.contains("TCP check 2"),
+            "Unconfirmed targets are reported without creating inventory devices")
+        verify(!redacted.contains("192.0.2.44") && !redacted.contains("192.0.2.45") && !redacted.contains("PRIVATE_TOKEN"),
+            "Even absent-device TCP targets are redacted; raw exception text is never exported")
+        verify(redacted.contains("First connection was not reconfirmed") && redacted.contains("Included in device list: No") &&
+            redacted.contains("Included in device list: Yes") && redacted.contains("Socket timed out; elapsed 160 ms"),
+            "Report distinguishes weak response, final admission and second-connect failure")
+        val named = TroubleshootingReport.create("", listOf(included), emptyList(), true, journal.snapshot()).text()
+        verify(named.contains("IP address: 192.0.2.44") && named.contains("IP address: 192.0.2.45"),
+            "Explicit names option reveals diagnostic target addresses")
+        journal.seal()
+        journal.record("192.0.2.46", 22, "IPv4 checks", partial, attempts, 367)
+        verify(journal.snapshot().entries.size == 2 && journal.snapshot().omitted == 0L, "Retired scan refuses late diagnostic writes")
+        val bounded = TcpProbeJournal()
+        repeat(TcpProbeJournal.LIMIT) { bounded.record("192.0.2.45", 1000 + it, "IPv4 checks", confirmed, attempts, 214) }
+        bounded.record("192.0.2.44", 62078, "IPv4 checks", partial, attempts, 367)
+        bounded.record("192.0.2.45", 443, "IPv4 checks", confirmed, attempts, 214)
+        verify(bounded.snapshot().entries.size == TcpProbeJournal.LIMIT && bounded.snapshot().omitted == 2L &&
+            bounded.snapshot().entries.any { !it.confirmed && it.address == "192.0.2.44" }, "Bound favors failed reconfirmations and exposes all capacity loss")
+        val absent = TcpProbeJournal()
+        absent.record("192.0.2.46", 80, "IPv4 checks", TcpCheck.Result(TcpCheck.Status.UNCONFIRMED, 0, -1, null), emptyList(), 160)
+        absent.record("2001:db8::44", 80, "IPv4 checks", partial, attempts, 367)
+        absent.record("192.0.2.46", 80, "IPv4 checks", TcpCheck.Result(TcpCheck.Status.CANCELLED, 1, -1, null), attempts, 367)
+        verify(absent.snapshot().entries.isEmpty(), "Zero-success, IPv6 and cancelled attempts cannot become recorded TCP presence candidates")
+        var immutable = false
+        try { (snapshot.entries as MutableList).clear() } catch (_: UnsupportedOperationException) { immutable = true }
+        verify(immutable, "TCP snapshot entries cannot mutate the retained report")
     }
 }

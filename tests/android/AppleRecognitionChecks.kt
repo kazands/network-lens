@@ -12,6 +12,7 @@ internal object AppleRecognitionChecks {
     private fun get(owner: Any, name: String): Any = owner.javaClass.getDeclaredField(name).let { it.isAccessible = true; it.get(owner)!! }
     private fun set(owner: Any, name: String, value: Any) = owner.javaClass.getDeclaredField(name).let { it.isAccessible = true; it.set(owner, value) }
     fun run(test: Instrumentation, check: (Boolean, String) -> Unit) {
+        AppleTransportChecks.run(check)
         val op = Discovery(test.targetContext, NetworkState().apply {
             ip = "198.18.0.1"; prefix = 24; key = "synthetic-apple"
             prefixes[ip] = prefix; addresses.add(ip)

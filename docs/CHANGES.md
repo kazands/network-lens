@@ -1,5 +1,15 @@
 # What is new
 
+## 0.3.40 — Broader discovery and clearer troubleshooting
+
+- Check three additional TCP ports during recovery and while collecting details for unidentified devices. These ports have been observed on some Nest cameras and other devices; a response does not identify a camera or its model.
+- Keep the normal scan time limit, and report additional checks that could not finish. Troubleshooting includes per-port failure counts and confirmed connection evidence.
+- Give unanswered devices more time to return a current ping response during recovery.
+- Distinguish Apple service response timeouts, closed connections and reported resets in troubleshooting, with bounded timings and response byte counts.
+- Keep addresses and device names hidden unless explicitly included in an exported report.
+
+Nest camera recognition and the reported missing Apple devices still require physical confirmation. This release improves discovery coverage and diagnostics; it does not claim those reports are resolved.
+
 ## 0.3.39 — More reliable VSSL identification
 
 - Identify supported VSSL amplifiers when their Google Cast model arrives without AirPlay manufacturer details.
@@ -137,6 +147,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.39).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.40).
 
-[Verification for this release](VERIFICATION-0.3.39.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.40.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

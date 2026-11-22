@@ -71,4 +71,4 @@ required public regeneration inputs, per-file hashes and original notices.
 Credentials, local caches and household evidence are excluded. Published assets
 include SHA256SUMS.
 
-[Build instructions](BUILDING.md) · [Previous release verification](archive/VERIFICATION-0.3.38.md)
+[Build instructions](../BUILDING.md) · [Previous release verification](VERIFICATION-0.3.38.md)

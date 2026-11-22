@@ -104,6 +104,7 @@ class SmokeInstrumentation : Instrumentation() {
                 "discovery-upgrade" -> discoveryUpgrade()
                 "permission" -> permissionFlow()
                 "scan-efficiency" -> ScanEfficiency.run(this,::check)
+                "additional-tcp" -> AdditionalTcpChecks.run(this,::check)
                 "scan-ownership" -> ScanOwnershipChecks.run(this,::check)
                 "performance" -> PerformanceChecks.run(this,::check)
                 "local-metadata" -> MetadataChecks.run(this,::check)

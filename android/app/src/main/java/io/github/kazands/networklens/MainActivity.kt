@@ -371,7 +371,7 @@ class MainActivity : ComponentActivity() {
                     TroubleshootingReport.Fact("Scan explanation", report.reason, publicValue = true),
                     TroubleshootingReport.Fact("Method records omitted", report.omittedSources.toString(), publicValue = true)
                 ) + report.sources.map { (key, value) -> TroubleshootingReport.Fact("Discovery method", value, key, publicValue = true) }
-                val document = TroubleshootingReport.create(summary, groups.map { it.troubleshootingGroup(report.finished) }, context, includeNames)
+                val document = TroubleshootingReport.create(summary, groups.map { it.troubleshootingGroup(report.finished) }, context, includeNames, report.tcpProbes)
                 main.post {
                     if (destroyed || generation != reportGeneration || !store.isCurrent(token) || scanning || demo || network?.key != current.key) return@post
                     reportPreparing = false

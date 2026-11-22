@@ -80,7 +80,16 @@ internal object AppleDeviceInfo {
 
     /** Caller binds this socket to selected Wi-Fi and owns cancellation/closure. */
     fun exchange(socket: Socket, peer: InetAddress, deadline: Long, timer: ScheduledExecutorService,
-                 port: Int = PORT, diagnostics: DiagnosticEvidence? = null, active: () -> Boolean): Report {
+                 port: Int = PORT, diagnostics: DiagnosticEvidence? = null, attempt: Int = 1, active: () -> Boolean): Report {
+        val started = System.nanoTime()
+        val budgetMillis = maxOf(0, TimeUnit.NANOSECONDS.toMillis(deadline - started))
+        var operation = "Connect"
+        var step = "Opening socket"
+        var received = 0
+        var connectMillis = -1L
+        var connectTimeout = 0
+        var readTimeout = 0
+        var outcome = "Exchange did not finish"
         fun remaining(): Int {
             if (!active() || Thread.currentThread().isInterrupted) throw MetadataHttp.Failure(MetadataHttp.Reason.CANCELLED)
             val left = deadline - System.nanoTime()
@@ -93,23 +102,29 @@ internal object AppleDeviceInfo {
         var stage = 0
         var verified = false
         try {
-            socket.connect(InetSocketAddress(peer, port), minOf(400, remaining()))
+            connectTimeout = minOf(400, remaining())
+            socket.connect(InetSocketAddress(peer, port), connectTimeout)
+            connectMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)
             fun roundTrip(model: Boolean): Map<String, String> {
+                operation = if (model) "GetValue(ProductType)" else "QueryType"
+                step = "Writing request"; received = 0; readTimeout = 0
                 remaining(); stage = 1; socket.getOutputStream().write(request(model)); stage = 2
+                step = "Reading response header"
                 val input = socket.getInputStream()
                 fun read(size: Int): ByteArray {
                     val bytes = ByteArray(size); var offset = 0
                     while (offset < size) {
-                        socket.soTimeout = remaining()
+                        readTimeout = remaining(); socket.soTimeout = readTimeout
                         val got = input.read(bytes, offset, size - offset)
                         if (got < 0) throw EOFException()
-                        offset += got
+                        offset += got; received += got
                     }
                     return bytes
                 }
                 val size = DataInputStream(ByteArrayInputStream(read(4))).readInt()
                 if (size !in 1..MAX_BODY) throw MetadataHttp.Failure(MetadataHttp.Reason.INVALID_METADATA)
-                val body = read(size); remaining(); stage = 3
+                step = "Reading response body"
+                val body = read(size); remaining(); stage = 3; step = "Validating response"
                 val fields = parse(body, true)
                 for ((key, value) in fields) {
                     val keep = key == "Error" && value in setOf("PasswordProtected", "GetProhibited", "MissingValue", "InvalidArgument", "InvalidHostID", "MissingHostID", "PairingDialogResponsePending", "UserDeniedPairing", "SessionInactive", "InvalidService", "UnknownError") ||
@@ -120,11 +135,12 @@ internal object AppleDeviceInfo {
                 }
                 return fields
             }
-            if (!serviceResponse(roundTrip(false))) return Report(Status.OTHER)
+            if (!serviceResponse(roundTrip(false))) { outcome = Status.OTHER.text; return Report(Status.OTHER) }
             verified = true
-            val report = modelResponse(roundTrip(true)); remaining(); return report
+            val report = modelResponse(roundTrip(true)); remaining(); outcome = report.status.text; step = "Complete"; return report
         } catch (e: Exception) {
             if (e is MetadataHttp.Failure) {
+                outcome = e.reason.detail
                 if (verified && e.reason !in setOf(MetadataHttp.Reason.CANCELLED, MetadataHttp.Reason.DEADLINE))
                     return Report(Status.UNAVAILABLE, failure = e.reason)
                 throw e
@@ -141,10 +157,22 @@ internal object AppleDeviceInfo {
                 e is SocketTimeoutException -> MetadataHttp.Reason.READ_TIMEOUT
                 else -> MetadataHttp.Reason.READ_FAILED
             }
+            outcome = reason.detail + if (reason in setOf(MetadataHttp.Reason.CANCELLED, MetadataHttp.Reason.DEADLINE,
+                MetadataHttp.Reason.INVALID_METADATA)) "" else "; " + TransportDiagnostic.failure(e).text
             if (verified && reason != MetadataHttp.Reason.CANCELLED && reason != MetadataHttp.Reason.DEADLINE)
                 return Report(Status.UNAVAILABLE, failure = reason)
             throw MetadataHttp.Failure(reason, cause = e)
-        } finally { timeout.cancel(false) }
+        } finally {
+            timeout.cancel(false)
+            if (diagnostics != null && active() && !Thread.currentThread().isInterrupted) {
+                val elapsed = maxOf(0, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started))
+                val number = attempt.coerceIn(1, 2)
+                diagnostics.record(SOURCE, "Transport attempt $number", "$operation: $step; $outcome; Apple service verified: $verified",
+                    "Transport observation only; does not identify the hardware or explain why the peer closed", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+                diagnostics.record(SOURCE, "Transport timing $number", "connect ${if (connectMillis < 0) elapsed else connectMillis} ms; elapsed $elapsed ms; budget at start $budgetMillis ms; connect timeout $connectTimeout ms; read timeout $readTimeout ms; response bytes $received",
+                    "Response bytes refer to the current request; zero read timeout means reading was not reached", DiagnosticEvidence.Retention.IDENTITY_OR_OUTCOME)
+            }
+        }
     }
 
     private class Plist(val diagnosticFields: Boolean) : DefaultHandler(), LexicalHandler {
