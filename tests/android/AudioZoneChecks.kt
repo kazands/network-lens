@@ -41,6 +41,16 @@ internal object AudioZoneChecks {
             check(apply.invoke(op,one,r)==true && apply.invoke(op,two,r.copy(zone=2))==true,"Direct reports enrich their own zones")
             check(one.mac.isEmpty() && one.links().none { it.contains(r.hardware) },"Chassis key is neither interface MAC nor endpoint grouping link")
             check(one.presentation().title=="VSSL A.6x" && one.presentation().subtitle.contains("Streaming amplifier"),"Amplifier identity overrides playback services while retaining zone name")
+            val castOnly=peer(9)
+            val cast=MdnsPacket.Service("Synthetic Cast zone","_googlecast._tcp.").apply {port=8009;attributes["md"]="VSSL A6x".toByteArray()}
+            current.invoke(op,castOnly,cast)
+            check(castOnly.manufacturer.isEmpty() && castOnly.identifiedProduct()==null && castOnly.audioStatus.endsWith("Waiting or checking"),"Current brand-qualified Cast model admits status while missing manufacturer stays unknown")
+            check(apply.invoke(op,castOnly,r.copy(zone=3))==true && castOnly.presentation().title=="VSSL A.6x", "Direct status identifies a Cast-only VSSL endpoint")
+            current.invoke(op,castOnly,service())
+            check(castOnly.audioStatus.endsWith(": Received") && castOnly.audioReport?.zone==3,"Later AirPlay advertisement does not duplicate or discard a successful Cast-triggered status lookup")
+            fresh.remove(castOnly.ip)
+            val cachedCast=peer(10,false);current.invoke(op,cachedCast,cast)
+            check(cachedCast.audioStatus.isEmpty(),"Unconfirmed Cast candidate cannot query VSSL status")
             check(Device.grouped(listOf(one,two)).size==2,"Separate audio zone addresses are not collapsed")
             fixtures=op.snapshot().filter{it.audioReport!=null}
             check(fixtures.size==2 && fixtures[0].audioRows.toString().contains(two.ip),"Fresh snapshots resolve same-amplifier relationships")

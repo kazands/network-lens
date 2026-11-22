@@ -233,7 +233,7 @@ full host suite were not rerun for these Android reporting/cleanup corrections.
 No version change, publication or phone installation was performed.
 
 The candidate verification history above predates release versioning. See
-[current release verification](../VERIFICATION-0.3.38.md) for the final artifact and checks.
+[current release verification](../VERIFICATION-0.3.39.md) for the final artifact and checks.
 
 ## Scrolling stability
 

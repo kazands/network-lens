@@ -34,6 +34,28 @@ object AudioZonesTest {
         fun advert(maker:String,type:String="_airplay._tcp.")=MdnsPacket.Service("Synthetic zone",type).apply { attributes["manufacturer"]=maker.toByteArray() }
         check(AudioZoneInfo.vsslCandidate(advert("VSSL")),"Explicit VSSL AirPlay triggers query")
         for(s in listOf(advert("VSSL impostor"),advert("VSSL","_googlecast._tcp."),advert("Other"),advert("VSSL").apply { attributes["MANUFACTURER"]="Other".toByteArray() })) check(!AudioZoneInfo.vsslCandidate(s),"Unqualified advertisements do not trigger proprietary probes")
+        fun cast(model: String) = MdnsPacket.Service("Synthetic audio endpoint", "_googlecast._tcp.").apply {
+            port = 8009; attributes["md"] = model.toByteArray()
+        }
+        for (model in listOf("A.1", "A.3", "A.6", "A.1x", "A.3x", "A.6x")) {
+            for (alias in listOf("VSSL $model", "VSSL ${model.replace(".", "")}"))
+                check(AudioZoneInfo.vsslCandidate(cast(alias)), "Exact brand-qualified Cast model admits a status query without inventing a manufacturer")
+        }
+        for (model in listOf("A6x", "A.6x", "VSSL", "VSSL A.9x", "VSSL A6x speaker", "Other VSSL A6x", "Google Cast Group", "Unknown"))
+            check(!AudioZoneInfo.vsslCandidate(cast(model)), "Bare, unknown and partial Cast models cannot authorize VSSL status")
+        val qualified = cast("VSSL A6x")
+        check(qualified.attributes["manufacturer"] == null && DeviceCatalog.lookup("VSSL A6x") == null,
+            "Candidate admission alone leaves manufacturer and catalogue identity unknown")
+        for (bad in listOf(
+            cast("VSSL A6x").apply { attributes["manufacturer"] = "Other".toByteArray() },
+            cast("VSSL A6x").apply { attributes["manufacturer"] = "VSSL".toByteArray(); attributes["MANUFACTURER"] = "VSSL".toByteArray() },
+            cast("VSSL A6x").apply { attributes["MD"] = "Other".toByteArray() },
+            cast("VSSL A6x").apply { duplicateModelKey = true },
+            cast("VSSL A6x").apply { attributes["ca"] = "32".toByteArray() },
+            cast("VSSL A6x").apply { attributes["md"] = ("VSSL A6x" + " ".repeat(161)).toByteArray() },
+            advert("VSSL", "_http._tcp.").apply { attributes["md"] = "VSSL A6x".toByteArray() },
+            MdnsPacket.Service("VSSL A6x", "_googlecast._tcp.")
+        )) check(!AudioZoneInfo.vsslCandidate(bad), "Conflicts, duplicate fields, groups and service names cannot qualify VSSL reads")
         val desc="<root xmlns=\"urn:schemas-upnp-org:device-1-0\"><device><manufacturer>Sonos, Inc.</manufacturer><UDN>uuid:$A</UDN></device></root>"
         val aid=AudioZoneInfo.sonosIdentity(desc.toByteArray())!!;val bid=AudioZones.token(B)
         for (bad in listOf(desc.replace("Sonos, Inc.","Other"), desc.replace("</UDN>","</UDN><UDN>uuid:$B</UDN>"), desc.replace("uuid:$A","uuid:invalid"),"<!DOCTYPE root [<!ENTITY x SYSTEM 'file:///synthetic'>]>"+desc))

@@ -14,10 +14,24 @@ internal object AudioZoneInfo {
     private const val TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
     private const val SOAP = "http://schemas.xmlsoap.org/soap/envelope/"
     private const val UPNP = "urn:schemas-upnp-org:device-1-0"
-    fun vsslCandidate(service: MdnsPacket.Service): Boolean =
-        LocalServices.canonicalType(service.type) == "_airplay._tcp." &&
-            service.attributes.filterKeys { it.equals("manufacturer", true) }.values.singleOrNull()
-                ?.contentEquals("VSSL".toByteArray()) == true
+    fun vsslCandidate(service: MdnsPacket.Service): Boolean {
+        val makers = service.attributes.filterKeys { it.equals("manufacturer", true) }.values
+        val vsslMaker = makers.singleOrNull()?.contentEquals("VSSL".toByteArray()) == true
+        return when (LocalServices.canonicalType(service.type)) {
+            "_airplay._tcp." -> vsslMaker
+            "_googlecast._tcp." -> {
+                if (service.duplicateModelKey || CastInfo.isGroup(service) || makers.isNotEmpty() && !vsslMaker) return false
+                val raw = service.attributes.filterKeys { it.equals("md", true) }.values.singleOrNull() ?: return false
+                if (raw.size > 160) return false
+                val model = String(raw, Charsets.UTF_8)
+                // Cast can report the full VSSL model without a manufacturer field.
+                // This only authorizes the fixed status query; its reply supplies identity.
+                DeviceCatalog.key(model).startsWith("vssl ") &&
+                    DeviceCatalog.lookup(model, "VSSL")?.id?.startsWith("vssl:") == true
+            }
+            else -> false
+        }
+    }
 
     fun sonosIdentity(body: ByteArray): String? {
         val root = xml(body) ?: return null

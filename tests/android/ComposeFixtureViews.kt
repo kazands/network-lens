@@ -45,6 +45,7 @@ internal object ComposeFixtureViews {
             d.start();d.fixture(fixtures)
             val group=Device.grouped(fixtures).first()
             d.search(group.ip);d.clickTag("device:${group.ip}")
+            d.reveal("Show technical details");d.click("Show technical details")
             var audio=""
             d.main {audio=d.words().first {it.startsWith("Audio system")}}
             d.reveal(audio);d.click(audio)
