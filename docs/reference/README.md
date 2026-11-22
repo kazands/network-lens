@@ -40,4 +40,4 @@ These pages describe implementation contracts, exact protocol coverage, provenan
 - [Application identity and updates](APPLICATION-IDENTITY.md)
 - [Release signing](RELEASE-SIGNING.md)
 
-Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.39 verification](../VERIFICATION-0.3.39.md).
+Historical release-specific results are in [the archive](../archive/README.md). Exact current checks are in [0.3.40 verification](../VERIFICATION-0.3.40.md).

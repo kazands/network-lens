@@ -219,7 +219,12 @@ internal object ComposeUiChecks {
     private fun reports(d: ComposeDriver,check: (Boolean,String)->Unit) {
         d.configure(411,2f)
         val fixtures=fixtures();val network=NetworkState.current(d.activity);val store=Store(d.activity)
-        d.main {store.retainIfCurrent(store.token(),network.key,fixtures,ScanReport("Synthetic",false,"Review fixture",254,254,System.currentTimeMillis(),mapOf("Fixture lookup" to "Failed · synthetic timeout")));d.set("demo",false);d.set("network",network)}
+        val tcp = TcpProbeJournal()
+        tcp.record("192.0.2.240", 62078, "IPv4 checks", TcpCheck.Result(TcpCheck.Status.UNCONFIRMED, 1, -1, null),
+            listOf(TcpProbeJournal.Attempt(true, 5, 160), TcpProbeJournal.Attempt(false, 160, 160, TransportDiagnostic.Failure.TIMEOUT)), 365)
+        val scanReport = ScanReport("Synthetic",false,"Review fixture",254,254,System.currentTimeMillis(),
+            mapOf("Fixture lookup" to "Failed · synthetic timeout"), tcpProbes = tcp.snapshot())
+        d.main {store.retainIfCurrent(store.token(),network.key,fixtures,scanReport);d.set("demo",false);d.set("network",network)}
         d.fixture(fixtures);d.search("192.0.2.42")
         d.main {d.activity.handle(UiAction.ReportOptions)};d.settle()
         d.main {check(d.nodes().filter {it.config.contains(SemanticsProperties.ToggleableState)}.let {it.size==1 && it.all {node->node.config[SemanticsProperties.ToggleableState]==androidx.compose.ui.state.ToggleableState.Off}},"Detailed report defaults to masking names and addresses")}
@@ -231,6 +236,8 @@ internal object ComposeUiChecks {
             val text=document.text()
             check(text.contains("6 device groups / 7 address endpoints"),"Report includes the full inventory despite the active search")
             check(!text.contains("Fixture hallway") && !text.contains("192.0.2.41"),"Default report masks synthetic private names and addresses")
+            check(text.contains("First connection was not reconfirmed") && text.contains("Included in device list: No") &&
+                !text.contains("192.0.2.240"), "Actual report preview carries redacted transport evidence for an absent address")
         }
         d.click("Copy this page")
         d.main {check(clip(d).startsWith("Network Lens report · page 1/"),"Report copy uses the actual preview page");check((d.activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip!!.description.extras?.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE)==true,"Report clipboard remains marked sensitive")}

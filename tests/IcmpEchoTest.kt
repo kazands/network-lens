@@ -184,6 +184,53 @@ object IcmpEchoTest {
                 ((r.latencyMillis).toLong() == (325).toLong())),
             "Late matching first reply remains valid after retry",
         )
+        // Model a slow current responder, independently of packet loss or real Wi-Fi.
+        for (timeout in listOf(300, 600)) {
+            val slowClock = Clock()
+            val slow = Fake(slowClock)
+            slow.reader = Read { ch, wait ->
+                val due = ch.times.first() + 1_000_000_000L
+                if (due <= slowClock.time + wait * 1_000_000L) {
+                    slowClock.time = due
+                    reply(ch.sent.first())
+                } else {
+                    slowClock.advance(wait)
+                    null
+                }
+            }
+            val result = IcmpEcho.probe({ slow }, { false }, timeout, 2, 120, slowClock)
+            check(result.status == if (timeout == 300) IcmpEcho.Status.NO_REPLY else IcmpEcho.Status.REPLIED,
+                "A one-second reply requires the longer recovery window")
+            check(result.requests == 2 && slow.closed, "Slow recovery keeps two requests and closes its socket")
+            if (timeout == 600) check(result.latencyMillis == 1000L, "Delayed first-request latency survives the second send")
+        }
+        val recoveryClock = Clock()
+        val silentRecovery = Fake(recoveryClock)
+        val silentResult = IcmpEcho.probe({ silentRecovery }, { false }, 600, 2, 120, recoveryClock)
+        check(silentResult.status == IcmpEcho.Status.NO_REPLY && recoveryClock.time == 1_320_000_000L && silentRecovery.closed,
+            "Silent recovery closes after its bounded 1320ms window")
+        val cancelledClock = Clock()
+        val cancelledRecovery = Fake(cancelledClock)
+        val cancelledResult = IcmpEcho.probe({ cancelledRecovery }, { cancelledClock.time >= 850_000_000L },
+            600, 2, 120, cancelledClock)
+        check(cancelledResult.status == IcmpEcho.Status.CANCELLED && cancelledRecovery.closed && cancelledClock.time < 1_000_000_000L,
+            "Cancellation interrupts the longer recovery receive window")
+        val foreignClock = Clock()
+        val foreignRecovery = Fake(foreignClock)
+        var foreignDelivered = false
+        foreignRecovery.reader = Read { ch, wait ->
+            if (!foreignDelivered && foreignClock.time + wait * 1_000_000L >= 1_000_000_000L) {
+                foreignClock.time = 1_000_000_000L
+                foreignDelivered = true
+                reply(ch.sent.first()).also { it[8] = (it[8].toInt() xor 1).toByte(); fix(it) }
+            } else {
+                foreignClock.advance(wait)
+                null
+            }
+        }
+        val foreignResult = IcmpEcho.probe({ foreignRecovery }, { false }, 600, 2, 120, foreignClock)
+        check(foreignResult.status == IcmpEcho.Status.NO_REPLY && foreignClock.time == 1_320_000_000L && foreignRecovery.closed,
+            "A delayed reply with another probe's nonce cannot establish presence")
         var nonce: ByteArray = ByteArray(16)
         Arrays.fill(nonce, (37).toByte())
         var request: ByteArray = IcmpEcho.request(12345, 1, nonce)

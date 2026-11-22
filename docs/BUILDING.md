@@ -13,7 +13,7 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.39.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
+The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.40.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
 
 A fresh checkout creates a local development signing key. That key cannot update an installation signed by another key. Existing keys must not be replaced to work around an installation error. Public release credentials are never required for ordinary builds or tests.
 
@@ -29,7 +29,7 @@ The unshrunk Compose candidate is about 15 MB, compared with about 4 MB before m
 
 ## Host tests
 
-`bash scripts/test.sh` checks generated catalogues and coverage policy, compiles the shared Kotlin code, and runs 55 host suites and Python diagnostic tests. Some fixtures open bounded loopback sockets; the runner needs permission to use local sockets. It does not require a phone or scan a household network.
+`bash scripts/test.sh` checks generated catalogues and coverage policy, compiles the shared Kotlin code, and runs 56 host suites and Python diagnostic tests. Some fixtures open bounded loopback sockets; the runner needs permission to use local sockets. It does not require a phone or scan a household network.
 
 Coverage includes protocol parsing, current-response rules, identity conflicts, grouping, retries, scanner/host separation, IPv4 scope and IPv6 exclusion, updates and resource ownership. Test counts measure assertions, not supported products or real-world accuracy.
 
@@ -51,7 +51,7 @@ Replace the serial with the exact emulator you started. Instrumentation changes 
 | Recognition and protocols | `device-identities`, `recog`, `local-metadata`, `public-identity`, `homekit`, `ipv4-scope` |
 | Focused products | `google-cast`, `fire-tv`, `smartthings`, `envisalink`, `kidde`, `fibe-tv` |
 | Indirect local-name evidence | `network-names` |
-| Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `session-only`, `session-cold` |
+| Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `additional-tcp`, `scan-efficiency`, `session-only`, `session-cold` |
 | Compose interface | `compose-design`, `compose-device-rows`, `compose-device-details`, `compose-search`, `compose-ui`, `compose-typography`, `compose-updates`, `compose-update-network`, `compose-reports`, `compose-rtl`, `compose-privacy`, `compose-list-anchor`, `compose-icmp-errors` |
 | Interface | `ui-refinement`, `home-user`, `detail-stability`, `recognition-report`, `scan-details`, `typography`, `navigation`, `options` |
 | Updates and performance | `app-updates`, `performance` |

@@ -20,7 +20,8 @@ import java.util.concurrent.atomic.*
 class Discovery @JvmOverloads internal constructor(c: Context, private val net: NetworkState, private val echoFactory: EchoFactory,
     private val networkCheck: NetworkCheck = NetworkCheck { context, network -> network.check(context) },
     private val metadataReader: MetadataReader? = null,
-    private val localNameReader: LocalNameReader? = null) {
+    private val localNameReader: LocalNameReader? = null,
+    private val tcpConnector: TcpConnector? = null) {
     interface Listener {
         fun progress(done: Int, total: Int, devices: List<Device>)
         /** Consumers that coalesce updates can defer copying until delivery is needed. */
@@ -32,6 +33,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     }
     internal fun interface MetadataReader { fun read(peer: InetAddress, request: LocalMetadata.Request, deadline: Long, active: () -> Boolean): LocalMetadata.Report }
     internal fun interface LocalNameReader { fun read(ip: String, resolver: InetAddress, deadline: Long, active: () -> Boolean): LocalNetworkNames.Result }
+    internal fun interface TcpConnector { fun connect(peer: InetAddress, port: Int, timeoutMillis: Int): Int }
     fun interface NetworkCheck { fun check(context: Context, network: NetworkState) }
     constructor(c: Context, n: NetworkState) : this(c, n, EchoFactory(AndroidIcmp::open))
 
@@ -42,6 +44,8 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private val cancelled = AtomicBoolean()
     private val found: ConcurrentMap<String, Device> = ConcurrentHashMap()
     private val freshResponders: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val tcpProbes = TcpProbeJournal()
+    private val additionalTcpTargets = ServiceAdmission(ScanPlan.MAX_HOSTS)
     private val echoAttempted = AtomicBoolean()
     @Volatile private var phase = "Finishing device details…"
     fun phase(): String = phase
@@ -156,6 +160,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             accepting = false
             enriching = false
         }
+        tcpProbes.seal()
         finishMetadataLookups(true)
         closeIo()
     }
@@ -211,6 +216,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 beginScan(plan)
                 total = hosts.size; started = true
                 health.begin("IPv4 checks")
+                health.skipped(AdditionalTcpChecks.SOURCE, "No unanswered or unidentified targets checked")
                 if (plan.sweepOmitted) health.truncated("IPv4 checks", "Address sweep not run: network exceeds 1,024 addresses; service discovery continues. Choose a smaller range to check individual addresses.")
                 health.skipped("UPnP descriptions", "No supported description advertised")
                 health.skipped(AppleDeviceInfo.SOURCE, "No open Apple service port observed")
@@ -315,6 +321,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     else e.message ?: "Could not finish this scan."
             } finally {
                 accepting = false; enriching = false
+                tcpProbes.seal()
                 finishMetadataLookups(cancelled.get())
                 closeIo()
                 try { cleanupNsd() } catch (_: Exception) {
@@ -343,7 +350,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                 readLegacyArp(); result = snapshot()
                 if (!store.isCurrent(token)) { result = emptyList(); complete = false; message = "This session was reset. Earlier scan results were discarded." }
                 else if (!started) result = store.devices(net.key)
-                else if (!store.retainIfCurrent(token, net.key, result, ScanReport(scope, complete, message, done.get(), total, System.currentTimeMillis(), health.sources()))) { result = emptyList(); complete = false }
+                else if (!store.retainIfCurrent(token, net.key, result, ScanReport(scope, complete, message, done.get(), total, System.currentTimeMillis(), health.sources(), tcpProbes = tcpProbes.snapshot()))) { result = emptyList(); complete = false }
             } finally { ACTIVE.set(false) }
             listener.finished(result, complete, message)
         }, "device-discovery").start()
@@ -376,7 +383,9 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     private fun probe(host: String, connectTimeout: Int, nameTimeout: Int) {
         if (cancelled.get() || Thread.currentThread().isInterrupted) return
         if (useFreshResponse(host, connectTimeout, nameTimeout)) return
-        val echo = echo(host, if (connectTimeout == 160) 200 else 300)
+        // Only unanswered-address recovery waits longer for a delayed current reply.
+        // Two 600ms attempts plus the retry gap retain the socket for up to 1320ms.
+        val echo = echo(host, if (connectTimeout == 160) 200 else 600)
         if (cancelled.get() || echo.status == IcmpEcho.Status.CANCELLED) return
         val d = if (echo.status == IcmpEcho.Status.REPLIED) observe(host, "ICMP echo response") else null
         if (d != null) {
@@ -399,7 +408,74 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
             }
             return
         }
-        if (!cancelled.get() && !useFreshResponse(host, connectTimeout, nameTimeout)) enrichNetBios(host, null, nameTimeout)
+        // The initial pass stays fast; additional ports get one chance during recovery.
+        if (connectTimeout > 160 && additionalTcp(host)) return
+        if (!cancelled.get() && !Thread.currentThread().isInterrupted && !useFreshResponse(host, connectTimeout, nameTimeout)) enrichNetBios(host, null, nameTimeout)
+    }
+    private fun additionalTcp(host: String): Boolean {
+        val peer = peerAddress(host)
+        if (!enriching || cancelled.get() || Thread.currentThread().isInterrupted || !inScope(peer) || net.owns(host)) return false
+        val existing = found[host]
+        if (existing != null && synchronized(existing) { existing.identifiedProduct() != null || IdentityHints.specific(existing.model) })
+            return freshResponders.contains(host)
+        val source = AdditionalTcpChecks.SOURCE
+        when (additionalTcpTargets.admit(host, source)) {
+            ServiceAdmission.Result.ADMITTED -> Unit
+            ServiceAdmission.Result.LIMIT -> {
+                health.truncated(source, "1,024-address additional check limit reached")
+                return freshResponders.contains(host)
+            }
+            else -> return freshResponders.contains(host)
+        }
+        health.workStarted(source)
+        health.count(source, "targets")
+        try {
+            val end = AdditionalTcpChecks.run(scanDeadline,
+                { enriching && !cancelled.get() },
+                { port, timeout, deadline ->
+                    health.begin(AdditionalTcpChecks.source(port))
+                    health.count(AdditionalTcpChecks.source(port), "checks")
+                    confirmTcp(peer, port, timeout, AdditionalTcpChecks.source(port), deadline)
+                },
+                { port, result ->
+                    val portSource = AdditionalTcpChecks.source(port)
+                    val outcome = when {
+                        result == null -> "Not completed: time budget ended"
+                        result.status == TcpCheck.Status.CONFIRMED -> "Two connections succeeded"
+                        result.connections > 0 -> "First connection was not reconfirmed"
+                        else -> result.failure?.let { TransportDiagnostic.failure(it).text } ?: "No confirmed connection"
+                    }
+                    if (result == null) {
+                        health.count(portSource, "checks not completed")
+                        health.truncated(portSource, "Time budget ended before check completed")
+                    } else {
+                        result.failure?.let { error ->
+                            health.diagnostic(portSource, when (TransportDiagnostic.failure(error)) {
+                                TransportDiagnostic.Failure.TIMEOUT -> DiscoveryHealth.Diagnostic.CONNECTION_TIMEOUT
+                                TransportDiagnostic.Failure.REFUSED -> DiscoveryHealth.Diagnostic.CONNECTION_REFUSED
+                                TransportDiagnostic.Failure.NO_ROUTE -> DiscoveryHealth.Diagnostic.ROUTING_FAILED
+                                else -> DiscoveryHealth.Diagnostic.CONNECTION_FAILED
+                            })
+                        }
+                        health.ok(portSource)
+                    }
+                    if (result?.status == TcpCheck.Status.CONFIRMED) {
+                        val evidence = "TCP connection on port $port (confirmed twice)"
+                        // Admission closes before existing-device details finish. A fresh
+                        // responder can still receive details, but a candidate cannot enter.
+                        val current = observe(host, evidence) ?: found[host]?.takeIf { freshResponders.contains(host) }
+                        current?.takeIf { enriching && !cancelled.get() && !Thread.currentThread().isInterrupted }?.let { d ->
+                            synchronized(d) { d.port(port); d.latency = result.latency; d.evidence(evidence) }
+                            queryDeviceName(d); queueDetails(d, 0, 220)
+                        }
+                    }
+                    found[host]?.let { d -> synchronized(d) {
+                        d.diagnostics.record("Port check", "TCP port $port", outcome)
+                    } }
+                })
+            if (end == AdditionalTcpChecks.End.DEADLINE) health.truncated(source, "Additional check time budget ended")
+        } finally { health.workFinished(source) }
+        return freshResponders.contains(host)
     }
     /** Only a response already validated by this scan can replace another presence probe. */
     private fun useFreshResponse(host: String, connectTimeout: Int, nameTimeout: Int): Boolean {
@@ -414,17 +490,37 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
     }
     private fun peerAddress(host: String): InetAddress = try { InetAddress.getByName(host) }
         catch (e: UnknownHostException) { throw IllegalArgumentException("Invalid scan address", e) }
-    private fun confirmTcp(address: InetAddress, port: Int, timeout: Int, source: String): TcpCheck.Result {
+    private fun confirmTcp(address: InetAddress, port: Int, timeout: Int, source: String,
+                           deadline: Long = Long.MAX_VALUE): TcpCheck.Result {
+        val started = System.nanoTime()
+        val attempts = ArrayList<TcpProbeJournal.Attempt>(2)
         val result = TcpCheck.confirm({
             if (!inScope(address)) throw IOException("TCP target is outside this scan")
+            if (deadline != Long.MAX_VALUE) networkCheck.check(context, net)
             val socket = Socket(); sockets.add(socket)
+            val attemptStarted = System.nanoTime()
+            var connected = false
+            var failure = TransportDiagnostic.Failure.NONE
+            val remaining = if (deadline == Long.MAX_VALUE) timeout else
+                minOf(timeout.toLong(), maxOf(1, TimeUnit.NANOSECONDS.toMillis(deadline - attemptStarted))).toInt()
             try {
-                selectedNetwork().bindSocket(socket)
-                val start = System.nanoTime(); socket.connect(InetSocketAddress(address, port), timeout)
-                if (!socket.isConnected || socket.isClosed || address != socket.inetAddress || socket.port != port) throw IOException("TCP connection was not established to the requested peer")
-                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start).toInt()
-            } finally { sockets.remove(socket); try { socket.close() } catch (_: IOException) {} }
-        }, { cancelled.get() || !enriching })
+                val start = System.nanoTime()
+                val latency = if (tcpConnector != null) tcpConnector.connect(address, port, remaining) else {
+                    selectedNetwork().bindSocket(socket)
+                    socket.connect(InetSocketAddress(address, port), remaining)
+                    if (!socket.isConnected || socket.isClosed || address != socket.inetAddress || socket.port != port) throw IOException("TCP connection was not established to the requested peer")
+                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start).toInt()
+                }
+                connected = true
+                latency
+            } catch (e: Exception) { failure = TransportDiagnostic.failure(e); throw e }
+            finally {
+                attempts.add(TcpProbeJournal.Attempt(connected, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - attemptStarted), remaining, failure))
+                sockets.remove(socket); try { socket.close() } catch (_: IOException) {}
+            }
+        }, { cancelled.get() || !enriching || System.nanoTime() >= deadline })
+        if (enriching && !cancelled.get()) tcpProbes.record(address.hostAddress.orEmpty(), port, source, result,
+            attempts, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started))
         if (result.status == TcpCheck.Status.CONFIRMED) health.count(source, "TCP confirmations")
         else if (result.status == TcpCheck.Status.UNCONFIRMED) {
             if (result.connections > 0) health.count(source, "TCP connections not reconfirmed")
@@ -1008,6 +1104,7 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
                     if (!enriching || cancelled.get()) return@Runnable
                     checkDetailPort(d, port, maxOf(160, connectTimeout))
                 }
+                additionalTcp(d.ip)
                 val retry = synchronized(d) { d.hostname.isEmpty() || d.mac.isEmpty() }
                 if (retry && enriching && !cancelled.get()) enrichNetBios(d.ip, d, minOf(400, nameTimeout + 180))
                 publicReaders.offer(d)
@@ -1128,11 +1225,13 @@ class Discovery @JvmOverloads internal constructor(c: Context, private val net: 
         health.workStarted(source)
         if (!submitEnrichment(DiscoveryWork.Lane.METADATA, source, d.ip, Runnable {
             val deadline = minOf(scanDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(2))
+            var attempt = 0
             try {
                 if (!enriching || cancelled.get() || !inScope(peerAddress(d.ip))) return@Runnable
                 val report = readOnlyMetadata(peerAddress(d.ip), deadline, { enriching && !cancelled.get() }) { socket ->
                     health.count(source, "requests")
-                    AppleDeviceInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts, diagnostics = d.diagnostics) { enriching && !cancelled.get() }
+                    AppleDeviceInfo.exchange(socket, peerAddress(d.ip), deadline, metadataTimeouts,
+                        diagnostics = d.diagnostics, attempt = ++attempt) { enriching && !cancelled.get() }
                 }
                 if (applyAppleReport(d, report)) health.count(source, when (report.status) {
                     AppleDeviceInfo.Status.MODEL -> "models received"

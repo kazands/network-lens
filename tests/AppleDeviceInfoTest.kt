@@ -153,6 +153,65 @@ object AppleDeviceInfoTest {
                         "Verified Apple service survives missing, malformed or oversized model response with its failure")
                 } }
             }
+            for (fault in listOf("eof", "partial", "reset", "timeout", "model-eof")) {
+                val diagnostics = DiagnosticEvidence()
+                withServer({ peer ->
+                    read(peer.getInputStream())
+                    when (fault) {
+                        "partial" -> peer.getOutputStream().write(byteArrayOf(0, 0))
+                        "reset" -> peer.setSoLinger(true, 0)
+                        "timeout" -> Thread.sleep(800)
+                        "model-eof" -> {
+                            peer.getOutputStream().write(frame(service))
+                            read(peer.getInputStream())
+                        }
+                    }
+                }) { port -> Socket().use { socket ->
+                    var failure: MetadataHttp.Reason? = null
+                    var report: AppleDeviceInfo.Report? = null
+                    try { report = AppleDeviceInfo.exchange(socket, InetAddress.getLoopbackAddress(),
+                        System.nanoTime() + TimeUnit.SECONDS.toNanos(2), timer, port, diagnostics, attempt = 2) { true } }
+                    catch (e: MetadataHttp.Failure) { failure = e.reason }
+                    if (fault == "model-eof") check(report?.status == AppleDeviceInfo.Status.UNAVAILABLE && report?.failure == MetadataHttp.Reason.READ_FAILED,
+                        "Diagnostics preserve verified Apple service after a model response closes")
+                    else check(failure == if (fault == "timeout") MetadataHttp.Reason.READ_TIMEOUT else MetadataHttp.Reason.READ_FAILED,
+                        "Detailed diagnostics leave existing retry/failure classification unchanged: $fault")
+                    val outcome = diagnostics.snapshot().single { it.field == "Transport attempt 2" }.value
+                    val timing = diagnostics.snapshot().single { it.field == "Transport timing 2" }.value
+                    val expected = when (fault) { "reset" -> "Connection reset reported by socket"; "timeout" -> "Socket timed out"; else -> "Peer closed the response (EOF)" }
+                    check(outcome.contains(expected), "Real loopback $fault has a distinct fixed transport label")
+                    check(outcome.contains(if (fault == "model-eof") "GetValue(ProductType)" else "QueryType") &&
+                        outcome.contains("Apple service verified: ${fault == "model-eof"}"), "Failed request and verification stage retained")
+                    check(timing.contains("response bytes ${if (fault == "partial") 2 else 0}") && timing.contains("read timeout 600 ms") &&
+                        timing.contains("budget at start") && timing.contains("elapsed"), "Partial frame bytes and actual timing bounds retained")
+                } }
+            }
+            check(TransportDiagnostic.failure(SocketException("PRIVATE_ADDRESS Connection reset PRIVATE_TOKEN")) == TransportDiagnostic.Failure.SOCKET,
+                "Arbitrary exception text is neither trusted as a reset nor retained")
+            check(TransportDiagnostic.failure(IOException("PRIVATE_TOKEN", EOFException())) == TransportDiagnostic.Failure.EOF,
+                "Typed nested EOF is recognized without exporting wrapper text")
+            val writeDiagnostics = DiagnosticEvidence()
+            val output = object : OutputStream() {
+                var requests = 0
+                override fun write(value: Int) { error("Fixture expects a framed request") }
+                override fun write(bytes: ByteArray) { if (++requests == 2) throw IOException("PRIVATE_ARGUMENT") }
+            }
+            val writing = object : Socket() {
+                override fun connect(endpoint: SocketAddress, timeout: Int) {}
+                override fun setSoTimeout(timeout: Int) {}
+                override fun getInputStream(): InputStream = ByteArrayInputStream(frame(service))
+                override fun getOutputStream(): OutputStream = output
+            }
+            writing.use {
+                val report = AppleDeviceInfo.exchange(it, InetAddress.getLoopbackAddress(), System.nanoTime() + TimeUnit.SECONDS.toNanos(2),
+                    timer, diagnostics = writeDiagnostics) { true }
+                check(report.status == AppleDeviceInfo.Status.UNAVAILABLE && report.failure == MetadataHttp.Reason.WRITE_FAILED,
+                    "Failed model request write still retains service verification")
+            }
+            check(writeDiagnostics.snapshot().any { it.field == "Transport attempt 1" && it.value.contains("GetValue(ProductType): Writing request") } &&
+                writeDiagnostics.snapshot().any { it.field == "Transport timing 1" && it.value.contains("read timeout 0 ms") && it.value.contains("response bytes 0") },
+                "A failed model write cannot inherit the previous QueryType read timing")
+            check(!writeDiagnostics.snapshot().joinToString().contains("PRIVATE_ARGUMENT"), "Failed write cannot expose exception text")
         } finally { timer.shutdownNow() }
         println("Apple device info checks passed: $checks")
     }

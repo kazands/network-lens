@@ -21,9 +21,9 @@ internal object ScanEfficiency {
         ip = "198.18.0.1"; prefix = 24; key = "synthetic-efficiency"
         prefixes[ip] = prefix; addresses.add(ip)
     }
-    private fun probe(op: Discovery) = Discovery::class.java.getDeclaredMethod("probe", String::class.java,
+    private fun probe(op: Discovery, connectTimeout: Int = 160, nameTimeout: Int = 220) = Discovery::class.java.getDeclaredMethod("probe", String::class.java,
         Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).let {
-        it.isAccessible = true; it.invoke(op, "198.18.0.2", 160, 220)
+        it.isAccessible = true; it.invoke(op, "198.18.0.2", connectTimeout, nameTimeout)
     }
     private fun blockedDetails(op: Discovery): CountDownLatch {
         val hold = CountDownLatch(1); val started = CountDownLatch(4)
@@ -74,6 +74,46 @@ internal object ScanEfficiency {
         val stopped = operation(); stopped.cancel(); probe(stopped)
         check(opens.get() == 2, "Cancelled work opens no echo socket")
 
+        // A selected-network transport fixture: no real peer or network socket is used.
+        val delayedSends = AtomicInteger()
+        val delayedCloses = AtomicInteger()
+        val delayed = Discovery(test.targetContext, network(), Discovery.EchoFactory { _, _ ->
+            object : IcmpEcho.Channel {
+                var pendingReply: ByteArray? = null
+                var due = Long.MAX_VALUE
+                override fun identifier() = 333
+                override fun send(packet: ByteArray) {
+                    delayedSends.incrementAndGet()
+                    if (pendingReply == null) {
+                        pendingReply = packet.clone().also {
+                            it[0] = 0; it[2] = 0; it[3] = 0
+                            val sum = IcmpEcho.checksum(it); it[2] = (sum ushr 8).toByte(); it[3] = sum.toByte()
+                        }
+                        due = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1000)
+                    }
+                }
+                override fun receive(waitMillis: Int): ByteArray? {
+                    val remaining = due - System.nanoTime()
+                    if (remaining > 0) TimeUnit.NANOSECONDS.sleep(minOf(remaining, TimeUnit.MILLISECONDS.toNanos(waitMillis.toLong())))
+                    return if (System.nanoTime() >= due) pendingReply.also { pendingReply = null; due = Long.MAX_VALUE } else null
+                }
+                override fun close() { delayedCloses.incrementAndGet() }
+            }
+        }).also { set(it, "accepting", true); set(it, "enriching", true) }
+        val delayedHold = blockedDetails(delayed)
+        try {
+            probe(delayed, 250, 400)
+            val peer = delayed.snapshot().singleOrNull()
+            check(peer != null && peer.ip == "198.18.0.2", "Recovery admits a current matching echo delayed by one second")
+            check(peer?.details?.get("ICMP response time")?.removeSuffix(" ms")?.toLongOrNull()?.let { it >= 1000 } == true,
+                "Recovery retains measured latency from the original delayed request")
+            check(delayedSends.get() == 2 && delayedCloses.get() == 1, "Delayed recovery keeps two requests and closes its transport")
+            check(peer != null && peer.mac.isEmpty() && peer.model.isEmpty(), "Delayed presence creates no inferred hardware identity")
+        } finally { delayed.cancel(); delayedHold.countDown() }
+
+        // Catalogue initialization shares this executor. Complete setup explicitly
+        // before testing the short presentation scheduling bound.
+        MacVendors.load(test.targetContext); DeviceCatalogLoader.load(test.targetContext)
         for (reset in listOf(false, true)) {
             Store(test.targetContext).clear()
             val activity = test.startActivitySync(Intent(test.targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
@@ -81,7 +121,10 @@ internal object ScanEfficiency {
             val active = operation(); val stale = operation()
             val gate = CountDownLatch(1); val began = CountDownLatch(1)
             try {
-                main(test) { set(activity, "network", network()); set(activity, "discovery", active); set(activity, "scanning", true) }
+                main(test) {
+                    MainActivity::class.java.getDeclaredMethod("stopWatchingConnection").apply { isAccessible = true }.invoke(activity)
+                    set(activity, "network", network()); set(activity, "discovery", active); set(activity, "scanning", true)
+                }
                 val store = get(activity, "store") as Store; val token = store.token()
                 val executor = get(activity, "presentation") as ScheduledExecutorService
                 executor.execute { began.countDown(); try { gate.await() } catch (_: InterruptedException) { Thread.currentThread().interrupt() } }

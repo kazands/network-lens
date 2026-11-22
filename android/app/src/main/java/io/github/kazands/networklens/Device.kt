@@ -255,8 +255,11 @@ class Device : Grouping.Endpoint {
             }
             for (entry in d.diagnostics.snapshot()) {
                 val returned = entry.disposition.startsWith("Returned") || entry.disposition.contains("withheld") || entry.disposition == "Array content omitted"
+                // Only these app-generated Apple transport fields contain fixed labels and timings.
+                val appleTransport = entry.source == AppleDeviceInfo.SOURCE && entry.field in setOf(
+                    "Transport attempt 1", "Transport attempt 2", "Transport timing 1", "Transport timing 2")
                 add(entry.field, entry.value, entry.source, entry.disposition,
-                    returned || diagnosticPublic(entry.field) || entry.source in setOf("Presence evidence", "Service observation", "Port observation", "Port check", "Audio lookup"))
+                    returned || appleTransport || diagnosticPublic(entry.field) || entry.source in setOf("Presence evidence", "Service observation", "Port observation", "Port check", "Audio lookup"))
             }
             d.diagnostics.losses().forEach { (kind, count) -> add("Diagnostic omitted events: " + kind.name.lowercase().replace('_', ' '), count.toString()) }
             add("Display retention limits", "8 observations per identity field; 16 detail entries; 24 services; 64 ports; 16 presence entries. Diagnostic journal retains up to ${DiagnosticEvidence.LIMIT} entries, prioritising identity observations and lookup outcomes over other returned fields, then withheld values. Capacity counts include displaced or rejected events; repeated omitted events can be counted again.")
