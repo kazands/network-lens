@@ -46,7 +46,7 @@ establish physical-device compatibility.
 
 The results below predate the explicit per-device check. See the
 [0.3.33 verification](../archive/VERIFICATION-0.3.33.md) for that earlier
-scheduling change. [Current verification](../VERIFICATION-0.3.38.md) records
+scheduling change. [Current verification](../VERIFICATION-0.3.39.md) records
 the removal and the new interface.
 
 - `scripts/test.sh`: all 45 host suites passed, including 38 Envisalink checks,

@@ -56,4 +56,4 @@ Physical-phone and OEM-keyboard behavior, TalkBack, ARM64 performance, low-memor
 
 The matching source package identifies the merged commit/tree and includes required public inputs, per-file hashes and original notices. Credentials, local caches and household evidence are excluded. Assets are published with SHA256SUMS.
 
-[Build instructions](BUILDING.md) · [Previous release verification](archive/VERIFICATION-0.3.37.md)
+[Build instructions](../BUILDING.md) · [Previous release verification](VERIFICATION-0.3.37.md)

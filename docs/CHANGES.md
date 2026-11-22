@@ -1,5 +1,12 @@
 # What is new
 
+## 0.3.39 — More reliable VSSL identification
+
+- Identify supported VSSL amplifiers when their Google Cast model arrives without AirPlay manufacturer details.
+- Confirm the manufacturer, hardware model and zone through the amplifier’s own read-only status response. Missing or conflicting details remain unknown.
+
+Scans still require current responses on the selected Wi-Fi and keep results in memory only.
+
 ## 0.3.38 — Clearer devices and easier search
 
 - Give device names more room by moving category and service badges out of the list rows. Keep useful room names and addresses visible.
@@ -130,6 +137,6 @@ These changes use information devices already report. They do not add network pr
 
 There are no new permissions, saved scan history, background scans or cloud recognition. Device and firmware compatibility still vary; this is a development preview.
 
-Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.37).
+Update through **Options → Check for updates** or download the APK from [GitHub Releases](https://github.com/kazands/network-lens/releases/tag/v0.3.39).
 
-[Verification for this release](VERIFICATION-0.3.37.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)
+[Verification for this release](VERIFICATION-0.3.39.md) · [Earlier releases](https://github.com/kazands/network-lens/releases) · [Documentation](README.md)

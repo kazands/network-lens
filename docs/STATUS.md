@@ -1,14 +1,12 @@
 # Current status
 
-**Network Lens 0.3.38 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
+**Network Lens 0.3.39 is a development preview for Android 8.0 and newer.** It targets Android API 37 and is distributed through GitHub as a signed APK.
 
 ## This release
 
-Device rows give names more room without category or service badges competing for width. Device details put labelled IPv4 and an available endpoint MAC in the identity card, then keep the existing Services & ports section. Grouped addresses, response timings and identification evidence remain under Show technical details.
+Supported VSSL amplifiers can now be identified when a current Google Cast advertisement supplies their full model but AirPlay manufacturer details are missing. The app reads the responding amplifier's own status to confirm its manufacturer, model and zone. Unknown models, ambiguous advertisements and virtual Cast groups do not qualify for this fallback.
 
-The compact scan card leaves more space for the list. Search dismisses the keyboard on submission and preserves the query when returning from a result. Text remains scalable in both themes.
-
-Discovery and recognition rules are unchanged. Scans admit responding IPv4 devices; IPv6-only devices and routed Thread endpoints remain outside the inventory. Cached advertisements cannot prove presence or identity.
+The clearer device rows, compact scan card and keyboard search submission from 0.3.38 remain available. Scans admit responding IPv4 devices; IPv6-only devices and routed Thread endpoints remain outside the inventory. Cached advertisements cannot prove presence or identity.
 
 ## App behavior
 
@@ -18,7 +16,7 @@ Bounded public identity readers retain selected local clues separately from hard
 
 No dedicated Envisalink TPI probe is used, because even a short connection could compete with an alarm integration. Devices without supported identifying reports can remain unnamed.
 
-[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.38.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md) · [Implementation verification history](PUBLIC-IDENTITY-VERIFICATION.md)
+[Changes](CHANGES.md) · [Release verification](VERIFICATION-0.3.39.md) · [Recognition rules](reference/DEVICE-IDENTITIES.md) · [Implementation verification history](PUBLIC-IDENTITY-VERIFICATION.md)
 
 ## What remains unverified
 

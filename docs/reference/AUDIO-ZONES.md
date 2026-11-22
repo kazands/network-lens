@@ -6,8 +6,13 @@ players separate; a playback group is never an endpoint identity/grouping key.
 
 ## VSSL
 
-A current `_airplay._tcp.` advertisement with the exact manufacturer `VSSL`
-qualifies its responding endpoint for one read-only status query on TCP 50002.
+A current `_airplay._tcp.` advertisement with the exact manufacturer `VSSL`, or
+a current physical `_googlecast._tcp.` advertisement whose `md` is an exact
+brand-qualified supported model such as `VSSL A6x`, qualifies its responding
+endpoint for one read-only status query on TCP 50002. Bare Cast model codes,
+service/room names, virtual groups, ambiguous model fields and conflicting
+manufacturers do not qualify. Cast admission does not fill in a missing
+manufacturer or identify hardware; a valid direct status reply supplies those fields.
 The four request bytes are `10 00 01 08` (hex). The response must have command
 `10 00`, a one-byte payload length, subcommand `08`, and valid JSON containing
 string fields `id`, `tp`, and `mc`. No playback/settings command is sent.
@@ -63,7 +68,7 @@ report. Group identifiers never merge Sonos devices, VSSL zones or Cast receiver
 - Mapping and names disappear with the scan/session. Clipboard export happens only
   when the user chooses Copy device details. Hashes are internal correlation tokens,
   not a claim of anonymization; no mapping identifier is exported.
-- AirPlay-disabled VSSL devices without a qualifying advertisement, other model
+- VSSL devices without a qualifying AirPlay or Cast advertisement, other model
   generations/protocol variants, failed Sonos topology queries and incompatible
   snapshots remain unmapped. A failed lookup does not mean a device is absent.
 - Physical-device compatibility is still unverified for this change. Synthetic
