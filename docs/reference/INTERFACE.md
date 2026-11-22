@@ -1,5 +1,21 @@
 # Home-user interface wording
 
+## Device layout and search — 0.3.38
+
+The current list gives names the full trailing text area, with useful room names
+and a quiet address count beneath. Category and service badges are kept in
+details. The compact scan card preserves complete status text and 48dp actions.
+
+Details start with the identity card's labelled IPv4 and available endpoint MAC,
+then the existing Services & ports section. Identification explanations, grouped
+addresses, response timings and source-labelled observations remain in collapsed
+technical details. These layouts supersede the quick-facts and standalone
+address/explanation sections described in the historical migration below.
+
+Search retains its active editor and list state while text changes. The keyboard
+Search action hides the keyboard and releases field focus without clearing the
+query. Back from a result preserves the query and list position.
+
 ## Design refinement — 0.3.36
 
 The [design system](DESIGN-SYSTEM.md) centralises complete light/dark Material
@@ -217,7 +233,7 @@ full host suite were not rerun for these Android reporting/cleanup corrections.
 No version change, publication or phone installation was performed.
 
 The candidate verification history above predates release versioning. See
-[current release verification](../archive/VERIFICATION-0.3.26.md) for the final artifact and checks.
+[current release verification](../VERIFICATION-0.3.38.md) for the final artifact and checks.
 
 ## Scrolling stability
 

@@ -5,17 +5,20 @@ import androidx.compose.foundation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
@@ -42,6 +45,8 @@ internal object UiDevicePolicy {
     }
 }
 @Composable internal fun DevicesScreen(state: UiState,memory: UiMemory,action: (UiAction)->Unit) {
+    val focus=LocalFocusManager.current
+    val keyboard=LocalSoftwareKeyboardController.current
     val filter=memory.filter
     val shown=remember(state.groups,state.query,filter) { state.groups.filter { UiDevicePolicy.matches(it,state.query,filter) } }
     val generation=memory.listVersion
@@ -49,7 +54,7 @@ internal object UiDevicePolicy {
     val itemKeys=listOfNotNull(if(state.demo) "sample" else null,"scan",
         if(showControls) "search" else null,if(showControls) "filters" else null,"heading")+
         if(shown.isEmpty()) listOf("empty") else shown.map {it.ip}
-    val list=remember(state.network?.key,state.demo,state.query,filter,generation) {
+    val list=remember(state.network?.key,state.demo,filter,generation) {
         // The list is disposed while handset details/settings are open. Resolve
         // its retained key against the current results, which may have grown.
         val index=memory.listKey?.let(itemKeys::indexOf)?.takeIf {it>=0} ?: memory.listIndex
@@ -77,10 +82,16 @@ internal object UiDevicePolicy {
         item(key="scan") { ScanHero(state,action) }
         if(showControls) {
             item(key="search") {
-                OutlinedTextField(value=state.query,onValueChange={action(UiAction.Search(it))},label={Text("Search devices")},
+                OutlinedTextField(value=state.query,onValueChange={
+                    action(UiAction.Search(it))
+                    // Keep the active editor and its IME connection alive while
+                    // bringing the filtered results back to the search area.
+                    list.requestScrollToItem(itemKeys.indexOf("search"))
+                },label={Text("Search devices")},
                     leadingIcon={LensIcon(R.drawable.ic_ui_search,null)},trailingIcon={if(state.query.isNotEmpty()) IconButton(onClick={action(UiAction.Search(""))}) { LensIcon(R.drawable.ic_ui_clear,"Clear search") }},
                     modifier=Modifier.fillMaxWidth().padding(top=8.dp).testTag("search"),singleLine=true,shape=LensShape.tile,
-                    keyboardOptions=KeyboardOptions(autoCorrectEnabled=false,imeAction=ImeAction.Search))
+                    keyboardOptions=KeyboardOptions(autoCorrectEnabled=false,imeAction=ImeAction.Search),
+                    keyboardActions=KeyboardActions(onSearch={keyboard?.hide();focus.clearFocus()}))
             }
             item(key="filters") {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("filters"),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -104,8 +115,9 @@ internal object UiDevicePolicy {
 }
 @Composable private fun ScanHero(state: UiState,action: (UiAction)->Unit) {
     Surface(shape=LensShape.hero,color=MaterialTheme.colorScheme.secondaryContainer) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(16.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp)) {
         val stacked=maxWidth<320.dp || LocalDensity.current.fontScale>=1.4f
+        val stackedStatus=maxWidth<260.dp*LocalDensity.current.fontScale || LocalDensity.current.fontScale>=1.4f
         val network=state.ssid.ifEmpty { if(state.network==null && !state.demo) "Wi-Fi not connected" else if(state.demo) "Example network" else "Current Wi-Fi" }
         val title=if(state.groups.isEmpty()) if(state.scanning) "Looking for devices…" else "Discover your network"
             else "${state.groups.size} device"+(if(state.groups.size==1) "" else "s")+" found"
@@ -119,7 +131,7 @@ internal object UiDevicePolicy {
             ScanRadar(state.scanning,if(state.total>0 && state.done<state.total) state.done.coerceAtLeast(0).toFloat()/state.total else null,
                 state.report,state.groups.size,Pair(state.network?.key,state.demo),diameter=if(stacked) 48.dp else 64.dp)
         }
-        Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             if(stacked) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) { NetworkLabel(Modifier.weight(1f));Radar() }
                 Text(title,style=MaterialTheme.typography.titleLarge)
@@ -136,7 +148,7 @@ internal object UiDevicePolicy {
                 Text("Details",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
                 LensIcon(R.drawable.ic_ui_chevron_right,null,tint=MaterialTheme.colorScheme.primary)
             }
-            if(stacked) Column(detailsAction,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            if(stackedStatus) Column(detailsAction,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 Status(Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth().heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.End)) { DetailsLabel() }
             } else Row(detailsAction,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -153,27 +165,42 @@ internal object UiDevicePolicy {
     val product=device.groupProduct()?.product
     val room=device.name.takeIf { IdentityHints.specificName(it) && it!=label.title && product?.redundantName(it)!=true && !device.self && !device.gateway }.orEmpty()
     val role=when {device.self->"This phone";device.gateway->"Wi-Fi gateway";device.classification().conflicted->"";else->product?.displayType?.takeIf {it.isNotEmpty()} ?: device.classification().category?.label.orEmpty()}
-    val compact=LocalDensity.current.fontScale<1.4f && LocalConfiguration.current.screenWidthDp>=360
+    // A custom name helps distinguish identical products. Category text is useful
+    // for a reported name/model without a product match, or for this phone/router.
+    // Services and full classification remain in details and in search.
+    val supporting=room.ifEmpty { role.takeIf { (product==null || device.self || device.gateway) && !label.title.contains(it,true) }.orEmpty() }
     Surface(onClick={action(UiAction.Select(device))},shape=LensShape.card,color=MaterialTheme.colorScheme.surface,
         border=if(selected) BorderStroke(1.dp,MaterialTheme.colorScheme.primary) else null,modifier=Modifier.fillMaxWidth().testTag("device:${device.ip}")) {
-        Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Surface(shape=LensShape.tile,color=tone.container,modifier=Modifier.size(48.dp)) {
-                Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(32.dp),tone.icon) }
-            }
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(label.title,style=MaterialTheme.typography.titleMedium,modifier=Modifier.weight(1f))
-                    if(compact && label.title.length<=22 && role.isNotEmpty() && role.length<=24 && !label.title.contains(role,true)) BadgeText(role)
-                }
-                if(room.isNotEmpty()) Text(room,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    if(primary.ip.contains(':')) AddressText(primary.ip)
-                    else Text(primary.ip,style=MaterialTheme.typography.bodySmall,fontFamily=FontFamily.Monospace,color=MaterialTheme.colorScheme.primary)
-                    if(endpoints.size>1) BadgeText("+${endpoints.size-1} address"+(if(endpoints.size==2) "" else "es"))
-                    if(compact) for(service in device.capabilities().take(2)) BadgeText(service)
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
+            // Adapt to this card's available width, including a split pane. Never
+            // shrink or truncate a name to preserve a decorative leading gutter.
+            val stacked=maxWidth-60.dp < 200.dp*LocalDensity.current.fontScale
+            @Composable fun DeviceTile() {
+                Surface(shape=LensShape.tile,color=tone.container,modifier=Modifier.size(if(stacked) 40.dp else 48.dp)) {
+                    Box(contentAlignment=Alignment.Center) { LensIcon(DeviceIcon.forGroup(device).drawable,null,Modifier.size(32.dp),tone.icon) }
                 }
             }
-            LensIcon(R.drawable.ic_ui_chevron_right,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+            @Composable fun Chevron() { LensIcon(R.drawable.ic_ui_chevron_right,null,Modifier.size(20.dp),MaterialTheme.colorScheme.onSurfaceVariant) }
+            @Composable fun Identity(modifier: Modifier=Modifier) {
+                Column(modifier,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text(label.title,style=MaterialTheme.typography.titleMedium.copy(lineBreak=LineBreak.Heading),modifier=Modifier.fillMaxWidth())
+                    if(supporting.isNotEmpty()) Text(supporting,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        FlowRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                            if(primary.ip.contains(':')) AddressText(primary.ip)
+                            else Text(primary.ip,style=MaterialTheme.typography.bodySmall,fontFamily=FontFamily.Monospace,color=MaterialTheme.colorScheme.primary)
+                            if(endpoints.size>1) Text("+${endpoints.size-1} address"+(if(endpoints.size==2) "" else "es"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if(!stacked) Chevron()
+                    }
+                }
+            }
+            if(stacked) Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) { DeviceTile();Chevron() }
+                Identity(Modifier.fillMaxWidth())
+            } else Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                DeviceTile();Identity(Modifier.weight(1f))
+            }
         }
     }
 }

@@ -8,11 +8,11 @@ See what is on your Wi-Fi. Find responding devices, understand what they are, an
 
 Network Lens is a free, open-source Android IPv4 Wi-Fi device finder for home users and smart-home enthusiasts. It keeps everyday scanning simple while making addresses, services and discovery evidence available when you need them. IPv6-only devices and routed Thread endpoints are outside its discovery scope.
 
-[![Download Network Lens 0.3.37 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.37/Network-Lens-0.3.37.apk)
+[![Download Network Lens 0.3.38 APK](docs/images/download-apk.svg)](https://github.com/kazands/network-lens/releases/download/v0.3.38/Network-Lens-0.3.38.apk)
 
 **Android 8.0 or newer · Development preview · No account required**
 
-Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.37)
+Already installed? Open **Options → Check for updates**. Android asks you to approve installation. [Release notes and checksums](https://github.com/kazands/network-lens/releases/tag/v0.3.38)
 
 ## Find your devices
 
@@ -20,7 +20,7 @@ Already installed? Open **Options → Check for updates**. Android asks you to a
 2. Tap **Scan Wi-Fi** and keep the app open while it scans.
 3. Search or filter the results, then tap a device to see its identity, addresses and available services.
 
-Recognised products receive useful names and category-coloured icons. Room names stay visible. The scan card brings the network, action and progress together and adapts to enlarged text. Compact rows show the preferred IPv4 address; device details show every grouped IPv4 address. **Show technical details** reveals the original reports and their sources, including selected public web, certificate and SSH clues when available. [IPv4 scope and limitations](docs/reference/IPV4-SCOPE.md).
+Recognised products receive useful names and category-coloured icons. Room names stay visible, and device names have space to wrap without competing badges. The compact scan card leaves more room for the list. Device details show the preferred IPv4 address and an available endpoint MAC above **Services & ports**. **Show technical details** reveals every grouped address, original reports and their sources, including selected public web, certificate and SSH clues when available. [IPv4 scope and limitations](docs/reference/IPV4-SCOPE.md).
 
 ## Local by design
 

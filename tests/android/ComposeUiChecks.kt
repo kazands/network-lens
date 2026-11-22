@@ -104,9 +104,9 @@ internal object ComposeUiChecks {
         d.click("Clear filters");d.clickTag("filter-UNNAMED")
         d.main {check(d.words().contains("1 matching device") && d.words().contains("Unnamed device"),"Unnamed filter keeps the useful unresolved endpoint")}
         d.clickTag("device:192.0.2.42")
-        d.main {check(d.words().contains(RecognitionCopy.UNNAMED),"Unknown details explain available evidence without inventing identity");check(d.words().count {it=="Not available"}==1,"Unknown MAC is summarised once before disclosure")}
+        d.main {check(d.words().contains(RecognitionCopy.UNNAMED),"Unknown details explain available evidence without inventing identity");check(d.tagged("copy-mac")==null && "Not available" !in d.words(),"Unknown MAC adds no identity row or placeholder")}
         d.reveal("Show technical details");d.click("Show technical details")
-        d.main {check(d.words().contains("Synthetic current unnamed response"),"Technical disclosure retains unnamed endpoint evidence");check(d.words().none {it.contains("Check for Envisalink")},"No manual alarm-check action remains")}
+        d.main {check(d.words().contains("Synthetic current unnamed response"),"Technical disclosure retains unnamed endpoint evidence");check(d.words().count {it=="Not available"}==1,"Technical details retain the unknown MAC once");check(d.words().none {it.contains("Check for Envisalink")},"No manual alarm-check action remains")}
         d.reveal("Copy device details");d.click("Copy device details")
         d.main {check(clip(d).contains("IP: 192.0.2.42") && clip(d).contains("MAC: Not available"),"Copy preserves unknown values and original address")}
         d.clickTag("back")
@@ -115,13 +115,15 @@ internal object ComposeUiChecks {
         d.main {
             check(d.words().contains("Thermostat") && d.words().contains("Fixture hallway"),"Physical thermostat identity and room lead the details")
             check(d.words().none {it=="ECB601"},"Raw model starts collapsed")
-            check(d.words().indexOf("192.0.2.41")<d.words().indexOf(fixtures[2].ip),"Unified address section orders IPv4 before IPv6")
+            check("192.0.2.41" in d.words() && fixtures[2].ip !in d.words(),"Identity card shows the primary IPv4 while additional endpoints start collapsed")
         }
         d.assertTextLayouts("Default details");capture(d,"details-light")
-        d.reveal("How this was identified");d.click("How this was identified")
-        d.main {check(d.words().any {it.contains("offline product catalogue")},"Identification explanation preserves the actual evidence basis")}
         d.reveal("Show technical details");d.click("Show technical details")
-        d.main {check(d.words().contains("Synthetic current IPv4 response") && d.words().contains("Synthetic current IPv6 response"),"One disclosure contains independent evidence for both endpoints")}
+        d.main {
+            check(d.words().any {it.contains("offline product catalogue")},"Technical identification explanation preserves the actual evidence basis")
+            check(d.words().contains("Synthetic current IPv4 response") && d.words().contains("Synthetic current IPv6 response"),"One disclosure contains independent evidence for both endpoints")
+            check(d.words().indexOf("192.0.2.41")<d.words().indexOf(fixtures[2].ip),"Technical endpoints retain IPv4 before IPv6")
+        }
         d.scroll("device-details",500f)
         var root: Any?=null;var nodeId=0;var offset=0
         d.main {root=d.root();nodeId=d.tagged("device-details")!!.id;offset=d.activity.uiMemory.detailOffset}
@@ -148,7 +150,7 @@ internal object ComposeUiChecks {
         d.main {check(d.words().contains("Failed · synthetic timeout"),"Bottom sheet retains the actual method failure")};capture(d,"scan-details")
         d.click("Done")
         d.search("192.0.2.41");d.clickTag("device:192.0.2.41")
-        d.reveal("How this was identified");d.click("How this was identified")
+        d.reveal("Show technical details");d.click("Show technical details")
         d.recreate()
         d.main {check(d.activity.uiState().selected?.ip=="192.0.2.41" && d.activity.uiState().query=="192.0.2.41" && d.words().any {it.contains("offline product catalogue")},"Activity recreation retains selection, query and disclosure only in RAM")}
         d.main {store.clear();d.set("demo",true);d.set("devices",emptyList<Device>());d.set("groupedSource",null);d.set("selected",null);d.set("query","");d.render()};d.settle()
@@ -179,9 +181,10 @@ internal object ComposeUiChecks {
                 d.fixture(fixtures);d.assertTextLayouts("List ${width}dp ${scale}x dark=$dark");capture(d,"list-${width}-${scale}x-$dark")
                 d.search("192.0.2.41");d.clickTag("device:192.0.2.41")
                 d.assertTextLayouts("Details ${width}dp ${scale}x dark=$dark")
-                d.main {check(d.words().contains(fixtures[2].ip),"Scoped IPv6 remains exact in the real $width dp/$scale x layout")}
+                d.main {check("192.0.2.41" in d.words() && fixtures[2].ip !in d.words(),"Primary address stays visible while peer details start collapsed at $width dp/$scale x")}
                 capture(d,"details-${width}-${scale}x-$dark")
                 d.reveal("Show technical details");d.click("Show technical details");d.assertTextLayouts("Technical evidence ${width}dp ${scale}x dark=$dark")
+                d.main {check(fixtures[2].ip in d.words(),"Technical details retain the exact scoped endpoint at $width dp/$scale x")}
                 d.reveal("Copy device details");d.click("Copy device details")
                 d.main {check(clip(d).contains(fixtures[2].ip) && !clip(d).contains('\u200b'),"Copy never contains display-only wrapping characters")}
                 d.clickTag("back");d.search("2001:db8:");d.revealTag("device:${fixtures[6].ip}")

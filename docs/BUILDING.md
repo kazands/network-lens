@@ -13,7 +13,7 @@ bash scripts/test.sh
 bash scripts/build.sh
 ```
 
-The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.37.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
+The app supports Android 8.0+ and targets API 37. The development APK is written to `artifacts/Network-Lens-0.3.38.apk`, with a checksum and permission/security audit outputs. Downloaded tools and build artifacts are ignored by Git.
 
 A fresh checkout creates a local development signing key. That key cannot update an installation signed by another key. Existing keys must not be replaced to work around an installation error. Public release credentials are never required for ordinary builds or tests.
 
@@ -52,15 +52,36 @@ Replace the serial with the exact emulator you started. Instrumentation changes 
 | Focused products | `google-cast`, `fire-tv`, `smartthings`, `envisalink`, `kidde`, `fibe-tv` |
 | Indirect local-name evidence | `network-names` |
 | Lifecycle and recovery | `service-retries`, `scan-ownership`, `fresh-presence`, `session-only`, `session-cold` |
-| Compose interface | `compose-design`, `compose-ui`, `compose-typography`, `compose-updates`, `compose-update-network`, `compose-reports`, `compose-rtl`, `compose-privacy`, `compose-list-anchor`, `compose-icmp-errors` |
+| Compose interface | `compose-design`, `compose-device-rows`, `compose-device-details`, `compose-search`, `compose-ui`, `compose-typography`, `compose-updates`, `compose-update-network`, `compose-reports`, `compose-rtl`, `compose-privacy`, `compose-list-anchor`, `compose-icmp-errors` |
 | Interface | `ui-refinement`, `home-user`, `detail-stability`, `recognition-report`, `scan-details`, `typography`, `navigation`, `options` |
 | Updates and performance | `app-updates`, `performance` |
 
 Compose UI checks drive the actual semantics tree, actions and measured text layouts. They use synthetic observations, test both themes, 200% text, narrow and wide viewports, and preserve private-keyboard and sensitive-clipboard protections. They do not substitute fake View widgets.
 
+`compose-device-rows` checks catalogue names, long reported and room names,
+unbroken identifiers and grouped address counts at 320dp, 360dp, 375dp, 411dp,
+320dp / 200% text and wide layouts in both themes. It measures actual title
+line counts and text overflow, checks whole-row targets, and verifies that
+services remain searchable and available in details.
+`compose-device-previews` renders focused 375dp list, details and services
+captures in both themes using synthetic examples.
+
+`compose-search` uses genuine field taps, key events and the current platform
+IME action to type, submit, edit and clear synthetic queries. It verifies keyboard dismissal,
+stable search positioning, query retention on Back and keyboard privacy at
+375dp and 320dp / 200% text in both themes. No LAN scan is started.
+
+`compose-device-details` verifies labelled identity addresses and exact copy
+actions, missing-MAC handling, endpoint-specific MAC association, and grouped
+address/MAC copy actions. It checks collapsed provenance, independent response
+timings and RAM-only disclosure retention, with both themes, enlarged text and
+wide layouts. All inputs are synthetic; no LAN scan is started.
+
 `compose-design` verifies light/dark colour contrast and category semantics,
 radar success/Stop/failure outcomes, live animation-scale changes without Activity
-recreation, and idle/off-screen animation shutdown. It restores the emulator's
+recreation, and idle/off-screen animation shutdown. It also checks the compact
+scan card's complete status, 48dp action targets and report access at 375dp and
+320dp / 200% text in both themes. It restores the emulator's
 animation setting afterwards. Its captures are synthetic interface evidence,
 not phone performance or household recognition measurements.
 

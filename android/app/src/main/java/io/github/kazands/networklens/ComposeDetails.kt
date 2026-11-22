@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -39,11 +38,15 @@ import kotlinx.coroutines.flow.distinctUntilChanged
     LaunchedEffect(scroll,generation) { snapshotFlow { scroll.value }.distinctUntilChanged().collect { if(memory.detailVersion==generation) memory.detailOffset=it } }
     DisposableEffect(scroll,generation) {onDispose {if(memory.detailVersion==generation) memory.detailOffset=scroll.value}}
     val endpoints=device.endpoints().sortedWith {a,b->Address.compare(a.ip,b.ip)}
+    val primary=endpoints.firstOrNull { !it.ip.contains(':') } ?: endpoints.first()
+    val addressKind=if(primary.ip.contains(':')) "IPv6" else "IPv4"
     val product=device.groupProduct()?.product
     val classification=device.classification()
     val category=when { device.self->"This phone";device.gateway->"Wi-Fi gateway";classification.conflicted->"Conflicting reports";else->product?.displayType?.takeIf {it.isNotEmpty()} ?: classification.category?.label ?: "Not identified" }
     val name=device.presentation().title
     val room=device.name.takeIf { IdentityHints.specificName(it) && it!=name && product?.redundantName(it)!=true }.orEmpty()
+    val matches=endpoints.map { it.identifiedProduct() }
+    val shared=matches.firstOrNull()?.takeIf { first -> product==first.product && matches.all { it!=null && it.product==first.product && RecognitionCopy.explanation(it)==RecognitionCopy.explanation(first) } }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp).testTag("device-details"),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Surface(shape=LensShape.hero,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -54,41 +57,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
                 Text(category,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.primary,modifier=Modifier.semantics { contentDescription="Primary device type: $category" })
                 if(room.isNotEmpty() && !device.self && !device.gateway) Text(room,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
                 if(product?.familyOnly==true) BadgeText("Device family")
-                FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    val first=endpoints.firstOrNull { !it.ip.contains(':') } ?: endpoints.first()
-                    AssistChip(onClick={action(UiAction.Copy(if(first.ip.contains(':')) "IPv6 address" else "IPv4 address",first.ip))},label={Text(if(first.ip.contains(':')) "Copy IPv6" else first.ip,fontFamily=FontFamily.Monospace)},trailingIcon={LensIcon(R.drawable.ic_ui_copy,null,Modifier.size(16.dp))},modifier=Modifier.heightIn(min=48.dp).testTag("copy-address"))
-                    endpoints.firstOrNull { it.mac.isNotEmpty() }?.let { mac -> AssistChip(onClick={action(UiAction.Copy("MAC address",mac.mac))},label={Text("Copy MAC")},modifier=Modifier.heightIn(min=48.dp)) }
+                Column(Modifier.fillMaxWidth().padding(top=4.dp)) {
+                    IdentityAddressRow(addressKind,primary.ip,"copy-address") { action(UiAction.Copy("$addressKind address",primary.ip)) }
+                    // A sibling endpoint may report another interface's MAC.
+                    // Pair the header's identifiers only from this endpoint.
+                    if(primary.mac.isNotEmpty() && !primary.hardwareAddressMayBeOtherInterface()) IdentityAddressRow("MAC",primary.mac,"copy-mac") { action(UiAction.Copy("MAC address",primary.mac)) }
                 }
-            }
-        }
-        val latency=endpoints.mapNotNull { endpoint ->
-            endpoint.details["ICMPv6 response time"]?.let { "ICMPv6 · $it" } ?: endpoint.details["ICMP response time"]?.let { "ICMP · $it" } ?: endpoint.latency.takeIf { it>=0 }?.let { "TCP · $it ms" }
-        }.firstOrNull() ?: "Not measured"
-        val last=endpoints.maxOfOrNull { it.lastSeen } ?: 0
-        val facts=listOf("Response" to if(last>0) "Responded ${UiDetails.time(last)}" else "Responded this scan", "Response time" to latency,
-            "Discovery evidence" to "${endpoints.sumOf { it.evidence.size }} observation"+(if(endpoints.sumOf { it.evidence.size }==1) "" else "s"),
-            "Addresses" to "${endpoints.size} IP address"+(if(endpoints.size==1) "" else "es"))
-        val columns=if(LocalDensity.current.fontScale>=1.4f || LocalConfiguration.current.screenWidthDp<360) 1 else 2
-        for(chunk in facts.chunked(columns)) Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            for((label,value) in chunk) Surface(shape=LensShape.tile,color=MaterialTheme.colorScheme.surface,modifier=Modifier.weight(1f).fillMaxHeight()) {
-                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(value,style=MaterialTheme.typography.bodyMedium) }
-            }
-        }
-        DetailSurface {
-            SectionTitle("Addresses")
-            if(endpoints.size>1) Text("${endpoints.size} IP addresses grouped together",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            for(endpoint in endpoints) AddressField(if(endpoint.ip.contains(':')) "IPv6" else "IPv4",endpoint.ip,"copy-ip:${endpoint.ip}") {
-                action(UiAction.Copy(if(endpoint.ip.contains(':')) "IPv6 address" else "IPv4 address",endpoint.ip))
-            }
-            val macs=endpoints.filter { it.mac.isNotEmpty() }.groupBy { it.mac }
-            if(macs.isEmpty()) InfoField("MAC address","Not available")
-            for((mac,reported) in macs) {
-                AddressField("MAC address",mac,"copy-mac:$mac") {action(UiAction.Copy("MAC address",mac))}
-                Text("Source: "+reported.map { it.macSource }.filter { it.isNotEmpty() }.distinct().joinToString("; ").ifEmpty { "Not reported" },style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if(macs.isNotEmpty() && endpoints.any { it.mac.isEmpty() }) Text("Some addresses did not report a MAC address.",style=MaterialTheme.typography.bodySmall)
-            Disclosure("About MAC addresses","mac-help",memory) {
-                Text("Android limits MAC access. Some devices report an address through their discovery services. A reported MAC may identify another interface on the device.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         if(device.capabilities().isNotEmpty() || endpoints.any { it.ports.isNotEmpty() }) DetailSurface {
@@ -102,25 +76,59 @@ import kotlinx.coroutines.flow.distinctUntilChanged
         if(!device.self && !device.gateway && product==null) {
             SectionTitle("About this device");Text(device.recognitionSummary(),style=MaterialTheme.typography.bodyMedium);Text(RecognitionCopy.NEXT_SCAN,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        val matches=endpoints.map { it.identifiedProduct() }
-        val shared=matches.firstOrNull()?.takeIf { first -> product==first.product && matches.all { it!=null && it.product==first.product && RecognitionCopy.explanation(it)==RecognitionCopy.explanation(first) } }
-        if(shared!=null) Disclosure("How this was identified","why-shared",memory) { Text(RecognitionCopy.explanation(shared),style=MaterialTheme.typography.bodyMedium) }
-        else for(endpoint in endpoints) endpoint.identifiedProduct()?.let { match ->
-            Disclosure("How this was identified"+(if(endpoints.size>1) " · ${endpoint.ip}" else ""),"why:${endpoint.ip}",memory) { Text(RecognitionCopy.explanation(match),style=MaterialTheme.typography.bodyMedium) }
-        }
-        for(endpoint in endpoints) if(endpoint.audioStatus.isNotEmpty() || endpoint.audioRows.isNotEmpty()) Disclosure("Audio system"+(if(endpoints.size>1) " · ${endpoint.ip}" else ""),"audio:${endpoint.ip}",memory) {
-            if(endpoint.audioStatus.isNotEmpty()) InfoField("Lookup",endpoint.audioStatus)
-            for((label,value) in endpoint.audioRows) InfoField(label,value)
-        }
         Disclosure("Show technical details","technical",memory,"Hide technical details") {
+            if(shared!=null) {
+                SectionTitle("Identification evidence")
+                Text(RecognitionCopy.explanation(shared),style=MaterialTheme.typography.bodyMedium)
+            }
+            if(endpoints.size>1) Text("${endpoints.size} IP addresses grouped together",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             for((i,endpoint) in endpoints.withIndex()) {
                 if(i>0) HorizontalDivider()
-                if(endpoints.size>1) SectionTitle((if(endpoint.ip.contains(':')) "IPv6" else "IPv4")+" · ${endpoint.ip}")
-                for((label,value) in UiDetails.fields(endpoint)) InfoField(label,value)
+                val kind=if(endpoint.ip.contains(':')) "IPv6" else "IPv4"
+                if(endpoints.size>1) SectionTitle("$kind · ${endpoint.ip}")
+                AddressField(kind,endpoint.ip,"copy-ip:${endpoint.ip}") { action(UiAction.Copy("$kind address",endpoint.ip)) }
+                if(endpoint.mac.isNotEmpty()) AddressField("MAC address",endpoint.mac,"copy-mac:${endpoint.ip}") { action(UiAction.Copy("MAC address",endpoint.mac)) }
+                InfoField("Response",if(endpoint.seen) "Responded this scan" else "Not confirmed this scan")
+                InfoField("Discovery evidence","${endpoint.evidence.size} observation"+(if(endpoint.evidence.size==1) "" else "s"))
+                if(shared==null) endpoint.identifiedProduct()?.let { match ->
+                    SectionTitle("Identification evidence")
+                    Text(RecognitionCopy.explanation(match),style=MaterialTheme.typography.bodyMedium)
+                }
+                for((label,value) in UiDetails.fields(endpoint)) {
+                    if(label!="MAC address" || endpoint.mac.isEmpty()) InfoField(label,value)
+                }
+                if(endpoint.audioStatus.isNotEmpty() || endpoint.audioRows.isNotEmpty()) Disclosure("Audio system"+(if(endpoints.size>1) " · ${endpoint.ip}" else ""),"audio:${endpoint.ip}",memory) {
+                    if(endpoint.audioStatus.isNotEmpty()) InfoField("Lookup",endpoint.audioStatus)
+                    for((label,value) in endpoint.audioRows) InfoField(label,value)
+                }
+            }
+            Disclosure("About MAC addresses","mac-help",memory) {
+                Text("Android limits MAC access. Some devices report an address through their discovery services. A reported MAC may identify another interface on the device.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("Reported details come from device responses. Local recognition is an interpretation of those details. Missing values stay unknown; neither establishes ownership or security.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         OutlinedButton(onClick={action(UiAction.CopyDevice(device))},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) { Text("Copy device details") }
+    }
+}
+@Composable private fun IdentityAddressRow(label: String,value: String,tag: String,onCopy: ()->Unit) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked=LocalDensity.current.fontScale>=1.4f || maxWidth-104.dp < 144.dp*LocalDensity.current.fontScale
+        @Composable fun CopyAction() {
+            IconButton(onClick=onCopy,modifier=Modifier.size(48.dp).testTag(tag)) {
+                LensIcon(R.drawable.ic_ui_copy,"Copy $label address",Modifier.size(20.dp),MaterialTheme.colorScheme.primary)
+            }
+        }
+        if(stacked) Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.weight(1f))
+                CopyAction()
+            }
+            AddressText(value)
+        } else Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.width(40.dp))
+            AddressText(value,Modifier.weight(1f))
+            CopyAction()
+        }
     }
 }
 @Composable internal fun DetailSurface(content: @Composable ColumnScope.()->Unit) {
@@ -136,7 +144,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @Composable internal fun Disclosure(title: String,key: String,memory: UiMemory,expandedTitle: String=title,content: @Composable ColumnScope.()->Unit) {
     val open=memory.expanded[key]==true
     Column(Modifier.fillMaxWidth()) {
-        TextButton(onClick={memory.expanded[key]=!open},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("disclosure:$key").semantics { stateDescription=if(open) "Expanded" else "Collapsed" },contentPadding=PaddingValues(vertical=8.dp)) {
+        // A pill clip cuts off the corners of multiline labels at enlarged text.
+        TextButton(onClick={memory.expanded[key]=!open},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("disclosure:$key").semantics { stateDescription=if(open) "Expanded" else "Collapsed" },shape=androidx.compose.ui.graphics.RectangleShape,contentPadding=PaddingValues(vertical=8.dp)) {
             Text(if(open) expandedTitle else title,style=MaterialTheme.typography.titleMedium,modifier=Modifier.weight(1f))
             LensIcon(if(open) R.drawable.ic_ui_chevron_down else R.drawable.ic_ui_chevron_right,null,tint=MaterialTheme.colorScheme.primary)
         }

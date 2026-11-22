@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.ui.InternalComposeUiApi::class)
+@file:OptIn(androidx.compose.ui.InternalComposeUiApi::class,androidx.compose.ui.ExperimentalComposeUiApi::class)
 package io.github.kazands.networklens.test
 
 import android.app.Instrumentation
@@ -90,18 +90,54 @@ internal object ComposeDesignChecks {
                     ComposeUiChecks.capture(d,"design-scan-sheet-$dark")
                     d.click("Done")
                 }
-                // The narrow / enlarged-text boundary uses the stacked scan-card layout.
-                d.configure(320,2f)
-                d.main {d.set("scanning",false);d.set("demo",true);d.set("devices",fixtures);d.set("groupedSource",null);d.render()};d.settle()
-                d.assertTextLayouts("Adaptive scan card at 320dp and 200% text")
-                d.main {
-                    val status=d.tagged("scan-status")!!.boundsInRoot
-                    val action=d.tagged("scan-details-action")!!.boundsInRoot
-                    check(kotlin.math.abs(status.width-action.width)<1f,"Enlarged scan status uses the full card width instead of competing with Details")
-                    val details=d.text("Details")!!.boundsInRoot
-                    check(details.top>=status.bottom,"Enlarged Details action sits below the status text")
+                val manyDevices=(1..52).map { n -> Device().apply {
+                    ip="192.0.2.$n";seen=true
+                    if(n==1) gateway=true else name="Sample device $n"
+                } }
+                for((width,scale) in listOf(375 to 1f,320 to 2f)) {
+                    d.configure(width,scale)
+                    for(dark in listOf(false,true)) {
+                        val currentNetwork=NetworkState.current(d.activity)
+                        val partial=ScanReport("192.0.2.0/24",false,"Synthetic review",52,52,System.currentTimeMillis(),mapOf(
+                            "Synthetic lookup A" to "Failed · synthetic timeout",
+                            "Synthetic lookup B" to "Failed · synthetic timeout"))
+                        d.fixture(manyDevices)
+                        d.main {
+                            val currentStore=Store(d.activity);currentStore.dark(dark)
+                            currentStore.retainIfCurrent(currentStore.token(),currentNetwork.key,manyDevices,partial)
+                            d.set("network",currentNetwork);d.set("demo",false);d.set("range","192.0.2.0/24")
+                            d.set("scanning",false);d.set("message","");d.render()
+                        };d.settle()
+                        d.assertTextLayouts("Compact scan card at ${width}dp / ${scale}x text, dark=$dark")
+                        ComposeUiChecks.capture(d,"design-compact-$width-$scale-$dark")
+                        d.main {
+                            check(d.words().contains("52 devices found") && d.words().any {it.contains("2 checks to review")},"Compact card preserves the count and incomplete-scan warning")
+                            check(d.tagged("scan")!!.touchBoundsInRoot.height>=48*d.root().density.density,"Compact scan button retains a 48dp touch target")
+                        }
+                        // The legacy emulator's usable height can end before the
+                        // footer at 200% text. Measure it after bringing it into view.
+                        if(scale>1f) {
+                            d.reveal("Details","devices-list")
+                            ComposeUiChecks.capture(d,"design-compact-footer-$width-$scale-$dark")
+                        }
+                        d.main {
+                            val density=d.root().density.density
+                            val action=d.tagged("scan-details-action")!!
+                            check(action.touchBoundsInRoot.height>=48*density,"Compact Details action retains a 48dp touch target")
+                            val status=d.tagged("scan-status")!!.boundsInRoot
+                            val details=d.text("Details")!!.boundsInRoot
+                            if(scale==1f) {
+                                check(details.left>=status.right && details.top<status.bottom,"Phone-width Details sits beside the complete status text")
+                            } else {
+                                check(kotlin.math.abs(status.width-action.boundsInRoot.width)<1f,"Enlarged scan status uses the full card width")
+                                check(details.top>=status.bottom,"Enlarged Details action sits below the status text: status=$status, Details=$details")
+                            }
+                        }
+                        d.clickTag("scan-details-action")
+                        d.main {check("Device groups" in d.words() && "Address endpoints" in d.words(),"Compact Details action opens the technical scan report")}
+                        d.click("Done")
+                    }
                 }
-                ComposeUiChecks.capture(d,"design-320dp-200pct")
             } finally {
                 if(prior=="null") d.shell("settings delete global animator_duration_scale")
                 else d.shell("settings put global animator_duration_scale $prior")

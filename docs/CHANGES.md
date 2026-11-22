@@ -1,5 +1,14 @@
 # What is new
 
+## 0.3.38 — Clearer devices and easier search
+
+- Give device names more room by moving category and service badges out of the list rows. Keep useful room names and addresses visible.
+- Simplify device details: show labelled IPv4 and an available endpoint MAC in the identity card, followed by the existing **Services & ports** section. Keep grouped addresses, response timings and identification evidence under **Show technical details**.
+- Shrink the scan card so the device list starts higher, while preserving full status messages and enlarged-text layouts.
+- Dismiss the keyboard when Search is pressed, preserve the query and keep the active editor stable while typing. Keep editing, clearing and returning from a result available.
+
+Discovery and recognition rules are unchanged. Scans still admit responding IPv4 devices on the selected Wi-Fi, with results held in memory only.
+
 ## 0.3.37 — Focused IPv4 discovery
 
 - Focus scans on responding IPv4 devices on the selected Wi-Fi.

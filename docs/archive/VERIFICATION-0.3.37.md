@@ -9,7 +9,7 @@ LAN discovery admits responding IPv4 endpoints on the selected Wi-Fi and eligibl
 
 Native resolution retains its original four-second deadline so AAAA-first/A-later updates can still queue IPv4 confirmation. Permanently IPv6-only services exit cleanly at window expiry. Current-response identity, unknown fields, cancellation, scope binding and RAM-only state remain intact. Typed Android refusals/routing errors are refined before read-only retry decisions.
 
-Independent Deep reviews and coordinator verification resolved the premature native-callback termination and stale scan-range help. The final implementation review approved the changes with no substantive findings. Earlier implementation matrices and the synthetic dual-stack comparison are recorded separately in [IPv4 scope](reference/IPV4-SCOPE.md); they are not claimed as tests of this numbered APK.
+Independent Deep reviews and coordinator verification resolved the premature native-callback termination and stale scan-range help. The final implementation review approved the changes with no substantive findings. Earlier implementation matrices and the synthetic dual-stack comparison are recorded separately in [IPv4 scope](../reference/IPV4-SCOPE.md); they are not claimed as tests of this numbered APK.
 
 ## Build and host checks
 
@@ -54,4 +54,4 @@ IPv6-only devices, routed Thread endpoints and identity clues available only thr
 
 The matching source package identifies the merged commit/tree and includes required public inputs, per-file hashes and original notices. Credentials, local caches and household evidence are excluded. Assets are published with SHA256SUMS.
 
-[Build instructions](BUILDING.md) · [Previous release verification](archive/VERIFICATION-0.3.36.md)
+[Build instructions](../BUILDING.md) · [Previous release verification](VERIFICATION-0.3.36.md)
